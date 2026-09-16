@@ -1,0 +1,42 @@
+# Unity generated directories
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Unity generated files
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+
+# Visual Studio and VS Code workspace files
+.vs/
+.vscode/
+
+# Build outputs
+[Bb]uild/
+[Bb]uilds/
+*.apk
+*.aab
+*.unitypackage
+
+# Crash reports and diagnostic output
+sysinfo.txt
+*.stacktrace
+crashlytics-build.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
