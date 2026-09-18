@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted（`AttackType` 配置方式由 ADR-020 收窄）
+Accepted（`AttackType` 配置方式由 ADR-020 收窄；敌人根脚本与 Prefab 划分由 ADR-031 修订）
 
 ## 日期
 
@@ -16,7 +16,7 @@ Accepted（`AttackType` 配置方式由 ADR-020 收窄）
 
 ## 决策
 
-- 使用 `EnemyType` 区分 `Normal`、`Elite`、`Boss`；三种类型首版共享一个轻量敌人行为控制器，差异由 `TbEnemy` 数值和 Unity Prefab 表达。
+- 使用 `EnemyType` 区分 `Normal`、`Elite`、`Boss`。本 ADR 原定三种类型共享一个轻量敌人行为控制器；ADR-031 已将实现边界修订为 `NormalMonster`、`EliteMonster`、`BossMonster` 三个具体池化根脚本和三个规范 Prefab，公共行为继续复用。
 - `AttackType` 保留为运行时概念，但不作为 `TbEnemy` 字段：`Normal` 派生为 `SingleTarget`，`Elite` 和 `Boss` 派生为 `Area`。Boss 首版没有额外阶段或特殊技能。
 - 敌人先向下移动至关卡配置的道路接近线，再向最近的有效士兵槽位移动。进入攻击起始范围后停止移动，不再继续向道路底部移动。
 - 敌人的最近目标由 ArmyController 提供。目标只包括 `RepresentedCount > 0` 的士兵槽位，距离相同时按 `SlotIndex` 从小到大选择。
@@ -30,7 +30,7 @@ Accepted（`AttackType` 配置方式由 ADR-020 收窄）
 
 ## 不采用
 
-- 不为三种敌人分别创建独立状态机、继承控制器或 Boss 专用框架。
+- 不为三种敌人复制三套相同状态机或提前建立复杂 Boss 框架；ADR-031 允许三个具体池化根脚本承载真实差异，公共规则仍通过组合、接口、基类或纯 C# 逻辑复用。
 - 不保留首版的“到达底部造成 `ContactDamage`”流程，不使用 `MonsterReachedBase` 作为首版事件。
 - 不让每个敌人每帧扫描所有 Army 槽位；目标只在进入攻击、攻击结束或目标失效时重新选择。
 - 不新增独立 `DamageType` 枚举。
@@ -56,3 +56,4 @@ Accepted（`AttackType` 配置方式由 ADR-020 收窄）
 - `../03_SharedContracts/EventCatalog.md`
 - `../07_Changes/ChangeLog.md`
 - `ADR-020-MinimalMvpConfigurationSurface.md`
+- `ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`

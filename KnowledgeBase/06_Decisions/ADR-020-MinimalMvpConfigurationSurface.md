@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted
+Accepted（池化规范 Prefab 与类型身份由 ADR-031 进一步收敛）
 
 ## 日期
 
@@ -17,11 +17,11 @@ MVP 只需要完成启动、游玩、胜负和重新开始闭环，因此配置�
 ## 决策
 
 - Luban 只保存可复用玩法数值、规则分类和跨表稳定 ID；运行时状态以及 Unity 对象引用不进入 Luban。
-- MVP 的 Luban 表不配置 `PrefabKey`、`SoldierPrefabKey` 或 `FormationKey`。Prefab、Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 侧资源绑定管理；ADR-027 已将 AudioClip 和全部声音能力延后。
-- Unity 侧资源绑定可以按 `EnemyType`、`GateType`、`WeaponId`、`BulletId` 等已有语义标识选择资源，但资源键属于 Unity 资源侧，不反向成为 Luban 字段。
+- MVP 的 Luban 表不配置 `PrefabKey`、`SoldierPrefabKey` 或 `FormationKey`。池化规范 Prefab 由对应 Manager 的 Inspector 引用绑定，Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 侧资源绑定管理；ADR-027 已将 AudioClip 和全部声音能力延后。
+- Unity 侧表现资源可以按 `EnemyType`、`GateType`、`WeaponId`、`BulletId` 等已有语义标识选择，但资源键属于 Unity 资源侧，不反向成为 Luban 字段，也不作为 PoolService 的池身份或 Prefab 选择入口。
 - Army 初始人数固定为 `1`，不建立 `InitialCount` 字段。`ArmyCountLimit` 保留；`0` 表示不设上限，大于 `0` 时才作为上限。
 - `AttackType` 由 `EnemyType` 派生：`Normal -> SingleTarget`，`Elite/Boss -> Area`，不在 `TbEnemy` 重复配置。
-- 当前 MVP 的三种 Prop 都是武器箱，其装备效果、Prefab 和表现由 `WeaponId` 决定，因此不建立 `PropType`。该最小字段面不把 Prop 的长期职责限制为武器切换；其他击破效果进入范围前按 ADR-022 和 DES-031 另行定案。
+- 当前 MVP 的三种 Prop 都是武器箱，其装备效果和表现由 `WeaponId` 决定，三者共用一个 `WeaponProp` 根类型、规范 Prefab 和类型池，因此不建立 `PropType`。该最小字段面不把 Prop 的长期职责限制为武器切换；其他击破效果进入范围前按 ADR-022 和 DES-031 另行定案。
 - 子弹固定为命中首个有效目标后回收，MVP 不建立 `CollisionBehavior`。
 - 代表人数不缩放射速、伤害或弹丸数量；每个激活槽位按同一武器配置独立发射一枚子弹。
 - 元素在 MVP 中只提供稳定身份和类型，用于装备状态与表现；伤害倍率、状态类型和持续时间延后。
@@ -74,3 +74,4 @@ MVP 初始字段如下：
 - `../04_Assets/ArtList.md`
 - `../05_Testing/IntegrationTests.md`
 - `ADR-021-MvpRuntimeDeterminismAndBindings.md`
+- `ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`

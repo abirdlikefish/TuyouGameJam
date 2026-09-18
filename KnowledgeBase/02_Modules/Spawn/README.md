@@ -13,6 +13,7 @@
 - 按 `LevelConfig` 的时间轴安排敌人、Gate 和 Prop 的生成。
 - 唯一维护 `enemySpawns`、`gateSpawns`、`propSpawns` 的游标。
 - 接受 LevelManager 传入的当前 `LevelRunId` 和 `elapsedTime`，在每次 `Tick` 中消费到时条目；拒绝过期会话的 Tick。
+- 不直接读取 TimeService；生成时间轴通过 LevelManager 使用 `Gameplay` 时间域累计的 `elapsedTime` 间接遵循玩法时间。
 - 将每条生成项的配置 ID 和 `[0,1]` 归一化横向出生位置解析为生成请求。
 - 向 EnemyManager 发送敌人生成请求，向 ObstacleManager 发送 Gate/Prop 生成请求。
 - 在 LevelManager 进入终局后停止消费未来生成项，并在新会话开始时重置三个游标。

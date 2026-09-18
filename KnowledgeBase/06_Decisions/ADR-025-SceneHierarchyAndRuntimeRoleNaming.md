@@ -42,7 +42,7 @@ Accepted
 
 - `GlobalBootstrap`：全局服务初始化。
 - `GameStateService`：应用流程推进。
-- `SceneService`：Gameplay 场景加载与卸载。
+- `SceneService`：MainMenu、LevelSelect、Gameplay 应用场景的切换、入口绑定与卸载协调；范围由 ADR-032 扩展。
 - `LevelManager`：当前单局生命周期与终局提交。
 
 如后续出现新职责，应先归入明确的现有模块，或在有独立生命周期和公共契约时新增专用服务，不使用 `GameManager` 作为兜底容器。

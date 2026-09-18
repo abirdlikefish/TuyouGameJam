@@ -2,18 +2,21 @@
 
 ## 应用流程
 
-- [ ] 初始化成功后进入 MainMenu；初始化失败时不自动跳过。
-- [ ] 只有 GlobalBootstrap 确认 ConfigService 为 Ready 后，才能通知 GameStateService 离开 Initializing；重复通知不重复进入 MainMenu。
-- [ ] MainMenu 使用 RealTime 等待 1 秒后只转换一次到 LevelSelect。
-- [ ] LevelSelect 只能选择目录中有效且当前可选的 `LevelId`；自动选择唯一关卡与手动选择都只产生一个选中结果。
-- [ ] LevelSelect 使用 RealTime 等待 1 秒后只调用一次 `TryStartSelectedGameplay`；重复回调不会创建第二个会话。
-- [ ] 开始 Gameplay 时先进入内部 `GameplayLoading`，只有场景加载、LevelConfig 注入和 LevelManager `Preparing` 完成后才进入 Gameplay/Playing。
-- [ ] 场景加载失败时发布 `GameplaySceneLoadFailed`，不发布 `LevelRunStarted`，并回到 LevelSelect。
-- [ ] Victory 或 GameOver 后只结束当前 `LevelRunId`，清理游玩对象并回到 LevelSelect，不返回 MainMenu。
-- [ ] Victory 或 GameOver 只发布一次；GameStateService 在收到匹配的 `GameplaySceneUnloaded` 后才清除当前会话并回到 LevelSelect。
-- [ ] 回到 LevelSelect 后等待 RealTime 1 秒，使用新的 `LevelRunId` 再次开始同一关。
-- [ ] 上一局的延迟事件、定时器和对象池实例不会影响新的 `LevelRunId`。
-- [ ] 离开 MainMenu/LevelSelect、加载失败和终局时旧的 RealTime 定时器均已取消，不能启动旧关卡。
+- [ ] BootstrapScene 常驻；MainMenuScene、LevelSelectScene、GameplayScene 都在 Build Settings 中，并按固定根名称各有且只有一个对应 SceneEntry。
+- [ ] 服务完成 Create、Connect 且应用级事件订阅完成后才进入 Start；ConfigService Ready 前不得请求任何应用场景。
+- [ ] 初始化成功后请求同步 Additive 加载 MainMenuScene；只有 MainMenuSceneEntry 初始化并发布 `AppSceneReady(MainMenu)` 后才进入 MainMenu。初始化失败时保持 `Initializing`。
+- [ ] MainMenu 的 RealTime 1 秒计时从 Scene Ready 后开始；到期后只请求一次 LevelSelect 切换，旧场景异步卸载完成前不加载目标场景。
+- [ ] LevelSelectSceneEntry Ready 后才进入 LevelSelect、选择目录中有效且可选的唯一 `LevelId`，并启动新的 RealTime 1 秒计时。
+- [ ] LevelSelect 计时结束后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 同步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
+- [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
+- [ ] MainMenu、LevelSelect 的场景事实使用 `LevelId = 0`、`LevelRunId = 0`；Gameplay 事实携带当前值，目标不匹配或过期事实不会推进状态。
+- [ ] 根缺失、重名、入口类型错误或 Entry 初始化失败时，失败目标场景先完成清理，再发布 `AppSceneLoadFailed`；不得发布 Ready。
+- [ ] Gameplay 加载失败时不发布 `LevelRunStarted`，清除待启动会话并请求恢复 LevelSelectScene；只有 LevelSelect Ready 后才进入 LevelSelect。
+- [ ] 异步卸载失败发布 `AppSceneUnloadFailed`，停止本次切换且不加载目标场景。
+- [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 请求切换 LevelSelect，GameplaySceneEntry 清理并卸载，LevelSelectSceneEntry Ready 后才清除当前会话并进入 LevelSelect。
+- [ ] 回到 LevelSelect 后等待 RealTime 1 秒，使用新的 `LevelRunId` 再次开始同一关；上一局的延迟事件、定时器和池实例不会影响新会话。
+- [ ] 离开稳定状态、加载失败和终局时旧 RealTime 定时器均已取消，不能启动旧页面或旧关卡。
+- [ ] 结构化日志中每次加载恰好出现一次切换请求、Entry 初始化和 Ready；每次卸载恰好出现一次 Entry 清理和 Unloaded，Gameplay 日志包含 `LevelId`、`LevelRunId`。日志不参与流程控制。
 
 ## 装配与服务访问
 
@@ -79,10 +82,12 @@
 
 ## 时间系统
 
-- [ ] 所有 Gameplay 时间域返回倍率为 `1` 的正常未缩放步进。
+- [ ] `Gameplay`、`Bullet`、`Gate`、`Monster` 和 `VFX` 都返回倍率为 `1` 的正常未缩放步进；同一帧输入下与 `RealTime` 数值一致。
+- [ ] Army 移动和 LevelManager 本局计时使用 `Gameplay`，SpawnManager 只消费由 LevelManager 累计的 `elapsedTime`；Bullet 使用 `Bullet`；Monster 使用 `Monster`；Gate/Prop 使用 `Gate`；Gameplay 世界特效使用 `VFX`。
+- [ ] 单次移动、计时或调度只读取一个最具体的时间域，不把 `Gameplay` delta 与子系统域 delta 重复累计。
 - [ ] MainMenu 和 LevelSelect 的等待使用 `RealTime` 定时器，不依赖 Gameplay 推进。
 - [ ] `TimerHandle.Cancel()` 幂等；状态离开、加载失败、终局或会话失效后，旧回调不会执行或推进流程。
-- [ ] MVP 不暴露倍率修改、暂停令牌、减速、加速或局部时停接口。
+- [ ] MVP 不暴露父域图、重叠归属、倍率修改、暂停令牌、减速、加速或局部时停接口。
 
 ## Deferred 能力
 
@@ -95,7 +100,7 @@
 - [ ] `LevelCatalog` 中每个引用的 `LevelConfig.levelId` 唯一，第一关默认解锁且存在有效引用。
 - [ ] LevelSelect 选定 `LevelId` 后，ConfigService 返回已校验的 `LevelConfig`；SceneService 不重复查询配置，并将同一关卡 ID、配置引用和新的 `LevelRunId` 传入 Gameplay。
 - [ ] 配置目录、关卡配置或共享表加载失败时发布错误并阻止进入 Gameplay。
-- [ ] `LevelConfig` 引用的敌人、Gate 和 Prop 配置 ID 全部存在；当前关卡需要的 Unity Prefab、阵型槽位和发射点绑定完整。
+- [ ] `LevelConfig` 引用的敌人、Gate 和 Prop 配置 ID 全部存在；EnemyManager 的三个敌人规范 Prefab、ObstacleManager 的 Gate/Prop 规范 Prefab、子弹规范 Prefab、阵型槽位和发射点绑定完整。
 - [ ] `enemySpawns` 为空时返回 `InvalidLevelConfig` 并阻止进入 Gameplay；`gateSpawns` 或 `propSpawns` 为空仍可正常加载。
 - [ ] `TbGate` 的 Additive/Element 条件字段和 `TbProp` 的生命值、伤害及武器引用校验符合配置契约。
 - [ ] `TbArmy` 引用的 `TbWeapon`、`TbElement` 以及 `TbWeapon` 引用的 `TbBullet` 均存在，跨表引用校验失败时启动失败。
@@ -103,6 +108,8 @@
 - [ ] `TbArmy.MoveSpeed` 是 Army 横向基础速度；实际位移按 `horizontalInput × MoveSpeed × 有效玩法 delta` 计算，触屏系数通过输入倍率影响最终速度但不改写配置。
 - [ ] MVP Luban 表不要求 `PrefabKey`、`FormationKey`、`SoldierPrefabKey`、`PropType`、`AttackType`、代表人数缩放字段或 `CollisionBehavior`。
 - [ ] 缺少必需的 Unity Prefab、Collider2D、阵型槽位或发射点绑定时阻止进入 Gameplay，并报告稳定来源。
+- [ ] `NormalMonster`、`EliteMonster`、`BossMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
+- [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。
 - [ ] 相同 `spawnPosition` 的不同尺寸敌人、Gate 和 Prop 使用相同中心点坐标，不按碰撞体或渲染尺寸内缩。
@@ -115,7 +122,19 @@
 - [ ] LevelManager 每帧传入当前 `LevelRunId` 和 `elapsedTime`，生成条目只消费一次；过期会话的 Tick 不会推进新会话。
 - [ ] 终局后 SpawnManager 停止消费；新会话只调用一次 `StartRun(LevelConfig, LevelRunId)`，并重置全部游标。
 - [ ] 过期 `LevelRunId` 的生成请求、管理器操作和结果事件不会影响新会话。
-- [ ] Config、Scene、Spawn、Enemy、Obstacle、EventBus 和 Time 接口均有明确输入、输出和失败语义；Pool 的失败、重复归还和重置语义在 `PoolSystem.md` 定案后再提升为 ContractReady。
+- [ ] Config、Scene、Spawn、Enemy、Obstacle、EventBus、Time 和 Pool 接口均有明确输入、输出和失败语义；Pool 遵守 ADR-031 的类型身份、重复归还、业务重置和防御性失活契约。
+
+## 类型对象池
+
+- [ ] 同一具体类型以同一规范 Prefab 重复请求时返回同一类型池；同一类型绑定不同 Prefab 时明确失败，不创建第二个池。
+- [ ] `RentInactive` 对首次创建和复用实例都返回未激活对象；首次实例化不会在 Manager 注入本次租用上下文前执行依赖上下文的 `OnEnable` 逻辑。
+- [ ] Manager 在激活前依次设置活动父节点、位置、旋转、`RuntimeInstanceId`、配置、`LevelRunId` 和回调，并完成活动集合登记。
+- [ ] Manager 归还前先注销活动实例、完成计数和事实事件、调用 `PrepareForPool()` 并主动失活；类型池随后防御性失活并移动到正确的空闲子节点。
+- [ ] 第一次合法归还返回成功；`null`、未知实例、其他类型池实例和重复归还返回失败且不改变池状态。
+- [ ] 池对象不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身；失活不会递归归还。
+- [ ] `NormalMonster`、`EliteMonster`、`BossMonster` 使用三个不同具体类型池；共有移动、受伤和目标查询规则的复用不改变类型池身份。
+- [ ] Gameplay 终局和场景卸载前各 Manager 归还全部活动实例；下一局复用已有 PoolService、PersistentPoolRoot 和类型池，不保留上一局借出状态。
+- [ ] PoolService 懒创建实例，不要求预热、容量配置或公共统计；应用清理时销毁全部已知实例并清除类型注册。
 
 ## 确定性与基础设施语义
 
@@ -124,4 +143,13 @@
 - [ ] 同一帧按移动阻挡、子弹、Gate/Prop、敌人攻击、终局判断的顺序结算。
 - [ ] Bullet Cast 同距离目标按 `Enemy > Gate > Prop > RuntimeInstanceId` 稳定选择。
 - [ ] EventBus 按注册顺序同步调用；发布期间使用订阅快照，异常隔离，重复订阅独立 Token，取消幂等。
+- [ ] EventBus 只按准确消息类型分发；基类或接口订阅不会收到具体子类型消息。
+- [ ] EventBus 支持同步嵌套发布，每层发布使用独立快照；`AppSceneReady(Gameplay)` 处理器发布的 `LevelRunStarted` 不会因重入丢失或重复。
+- [ ] 发布期间新增或取消订阅只影响下一次发布；当前快照中的处理器仍按原注册顺序完成。
+- [ ] 默认、未知、重复使用和其他 EventBus 实例的 `SubscriptionToken` 取消时无副作用。
+- [ ] 单个处理器和异常报告委托抛出异常时，当前快照中的其他处理器仍继续执行。
+- [ ] 零监听者发布安全；移除 UI/VFX 监听者不会改变玩法状态、敌人死亡计数或终局结果。
+- [ ] 应用服务在配置初始化前完成订阅；各 SceneEntry 在对应 `AppSceneReady` 前完成场景订阅，并在场景卸载前取消；旧场景监听者不会接收新场景或新会话事件。
+- [ ] 池对象不直接订阅或查找全局 EventBus；复用前注入本局回调，回收时清除，下一局不会重复发布。
+- [ ] Monster 通过必执行回调报告死亡，EnemyManager 先完成死亡去重和 `AliveEnemyCount` 更新再发布一次 `MonsterKilled`；零监听者不影响计数和回收。
 - [ ] Unity 资源注册表按 `类别/身份` 键解析，缺失或类型不匹配在进入 Gameplay 前失败。

@@ -6,11 +6,11 @@
 - 层级：Gameplay
 - 状态：`InDesign`
 - 依赖：TimeService、EventBus、Army、Bullet、ObstacleManager、ConfigService
-- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`
+- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 
 ## 职责
 
-- 控制加法门和元素门向下移动。
+- 控制加法门和元素门向下移动；移动和接触流程使用 `Gate` 时间域，一次更新不再叠加 `Gameplay` delta。
 - 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；移动后通过显式 Cast/Overlap 查询，不依赖自动碰撞回调。
 - 保存门的运行时数字、HP、接触状态和运行时实例 ID。
 - 接收子弹命中并更新门数字或 HP。
@@ -69,7 +69,7 @@ Pending
 ## 配置输入
 
 - 从 Luban `TbGate` 读取 `GateType`、`InitialValue`、`HitIncrement`、`MaxHp`、`ElementId`、`ContactDamage` 和 `MoveSpeed`。
-- 加法门与元素门 Prefab 由 Unity 侧按 `GateType` 绑定，不读取 Luban 资源键。
+- 加法门使用 `AdditiveGate` 根脚本和一个规范 Prefab，元素门使用 `ElementGate` 根脚本和一个规范 Prefab；ObstacleManager 通过 Inspector 绑定二者并按 `GateType` 选择具体类型池，不读取 Luban 资源键。
 - 关卡出现顺序和每条生成项的 `[0,1]` 横向出生位置由 `LevelConfig` 提供；SpawnManager 解析固定 `spawnY` 上的中心点世界坐标。
 - 当前数字、HP、接触状态和位置属于运行时状态，不回写 Luban。
 
@@ -79,6 +79,7 @@ Pending
 - 不依赖 ArmyController 订阅 `GateContactResolved` 来执行门效果；该事件只用于事后观察。
 - 不负责 Spawn 时序和活动对象列表。
 - 不决定敌人生成完成和关卡胜负条件。
+- 不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身；只通过 ObstacleManager 注入的窄回调请求结束当前实例。
 
 ## 测试标准
 
@@ -92,3 +93,4 @@ Pending
 - 元素门接触失败后被后续子弹击破时不更新 Army 的 `ElementId`。
 - 未接触的门离场时不产生接触成功或失败事件。
 - Gate 的 BodyCollider 使用 Gate Layer；同一查询返回多个子 Collider 时按运行时实例 ID 去重。
+- 两种具体 Gate 类型各自只绑定一个规范 Prefab；从类型池取得时未激活，ObstacleManager 完成初始化和登记后才激活，归还前清理运行时状态并主动失活。

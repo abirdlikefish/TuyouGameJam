@@ -7,7 +7,9 @@
 ## 阶段 1：核心闭环
 
 - [ ] GlobalBootstrap / Composition Root 与唯一 GlobalRoot
-- [ ] GameStateService、TimeService、EventBus、SceneService、ConfigService、PoolService
+- [ ] GameStateService、TimeService、EventBus、SceneService、ConfigService，以及按具体根组件类型持有的 PoolService
+- [ ] 服务按 Create、Connect、Start 三阶段装配，全部连接和应用级订阅完成后才启动流程
+- [ ] Bootstrap、MainMenu、LevelSelect、Gameplay 四个场景及固定根 SceneEntry；同步 Additive 加载、异步卸载和结构化日志切换验证
 - [ ] 军队人数和自动射击
 - [ ] 军队固定槽位、聚合生命值和横向移动
 - [ ] Gameplay 场景键盘/手柄横向输入，以及 UI 区域内停手即停的触屏相对拖动输入
@@ -25,13 +27,13 @@
 - [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID
 - [ ] Luban 配置角色/军队、敌人、Gate、Prop 和子弹属性
 - [ ] Luban 配置 Weapon、Element、阵型槽位和每名士兵生命值
-- [ ] 当前临时流程：胜利/失败后清理游玩会话，回到选关并等待 1 秒重新开始当前关卡
+- [ ] 当前临时流程：MainMenuScene 与 LevelSelectScene 各在 Entry Ready 后等待 1 秒；胜利/失败后清理 Gameplay 并切换回 LevelSelectScene，再开始当前关卡
 
 ## 阶段 3：表现和性能
 
 - [ ] UI 完整反馈
 - [ ] 粒子和命中特效
-- [ ] 子弹、怪物、特效对象池
+- [ ] 在目标设备实测子弹、怪物和特效类型池，并按数据决定是否增加预热、容量上限或溢出策略
 - [ ] 多分辨率和移动设备验证
 
 ## 阶段 4：可选扩展

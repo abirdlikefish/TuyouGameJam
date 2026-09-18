@@ -26,7 +26,7 @@ Accepted
 ### GameStateService 与 SceneService 保持分离
 
 - `GameStateService` 继续作为 `AppFlowState`、选中关卡、`LevelRunId`、流程定时器和终局推进的唯一所有者。
-- `SceneService` 保持为薄场景适配器，只负责 Gameplay 场景加载、入口绑定、卸载及成功/失败事实发布。
+- `SceneService` 保持为薄场景协调器，只负责 MainMenu、LevelSelect、Gameplay 场景切换、入口绑定、卸载及成功/失败事实发布；应用场景范围由 ADR-032 扩展。
 - 二者可以由同一个 `GlobalBootstrap` 创建并在同一份应用流程架构文档中描述，但不合并为一个承担状态机和 Unity 场景操作的服务。
 - `GameStateService` 通过 `ISceneService` 调用场景能力；测试可以使用替代实现验证状态转换，不依赖真实 Unity 场景加载。
 

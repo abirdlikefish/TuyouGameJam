@@ -5,7 +5,7 @@
 - ID：`MOD-LEVEL`
 - 层级：Gameplay
 - 状态：`Planned`
-- 依赖：GameStateService、Spawn、Monster、Army、ObstacleManager、EventBus
+- 依赖：GameStateService、TimeService、Spawn、Monster、Army、ObstacleManager、EventBus
 - 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`
 
 ## 职责
@@ -42,7 +42,7 @@ Preparing
   -> Completed（Victory / GameOver）
 ```
 
-`Preparing` 状态完成 Army、EnemyManager、ObstacleManager、SpawnManager 和子弹状态初始化后，向场景入口报告就绪；只有 SceneService 发布 `GameplaySceneReady`、GameStateService 进入应用级 `Gameplay` 后，LevelManager 才进入 `Playing`。`Playing` 状态下，LevelManager 使用本局开始时间累计 `elapsedTime`，每帧将当前 `LevelRunId` 和该时间传给 SpawnManager；SpawnManager 自行消费所有 `spawnTime <= elapsedTime` 的条目并推进对应游标。
+`Preparing` 状态完成 Army、EnemyManager、ObstacleManager、SpawnManager 和子弹状态初始化后，向 GameplaySceneEntry 报告就绪；只有 SceneService 发布匹配的 `AppSceneReady(Gameplay)`、GameStateService 进入应用级 `Gameplay` 并发布 `LevelRunStarted` 后，LevelManager 才进入 `Playing`。`Playing` 状态下，LevelManager 每帧使用 `timeService.GetDeltaTime(TimeDomain.Gameplay)` 累计本局 `elapsedTime`，并将当前 `LevelRunId` 和该时间传给 SpawnManager；SpawnManager 不直接读取 TimeService，自行消费所有 `spawnTime <= elapsedTime` 的条目并推进对应游标。
 
 终局判断在一帧内的生成、伤害和死亡事件处理完成后执行：
 
@@ -69,11 +69,12 @@ Army 归零优先于胜利，因此同一帧最后一只敌人死亡且 Army 归
 - 当前场景可以接收选关阶段已校验的唯一 `LevelConfig`，并正确提供道路宽高、边界、`spawnY`、接近线和 `despawnY`。
 - 每条敌人、Gate、Prop 生成项的 `spawnPosition` 均位于 `[0,1]`；越界或非有限值在场景加载前被拒绝。
 - 三类生成列表按 `spawnTime` 消费，每个生成项只处理一次。
+- 本局 `elapsedTime` 只累计 `Gameplay` 时间域 delta；一次更新不叠加其他时间域 delta，SpawnManager 不直接读取 TimeService。
 - 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后只触发一次胜利。
 - 胜利事件携带当前 `levelId` 和配置中的 `unlockedLevelIds`。
 - Army 总人数小于等于 0 后只触发一次失败。
 - 同一帧敌人清零和 Army 归零时结果为失败。
-- 终局后停止输入、射击、攻击和未来生成，向 GameStateService 提交一次 `Victory` 或 `GameOver` 结果；GameStateService 在匹配的 `GameplaySceneUnloaded` 后回到 LevelSelect。
+- 终局后停止输入、射击、攻击和未来生成，向 GameStateService 提交一次 `Victory` 或 `GameOver` 结果；GameStateService 请求切换 LevelSelectScene，并在匹配的 `AppSceneReady(LevelSelect)` 后清除会话并回到 LevelSelect。
 - LevelSelect 使用 RealTime 等待 1 秒后开始新的同一关会话；新会话的运行时间、生成游标、EnemyManager、ObstacleManager、Army 和子弹状态恢复为初始值。
 - 初始化或配置加载失败时不得自动进入 Playing。
 - `enemySpawns` 为空时配置校验失败，不创建 Gameplay 会话，也不触发立即胜利。

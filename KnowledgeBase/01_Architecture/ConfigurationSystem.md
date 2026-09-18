@@ -17,7 +17,8 @@
 | Gate 属性、数字变化和接触参数 | Luban `TbGate` | Gate、Spawn、ObstacleManager |
 | Prop 属性、生命值和武器奖励 | Luban `TbProp` | Prop、Spawn、ObstacleManager |
 | 子弹属性 | Luban `TbBullet` | Bullet、Army |
-| Prefab、Sprite | Unity 资源注册表/Inspector | 表现和生成系统 |
+| 池化规范 Prefab | 对应 Manager 的 Inspector 引用 | EnemyManager、ObstacleManager、子弹生成所有者、PoolService 类型池 |
+| Sprite、Animator 等表现资源 | Unity 资源注册表/Inspector | 表现和生成系统 |
 | 当前人数、生命值、生成游标、关卡计时和胜负状态 | 运行时对象或服务 | Gameplay、UI |
 
 ## Luban 工程
@@ -60,9 +61,9 @@ Assets/StreamingAssets/Luban
 2. 一个 `cfg.Tables` 实例，内部由 Luban JSON loader 读取生成数据。
 3. Inspector 提供的 Unity 资源绑定或资源注册表；绑定关系由 Unity 侧持有，不从 Luban `PrefabKey` 读取。
 
-资源注册表键使用大小写敏感的 ASCII `类别/身份` 格式，例如 `Enemy/Normal`、`Gate/Additive`、`Prop/Weapon/{WeaponId}`、`Bullet/{BulletId}`。这些键属于 Unity 资源侧，不写入 Luban，也不使用绝对路径。
+资源注册表键使用大小写敏感的 ASCII `类别/身份` 格式，只用于需要运行时选择的非池身份资源。这些键属于 Unity 资源侧，不写入 Luban，也不使用绝对路径。池化规范 Prefab 不通过资源键交给 PoolService：对应 Manager 通过 Inspector 持有具体根组件 Prefab，并以具体类型取得类型池。
 
-进入 LevelSelect 后，`ConfigService` 从 `LevelCatalog` 根据选定的 `LevelId` 提供对应的 `LevelConfig`。Gameplay 由 SceneService 接收并注入这份已校验的 `LevelConfig`；Level 和 Spawn 只消费注入的关卡配置与道路快照，Army、EnemyManager、ObstacleManager 等实际数值消费者通过注入的 `IConfigService` 查询 Luban 可复用数值。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables 或访问静态 `LubanTables.Instance`。
+进入 LevelSelect 后，`ConfigService` 从 `LevelCatalog` 根据选定的 `LevelId` 提供对应的 `LevelConfig`。Gameplay 由 SceneService 接收并注入这份已校验的 `LevelConfig`；Level 和 Spawn 只消费注入的关卡配置与道路快照，Army、EnemyManager、ObstacleManager 等实际数值消费者通过注入的 `IConfigService` 查询 Luban 可复用数值。场景装配同时验证 Manager 的规范 Prefab Inspector 引用和具体根类型，再向全局 PoolService 请求类型池。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables 或访问静态 `LubanTables.Instance`。
 
 `LevelCatalog` 只保存 `LevelConfig` 引用和 `initiallyUnlocked` 标记。`LevelConfig.levelId` 是唯一 ID，目录不重复保存 ID；当前目录只有第一关且该条目默认解锁。
 
@@ -72,7 +73,7 @@ Assets/StreamingAssets/Luban
 GlobalBootstrap → ConfigService.Initialize(LevelCatalog, Tables, ResourceRegistry)
 LevelSelect → SelectLevel(levelId)
 ConfigService → Validate and GetLevelConfig(levelId)
-SceneService → LoadGameplay(levelId, levelConfig, levelRunId)
+SceneService → SwitchToGameplay(levelId, levelConfig, levelRunId)
 LevelManager → Initialize(levelConfig, levelRunId)
 ```
 
@@ -98,7 +99,7 @@ LevelManager → Initialize(levelConfig, levelRunId)
 ## 关键约束
 
 - Luban ID 是跨配置引用的稳定键，不能使用会随排序变化的行号。
-- MVP Luban 表不保存 `PrefabKey`；Prefab、Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 资源注册表绑定。MVP 完全无声音，不要求 AudioClip 绑定。
+- MVP Luban 表不保存 `PrefabKey`；池化规范 Prefab 由对应 Manager 的 Inspector 引用绑定，Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 资源注册表绑定。MVP 完全无声音，不要求 AudioClip 绑定。
 - Unity 资源注册表如使用字符串键，键只属于 Unity 资源侧，不构成 Luban 表字段。
 - LevelConfig 只描述本关卡如何编排，不复制敌人、军队和门的数值。
 - Luban 表只描述可复用的数据，不承担场景对象的生命周期。

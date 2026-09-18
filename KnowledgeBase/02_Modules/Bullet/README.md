@@ -6,6 +6,7 @@
 - 层级：Gameplay
 - 状态：`Planned`
 - 依赖：TimeService、PoolService、IDamageable、IBulletDamageable
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 
 ## 职责
 
@@ -20,7 +21,7 @@
 
 - 从 Luban `TbBullet` 读取基础伤害和速度。
 - 从 `TbWeapon` 获取发射间隔和基础子弹引用，从 `TbElement` 获取元素身份与类型。
-- 子弹 Prefab 由 Unity Inspector 或 Unity 侧按 `BulletId` 绑定；命中首个有效目标后回收是固定规则，不配置资源键或碰撞行为。
+- MVP 子弹只有配置与表现资源差异，共用一个 `Bullet` 池化根脚本和一个规范 Prefab；子弹生成所有者通过 Inspector 绑定该 Prefab，并按 `BulletId` 注入数值与表现。命中首个有效目标后回收是固定规则，不配置资源键或碰撞行为。
 - Army 每个激活槽位提供一个发射点和代表人数；Bullet 不读取 Army 内部状态，只消费生成时的不可变快照。
 - 子弹的发射时机由 Army 运行时逻辑决定，关卡编排不保存子弹实例。
 
@@ -33,7 +34,7 @@
 
 ## 运行时快照
 
-最少包含：`SourceArmyId`、`SourceSlotIndex`、`BulletInstanceId`、`BulletId`、`WeaponId`、`ElementId`、最终伤害、速度和方向。Prefab 引用由生成器从 Unity 资源绑定取得，不作为玩法快照字段。快照生成后不随 Army 人数变化，避免飞行中的子弹属性突然改变。命中目标时从快照生成 `BulletDamageContext`，不新增独立 `DamageType`。
+最少包含：`SourceArmyId`、`SourceSlotIndex`、`BulletInstanceId`、`BulletId`、`WeaponId`、`ElementId`、最终伤害、速度和方向。规范 Prefab 引用由子弹生成所有者的 Inspector 提供，不作为玩法快照字段。快照生成后不随 Army 人数变化，避免飞行中的子弹属性突然改变。命中目标时从快照生成 `BulletDamageContext`，不新增独立 `DamageType`。
 
 ## 测试标准
 
@@ -44,3 +45,5 @@
 - 子弹 Collider Cast 能覆盖整段移动位移，高速或掉帧时不穿透敌人、Gate 或 Prop。
 - 子弹与怪物、Gate 或 Prop 的受击碰撞体碰撞时只生成一次伤害上下文并回收；攻击碰撞体不作为子弹目标。
 - 同一个 `BulletInstanceId` 不会因多个目标子碰撞体重复结算。
+- `Bullet` 具体类型只绑定一个规范 Prefab 和类型池；类型池返回未激活实例，生成所有者设置发射父节点、Transform 和快照并登记后才激活。
+- 子弹只请求生成所有者结束实例，不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还；命中或离屏后清理状态、主动失活，再由类型池防御性失活并回收。

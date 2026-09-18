@@ -44,7 +44,7 @@ GlobalBootstrap
 → GameStateService.MainMenu / LevelSelect
 → SelectLevel(levelId)
 → ConfigService.TryGetLevelConfig(levelId)
-→ SceneService.LoadGameplay(levelId, levelConfig, levelRunId)
+→ SceneService.SwitchToGameplay(levelId, levelConfig, levelRunId)
 → LevelManager.Initialize(levelConfig, levelRunId)
 ```
 

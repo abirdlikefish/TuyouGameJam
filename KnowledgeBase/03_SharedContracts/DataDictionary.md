@@ -22,7 +22,9 @@
 | `LevelRunId` | `int` | 一次 Gameplay 会话的稳定运行 ID | 每次进入 Gameplay 递增；过期事件不得作用于新会话 |
 | `ConfigLoadState` | `enum` | 配置服务加载状态 | `Uninitialized`、`Loading`、`Ready`、`Failed` |
 | `ConfigErrorCode` | `enum` | 配置或资源加载失败原因 | 目录为空、ID 重复、关卡不存在、引用缺失、关卡配置无效、表加载失败、资源缺失 |
-| `SceneLoadErrorCode` | `enum` | Gameplay 场景加载或入口绑定失败原因 | 请求无效、场景加载失败、Gameplay 入口缺失 |
+| `AppSceneId` | `enum` | SceneService 管理的稳定应用场景身份 | `MainMenu`、`LevelSelect`、`Gameplay`；不包含 `Initializing`、`GameplayLoading` |
+| `SceneLoadErrorCode` | `enum` | 应用场景加载、规范根解析或 SceneEntry 初始化失败原因 | 请求无效、场景未配置、加载失败、入口缺失/重名/类型错误、入口初始化失败 |
+| `SceneUnloadErrorCode` | `enum` | 当前应用场景异步卸载失败原因 | 请求无效、场景卸载失败 |
 | `LevelDescriptor` | `struct` | 选关使用的关卡目录只读描述 | `LevelId`、显示名、初始解锁标记 |
 | `UnlockedLevelIds` | `List<int>` | 当前关卡通关后记录的解锁关卡 ID | 首版只记录，不执行下一关跳转 |
 | `AppFlowState` | `enum` | 应用级流程状态；`GameplayLoading` 仅为内部过渡，不是用户可见页面 | `Initializing`、`MainMenu`、`LevelSelect`、`GameplayLoading`、`Gameplay` |

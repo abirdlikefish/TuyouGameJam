@@ -27,13 +27,31 @@ BootstrapScene
 
 `ServiceHost` 表示服务的所有权和注册位置，不要求图中的每个服务都实现为子 GameObject；适合使用纯 C# 的服务可以由 `GlobalBootstrap` 或统一宿主持有。服务由 Composition Root 创建并通过接口注入，不要求也不提供各自的静态 `Instance`。MVP 完全无声音，不创建 `AudioRoot` 或 `AudioService`；`SaveService` 和 `DebugService` 同样不初始化。
 
-场景重载时不得创建重复的 `GlobalRoot`。全局服务可以保存当前 `LevelRunId` 和公共契约数据，但不得长期持有已卸载 Gameplay 场景对象的具体引用。
+`PersistentPoolRoot` 由 PoolService 持有，并按具体池化根组件类型维护空闲子节点。空闲实例全部失活；租出后由对应 Manager 移入当前 Gameplay 场景的 `MonsterRoot`、`ObstacleRoot`、`BulletRoot` 或其他职责节点，场景卸载前归还。
+
+场景重载时不得创建重复的 `GlobalRoot`。全局服务可以保存当前 `LevelRunId` 和公共契约数据，但不得长期持有已卸载 MainMenu、LevelSelect 或 Gameplay 场景对象的具体引用。
+
+## 应用页面层
+
+MainMenu、LevelSelect 和 Gameplay 都是由 SceneService 管理的 Additive 应用场景；`BootstrapScene` 始终保留。同一时刻至多有一个非 Bootstrap 应用场景处于 Ready：
+
+```text
+MainMenuScene
+└── MainMenuRoot [MainMenuSceneEntry]
+
+LevelSelectScene
+└── LevelSelectRoot [LevelSelectSceneEntry]
+```
+
+MainMenuSceneEntry 和 LevelSelectSceneEntry 是场景装配入口，当前只完成固定引用校验、最小依赖注入、订阅生命周期和结构化日志验证。正式主界面与选关 UI 尚未实现；对应场景 Ready 后仍由 GameStateService 使用 RealTime 等待 1 秒自动推进。
+
+三个应用场景都遵守固定根入口约定。Unity 场景适配器只在本次加载的 `Scene.GetRootGameObjects()` 中解析规范根，不使用跨场景 `GameObject.Find`。根缺失、重名、入口类型错误或初始化失败都必须报告加载失败，不得以运行时添加组件或静态入口注册兜底。
 
 ## Gameplay 单局层
 
 ```text
 GameplayScene
-└── GameplayRoot
+└── GameplayRoot [GameplaySceneEntry]
     ├── MainCamera
     ├── Road
     ├── ArmyRoot [ArmyController]
@@ -57,7 +75,7 @@ GameplayScene
 
 `TouchDragArea` 虽然位于 Gameplay Canvas/UI 层级中，但职责归属 Input 模块。它通过 UGUI Pointer 回调采集相邻位置的水平拖动差值，使用 RectTransform 宽度和未缩放帧时间归一化，并将结果交给 `InputAdapter`；跨模块传递仍使用同步命令，不发布项目事件。灵敏度系数 `horizontalMultiplier` 默认值为 `1`，在对应 UI Prefab 的 Inspector 中配置。详细规则见 [Input 模块](../02_Modules/Input/README.md) 和 [ADR-028](../06_Decisions/ADR-028-MvpRelativeDragInput.md)。
 
-当前只有 Gameplay 使用实际关卡场景。MainMenu 和 LevelSelect 暂时由常驻的 `GameStateService` 状态表示，各自等待 1 秒后自动跳过；后续可以在不改变应用状态契约的前提下接入独立 UI 或场景。
+`GameplaySceneEntry` 通过 Inspector 持有本场景 Manager 和固定组件引用；SceneService 的 Unity 适配器向它注入 `LevelConfig`、`LevelId`、`LevelRunId` 和所需最小服务。Entry 完成订阅与 `LevelManager.Preparing` 后才允许发布 `AppSceneReady(Gameplay)`；Gameplay 对象随后等待 `LevelRunStarted` 才进入 `Playing`。
 
 军队固定在屏幕下方；怪物、Gate 和 Prop 从道路上方生成并通过自身移动向下推进。玩法 Prefab 的 `Collider2D` 由 Inspector 绑定并按职责配置 Layer；对象移动和碰撞结算不依赖 Dynamic Rigidbody2D 的自动回调。
 
@@ -65,11 +83,14 @@ GameplayScene
 
 ```text
 BootstrapScene 创建 GlobalRoot
-→ GlobalBootstrap 初始化全局服务
-→ GameStateService 请求 SceneService 加载 GameplayScene
-→ LevelManager 完成 Preparing 并进入单局
+→ GlobalBootstrap 按 Create、Connect、Start 初始化全局服务
+→ SceneService 同步 Additive 加载 MainMenuScene，MainMenuSceneEntry Ready
+→ 异步卸载 MainMenuScene，再同步加载 LevelSelectScene，LevelSelectSceneEntry Ready
+→ 异步卸载 LevelSelectScene，再同步加载 GameplayScene
+→ GameplaySceneEntry 完成 LevelManager.Preparing
+→ AppSceneReady(Gameplay) 后 GameStateService 发布 LevelRunStarted 并进入单局
 → 单局完成并清理 GameplayRoot 下的运行时对象
-→ SceneService 卸载 GameplayScene
+→ SceneService 异步卸载 GameplayScene，再同步加载 LevelSelectScene
 → GlobalRoot 与全局服务继续保留
 ```
 
@@ -84,3 +105,4 @@ BootstrapScene 创建 GlobalRoot
 - [ADR-019：应用流程公共接口与场景握手](../06_Decisions/ADR-019-ApplicationFlowContract.md)
 - [ADR-025：场景层级与运行时职责命名](../06_Decisions/ADR-025-SceneHierarchyAndRuntimeRoleNaming.md)
 - [ADR-028：MVP 触屏相对拖动输入](../06_Decisions/ADR-028-MvpRelativeDragInput.md)
+- [ADR-032：MVP 应用场景入口、切换协议与分阶段初始化](../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md)

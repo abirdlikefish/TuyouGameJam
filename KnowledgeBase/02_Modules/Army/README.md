@@ -13,7 +13,7 @@
 - 保存军队逻辑总人数、总人数上限（如启用）和上场槽位状态。
 - 根据固定阵型槽位生成/隐藏士兵表现，并维护每个槽位的代表人数、聚合生命值、碰撞体和子弹生成点。
 - 向 Monster 提供有士兵槽位的只读位置和索引查询，不暴露槽位内部对象。
-- 控制 ArmyRoot 的整体横向移动；移动范围受 LevelConfig 固定道路左右边界和当前激活槽位 AABB 共同限制。
+- 控制 ArmyRoot 的整体横向移动；移动范围受 LevelConfig 固定道路左右边界和当前激活槽位 AABB 共同限制，位移使用 `Gameplay` 时间域。
 - 按当前激活槽位自动发射子弹，将武器和元素组合成运行时子弹配置。
 - 通过 `IArmyController` 的同步命令接口接收加法门、元素门和道具造成的人数、槽位伤害或玩法状态变化，不订阅接触/击破事实事件重复结算。
 - 当前 MVP 通过 `WeaponId` 应用武器箱效果，通过 `ElementId` 应用元素门效果；两种切换互不覆盖另一维度。未来道具效果的 Army 命令边界需在 DES-031 定案，不能由 Prop 直接写入 Army 私有状态。
@@ -64,7 +64,7 @@ void SetHorizontalInput(float value);
 - 当前 MVP 的武器箱成功击破时只切换一次 `WeaponId`，并保留当前 `ElementId`；道具接触失败后不得触发任何击破效果。
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
-- `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × 有效玩法 delta`。键盘/手柄输入位于 `[-1,1]`，触屏先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。
+- `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × timeService.GetDeltaTime(TimeDomain.Gameplay)`，同一次更新不得再叠加其他时间域 delta。键盘/手柄输入位于 `[-1,1]`，触屏先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。
 
 ## 相关设计
 

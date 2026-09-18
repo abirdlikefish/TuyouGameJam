@@ -70,36 +70,41 @@ public interface IGameStateService
 }
 ```
 
-`GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况；`TrySelectLevel` 只允许在 `LevelSelect` 选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.LoadGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
+`GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
-`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。结果接受后由 `GameStateService` 调用 `SceneService.UnloadGameplay`，收到匹配的 `GameplaySceneUnloaded` 后才回到 `LevelSelect`。
+`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
 ```csharp
 public interface ISceneService
 {
-    void LoadGameplay(
+    void SwitchToMainMenu();
+    void SwitchToLevelSelect();
+    void SwitchToGameplay(
         int levelId,
         LevelConfig levelConfig,
         int levelRunId);
-    void UnloadGameplay(int levelRunId);
 }
 ```
 
-`SceneService` 不再次查询或解析关卡配置。调用方必须先通过 `IConfigService.TryGetLevelConfig` 取得已校验的 `LevelConfig`，再把同一 `levelId`、配置引用和新的 `LevelRunId` 传入。`LoadGameplay` 是异步边界：场景加载完成、`LevelManager` 完成 `Preparing` 初始化后发布 `GameplaySceneReady`；失败时发布 `GameplaySceneLoadFailed`。`SceneService` 不推进 `AppFlowState`，也不得在未就绪时伪装成进入 `Playing`。卸载完成后发布 `GameplaySceneUnloaded`。
+`SceneService` 不再次查询或解析关卡配置。调用方必须先通过 `IConfigService.TryGetLevelConfig` 取得已校验的 `LevelConfig`，再把同一 `levelId`、配置引用和新的 `LevelRunId` 传入。三个命令都表示切换目标：如果已有应用场景，SceneService 先清理并异步卸载旧场景，再同步 Additive 加载目标场景、解析固定根 SceneEntry 并显式初始化。SceneService 不推进 `AppFlowState`，也不得在 Entry 未就绪时伪装 Ready。
 
 ```csharp
-public readonly struct GameplaySceneReady
+public readonly struct AppSceneReady
 {
+    public AppSceneId SceneId { get; }
     public int LevelId { get; }
     public int LevelRunId { get; }
 }
 
-public readonly struct GameplaySceneUnloaded
+public readonly struct AppSceneUnloaded
 {
+    public AppSceneId SceneId { get; }
     public int LevelId { get; }
     public int LevelRunId { get; }
 }
 ```
+
+MainMenu 和 LevelSelect 的 `LevelId`、`LevelRunId` 固定为 `0`。Gameplay 事实必须携带当前值。`AppSceneReady` 只能在目标场景加载、规范 Entry 初始化、场景监听者订阅完成，且 Gameplay 的 `LevelManager.Preparing` 完成后发布；`AppSceneUnloaded` 只描述旧场景异步卸载完成。
 
 ## 军队接口
 
@@ -262,6 +267,13 @@ public enum AppFlowState
     Gameplay
 }
 
+public enum AppSceneId
+{
+    MainMenu,
+    LevelSelect,
+    Gameplay
+}
+
 public enum LevelResult
 {
     Victory,
@@ -285,6 +297,7 @@ public readonly struct RoadLayoutSnapshot
     public float EnemyApproachY { get; }
     public float DespawnY { get; }
 }
+
 ```
 
 道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`；世界原点由道路 Prefab/场景决定，不属于公共契约。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。计算不考虑对象尺寸；敌人到达 `EnemyApproachY` 后由 Monster 选择最近的有效士兵槽位。
@@ -303,16 +316,21 @@ public interface ITimeService
 
 MVP 中所有时间域倍率固定为 `1`。当前公共契约不包含倍率查询/修改、暂停令牌、减速、加速或局部时停；未来启用前另行定案。
 
+`TimeDomain` 是一次移动、计时或调度所选择的时间策略，不是对象可以同时加入的标签集合。每次操作只选择一个最具体的域，不把 `Gameplay` delta 与 `Bullet`、`Gate`、`Monster` 或 `VFX` delta 重复累计。MVP 归属固定为：
+
+- MainMenu、LevelSelect 和不依赖 Gameplay 推进的流程等待使用 `RealTime`。
+- Army 移动、LevelManager 本局计时和未单独分类的玩法逻辑使用 `Gameplay`；SpawnManager 只消费 LevelManager 基于该域累计的 `elapsedTime`，不直接访问 `ITimeService`。
+- 子弹使用 `Bullet`；怪物使用 `Monster`。
+- Gate、Prop 和其他道路对象暂时统一使用 `Gate`。
+- `VFX` 只表示跟随 Gameplay 世界推进的视觉特效；UI 动画和应用流程表现不使用该域。
+
+当前枚举不提供运行时父子关系或重叠归属。未来启用时间控制时，按 ADR-030 的单父级方向重新确认接口；不得由消费者自行组合多个域。
+
 ```csharp
 public readonly struct TimerHandle
 {
     public bool IsValid { get; }
     public void Cancel();
-}
-
-public readonly struct SubscriptionToken
-{
-    public bool IsValid { get; }
 }
 ```
 
@@ -389,6 +407,11 @@ Manager 在 `StartRun` 时切换当前会话并清空上局状态，只接受当
 ## EventBus 与 PoolService 接口
 
 ```csharp
+public readonly struct SubscriptionToken
+{
+    public bool IsValid { get; }
+}
+
 public interface IEventBus
 {
     SubscriptionToken Subscribe<T>(Action<T> handler);
@@ -397,19 +420,33 @@ public interface IEventBus
 }
 ```
 
-`Publish` 同步执行并按注册顺序调用；发布开始时固定订阅快照，发布期间的订阅变更只影响下一次发布。重复订阅各自拥有独立 Token，单个处理器异常隔离后继续调用其他处理器，`Unsubscribe` 幂等。完整语义见 ADR-021。
+`SubscriptionToken` 是不透明值，内部关联 EventBus 身份和单次订阅 ID；业务代码只检查 `IsValid` 并交回原 EventBus 取消，不读取或构造内部 ID。默认 Token、未知 Token、已取消 Token 和其他 EventBus 的 Token 取消时均无副作用。
+
+`Publish` 只在 Unity 主线程同步执行，只匹配准确的消息类型，并按注册顺序调用；发布开始时固定订阅快照，发布期间的订阅变更只影响下一次发布。允许同步嵌套发布，每层发布拥有独立快照。重复订阅各自拥有独立 Token，单个处理器异常经注入的异常报告委托记录后继续调用其他处理器，`Unsubscribe` 幂等。
+
+`IEventBus` 不对 `T` 增加 `struct` 或 `class` 约束。小型、字段固定或高频事件默认使用 `readonly struct`；包含大型快照、多个集合或明显复制成本的事件使用不可变 `sealed class`。两者都不得在发布后被修改，可变集合必须在构造时复制为快照。完整实现、生命周期和文件布局见 `../01_Architecture/EventSystem.md` 与 ADR-029。
 
 ```csharp
 public interface IPoolService
 {
-    GameObject Get(string key, Vector3 position, Quaternion rotation);
-    void Release(GameObject instance);
+    IComponentPool<T> GetOrCreatePool<T>(T prefab)
+        where T : MonoBehaviour;
+}
+
+public interface IComponentPool<T> where T : MonoBehaviour
+{
+    T RentInactive();
+    bool Return(T instance);
 }
 ```
 
-对象获取和归还属于 PoolService，不属于 SpawnManager。
+对象获取和归还属于对应 Manager 与类型池的协作，不属于 SpawnManager。全局 PoolService 持有全部类型池；Manager 通过 Inspector 持有规范 Prefab，并以准确的具体根组件类型取得或创建类型池。一个具体类型只允许绑定一个规范 Prefab；同类型同 Prefab 返回已有池。Prefab 为空时抛出 `ArgumentNullException`，传入场景实例或组件不在 Prefab 根节点时抛出 `ArgumentException`，同类型绑定不同 Prefab 时抛出 `InvalidOperationException`。
 
-资源注册表键使用 Unity 侧大小写敏感的 ASCII `类别/身份` 格式，例如 `Enemy/Normal`、`Gate/Additive`、`Prop/Weapon/{WeaponId}`、`Bullet/{BulletId}`；不使用绝对路径或 Luban 资源键。
+`RentInactive` 对首次创建和复用实例都返回未激活对象。Manager 负责活动父节点、位置、旋转、配置、`LevelRunId`、`RuntimeInstanceId`、回调、活动登记和最终激活。归还前 Manager 注销并清理业务状态、调用对象的 `PrepareForPool()` 并主动失活；`Return` 再次防御性失活并移入类型空闲 Root。第一次合法归还返回 `true`；空、未知、跨池或重复归还返回 `false` 且不改变池状态。
+
+池化对象不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身；它只通过 Manager 注入的窄回调请求结束当前实例。完整生命周期见 `../01_Architecture/PoolSystem.md` 与 ADR-031。
+
+Unity 资源注册表键仍可用于非池身份的配置与表现资源绑定，但不用于 PoolService 选择 Prefab。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供。
 
 ## 失败事件数据
 
@@ -430,19 +467,38 @@ public readonly struct LevelConfigLoadFailed
 public enum SceneLoadErrorCode
 {
     InvalidRequest,
+    SceneNotConfigured,
     SceneLoadFailed,
-    GameplayBootstrapMissing
+    SceneEntryMissing,
+    SceneEntryAmbiguous,
+    SceneEntryTypeMismatch,
+    SceneEntryInitializationFailed
 }
 
-public readonly struct GameplaySceneLoadFailed
+public enum SceneUnloadErrorCode
 {
+    InvalidRequest,
+    SceneUnloadFailed
+}
+
+public readonly struct AppSceneLoadFailed
+{
+    public AppSceneId SceneId { get; }
     public int LevelId { get; }
     public int LevelRunId { get; }
     public SceneLoadErrorCode ErrorCode { get; }
 }
+
+public readonly struct AppSceneUnloadFailed
+{
+    public AppSceneId SceneId { get; }
+    public int LevelId { get; }
+    public int LevelRunId { get; }
+    public SceneUnloadErrorCode ErrorCode { get; }
+}
 ```
 
-`Source` 使用稳定的配置项、表名或资源键，供日志和 UI 定位；不得放入异常堆栈或本地绝对路径。失败事件只报告事实，不负责重试或推进应用状态。
+`Source` 使用稳定的配置项、表名或资源键，供日志和 UI 定位；不得放入异常堆栈或本地绝对路径。场景失败事件只报告事实，不负责推进应用状态。目标加载或 Entry 初始化失败时，SceneService 必须先异步清理失败场景再发布 `AppSceneLoadFailed`；旧场景卸载失败时发布 `AppSceneUnloadFailed`，不得继续加载目标场景。
 
 ## 碰撞契约
 

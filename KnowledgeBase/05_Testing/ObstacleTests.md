@@ -33,3 +33,5 @@
 - [ ] 成功回收、失败后离场和未接触离场都只注销一次。
 - [ ] 已注销对象不再出现在活动快照中。
 - [ ] 归还对象池前数字、HP、接触状态和运行时 ID 已重置。
+- [ ] `AdditiveGate`、`ElementGate`、`WeaponProp` 类型池均返回未激活对象；ObstacleManager 完成 Transform、配置、ID、回调和登记后才激活。
+- [ ] Gate/Prop 不在 `OnDisable`、`OnDestroy` 中归还自身；ObstacleManager 主动失活后归还，类型池再次防御性失活且重复归还不改变状态。

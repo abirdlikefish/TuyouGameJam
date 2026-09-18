@@ -6,7 +6,7 @@
 - 层级：Gameplay / Infrastructure
 - 状态：`InDesign`
 - 依赖：ConfigService、PoolService、TimeService、Gate、Prop、EventBus
-- 决策：`../../06_Decisions/ADR-008-ObstacleManager.md`
+- 决策：`../../06_Decisions/ADR-008-ObstacleManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 
 ## 目标
 
@@ -14,11 +14,12 @@
 
 ## 职责
 
-- 接收 Spawn 的生成请求并从对象池获取对象。
+- 通过 Inspector 绑定 `AdditiveGate`、`ElementGate` 和 `WeaponProp` 规范 Prefab，从 PoolService 取得对应具体类型池；接收 Spawn 请求后从正确类型池取得未激活对象。
 - 为每个实例分配唯一的 `RuntimeInstanceId`。
+- 设置 `ObstacleRoot`、世界位置和旋转，注入配置、会话 ID、实例 ID 和回调，登记活动集合后再激活对象。
 - 登记、查询和注销活动 Gate/Prop。
 - 提供按对象类型、运行时实例 ID 和道路位置的只读快照查询。
-- 接收对象成功回收或下方离场通知，并幂等地注销和归还对象池。
+- 接收对象成功回收或下方离场请求，幂等注销、清理并主动失活后归还对应类型池；类型池再执行防御性失活。
 - 发布对象生成、回收和离场事实事件。
 
 ## 非职责
@@ -56,3 +57,5 @@ bool TryGetObject(int runtimeInstanceId, out RoadObjectSnapshot snapshot);
 - 成功回收、失败后离场和未接触离场都只注销一次。
 - 查询结果不包含已注销或已归还对象。
 - Manager 不改变 Gate/Prop 的数值规则和 Army 状态。
+- 三种具体池化根类型各自只绑定一个规范 Prefab；同类型不同 Prefab 注册失败。
+- Gate/Prop 不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身。

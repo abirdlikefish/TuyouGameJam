@@ -42,7 +42,7 @@ MVP 初始人数固定为 `1`，不配置 `InitialCount`。`ArmyCountLimit = 0` 
 
 初始字段：`Id`、`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange`、`AttackCooldown`。
 
-首版 `EnemyType` 为 `Normal`、`Elite`、`Boss`。攻击类型由敌人类型固定派生：普通敌人为 `SingleTarget`，精英和 Boss 为 `Area`，不重复配置 `AttackType`。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。敌人 Prefab 由 Unity 侧按 `EnemyType` 绑定。
+首版 `EnemyType` 为 `Normal`、`Elite`、`Boss`。攻击类型由敌人类型固定派生：普通敌人为 `SingleTarget`，精英和 Boss 为 `Area`，不重复配置 `AttackType`。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定 `NormalMonster`、`EliteMonster`、`BossMonster` 三个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。
 
 ### `TbGate`
 
@@ -63,7 +63,7 @@ MVP 初始人数固定为 `1`，不配置 `InitialCount`。`ArmyCountLimit = 0` 
 
 初始字段：`Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed`。
 
-当前 MVP 的道具均为武器箱，其装备效果、Prefab 与表现由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱由 Unity 侧按 `WeaponId` 绑定，不同武器必须使用不同的 `WeaponId`。该字段集只描述当前 MVP；Prop 的领域职责允许未来配置其他击破效果，但在 DES-031 定案前不预留通用效果字段，见 ADR-022。
+当前 MVP 的道具均为武器箱，其装备效果和表现由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱共用一个 `WeaponProp` 根类型、规范 Prefab 和类型池，ObstacleManager 通过 Inspector 绑定 Prefab，初始化时按 `WeaponId` 绑定表现；不同武器必须使用不同的 `WeaponId`。该字段集只描述当前 MVP；Prop 的领域职责允许未来配置其他击破效果，但在 DES-031 定案前不预留通用效果字段，见 ADR-022。
 
 每条 `TbProp` 必须具有有效 `WeaponId`、`MaxHp > 0`、`ContactDamage > 0` 和 `MoveSpeed >= 0`。
 
@@ -71,7 +71,7 @@ MVP 初始人数固定为 `1`，不配置 `InitialCount`。`ArmyCountLimit = 0` 
 
 初始字段：`Id`、`Damage`、`MoveSpeed`。
 
-MVP 子弹固定为命中首个有效目标后回收，不配置 `CollisionBehavior`。子弹 Prefab 由 Unity Inspector 或 Unity 侧按 `BulletId` 绑定。
+MVP 子弹固定为命中首个有效目标后回收，不配置 `CollisionBehavior`。全部 MVP 子弹共用一个 `Bullet` 根类型、规范 Prefab 和类型池；数值与表现按 `BulletId` 初始化，Prefab 与池身份不写入 Luban。
 
 数值单位、上下限和默认值必须在实际表建立时补齐，不在模块代码中另写一份。
 
@@ -123,7 +123,7 @@ TbWeapon.bulletId          -> TbBullet.Id
 TbProp.weaponId            -> TbWeapon.Id
 ```
 
-参与玩法碰撞的 Prefab 必须按 `CollisionRules.md` 配置对应的 `Collider2D`、职责 Layer 和稳定职责名称。Prefab、碰撞形状、阵型槽位、发射点与对象生命周期属于 Unity 资源或运行时状态，不写入 Luban 数值表；MVP 不通过 Luban `PrefabKey` 间接引用这些对象。
+参与玩法碰撞的 Prefab 必须按 `CollisionRules.md` 配置对应的 `Collider2D`、职责 Layer 和稳定职责名称。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供，一个具体池化根类型只绑定一个 Prefab；Prefab、碰撞形状、阵型槽位、发射点与对象生命周期属于 Unity 资源或运行时状态，不写入 Luban 数值表，MVP 不通过 Luban `PrefabKey` 间接引用这些对象。
 
 所有跨表引用和条件字段必须在初始化或选定关卡加载期验证。找不到目录条目、重复 `levelId`、空 `enemySpawns`、无效目标 ID 或无效条件字段时，配置加载失败并报告具体来源。必需的 Unity 资源绑定在进入 Gameplay 前单独验证；`TbArmy.MaxDeployedSoldiers` 不得超过 Inspector 阵型提供的槽位数。
 

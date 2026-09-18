@@ -2,11 +2,13 @@
 
 ## 状态
 
-Accepted
+Accepted（Gameplay 专用场景接口与事件由 ADR-032 取代）
 
 ## 日期
 
 2026-09-14
+
+> 后续决策：ADR-032 将场景握手扩展到 MainMenu、LevelSelect、Gameplay，并以 `SwitchTo...` 命令及 `AppScene...` 事件取代本文的 Gameplay 专用命令和载荷；GameStateService 的唯一状态所有权、`GameplayLoading`、`LevelRunId` 校验和结果幂等规则继续有效。
 
 ## 背景
 

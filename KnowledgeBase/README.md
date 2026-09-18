@@ -23,7 +23,7 @@
 
 | 模块 | 状态 | 入口文档 |
 |---|---|---|
-| 全局服务 | InDesign（Pool 语义待决） | `01_Architecture/GlobalServices.md` |
+| 全局服务 | ContractReady | `01_Architecture/GlobalServices.md` |
 | 启动与装配 | ContractReady | `01_Architecture/BootstrapAndComposition.md` |
 | 应用流程 | ContractReady | `01_Architecture/ApplicationFlow.md` |
 | 时间系统 | ContractReady | `01_Architecture/TimeSystem.md` |

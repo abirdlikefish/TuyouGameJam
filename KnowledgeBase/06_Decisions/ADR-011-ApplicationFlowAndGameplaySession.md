@@ -2,11 +2,13 @@
 
 ## 状态
 
-Accepted
+Accepted（MainMenu/LevelSelect 无实际场景的部分由 ADR-032 取代）
 
 ## 日期
 
 2026-09-14
+
+> 后续决策：ADR-032 已将 MainMenu、LevelSelect 改为实际 Additive 场景并增加固定 SceneEntry；本 ADR 关于应用状态所有权、1 秒自动推进、单局状态和终局回选关的决定继续有效。
 
 ## 背景
 

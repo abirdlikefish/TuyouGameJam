@@ -2,9 +2,11 @@
 
 ## 状态
 
-Accepted
+Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
 > ADR-027 已进一步移除当前 `ITimeService` 中的倍率与暂停接口；本 ADR 的固定倍率结论继续有效。
+
+> ADR-029 已进一步补充 EventBus 的精确类型匹配、嵌套发布、Token 身份、异常报告、载荷类型和订阅生命周期；本 ADR 的同步快照分发基础语义继续有效。
 
 ## 日期
 
@@ -92,6 +94,7 @@ Gate/Prop 的专用接触枚举仍负责本对象的细节状态；快照只暴�
 - 资源键只属于 Unity 资源注册表，不写入 Luban，也不使用绝对路径或 `AssetDatabase` 路径。
 - 键使用大小写敏感的 ASCII `类别/身份` 格式：`Enemy/Normal`、`Enemy/Elite`、`Enemy/Boss`、`Gate/Additive`、`Gate/Element`、`Prop/Weapon/{WeaponId}`、`Bullet/{BulletId}`。
 - 同一键只能注册一个兼容类型的资源；缺失或类型不匹配在进入 Gameplay 前报告 `ResourceMissing`。
+- ADR-031 已明确资源键不作为对象池身份或 PoolService 的 Prefab 选择入口。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供，PoolService 使用准确的具体根组件类型区分类型池；本节继续约束其他运行时资源绑定。
 
 ## 未在本 ADR 定案
 
@@ -116,3 +119,5 @@ Layer Collision Matrix 的最终允许/禁止关系仍需根据 Unity 工程中�
 - `../03_SharedContracts/DataDictionary.md`
 - `../04_Assets/ArtList.md`
 - `../05_Testing/IntegrationTests.md`
+- `ADR-029-EventBusImplementationAndPayloads.md`
+- `ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`

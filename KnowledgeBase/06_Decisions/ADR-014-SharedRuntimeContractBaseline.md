@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted
+Accepted（Pool 公共契约由 ADR-031 修订为具体组件类型池）
 
 > ADR-027 已从当前 MVP 公共契约移除 `PauseToken` 和倍率修改能力；本 ADR 对其他接口、请求、事件和会话 ID 的决策继续有效。
 
@@ -22,7 +22,7 @@ Accepted
 - Gate 和 Prop 通过 `IArmyController` 的同步方法提交人数、槽位伤害、元素或武器变更；状态变更完成后再发布接触/击破事实事件。`ArmyController` 不通过订阅这些事实事件执行同一状态变更。
 - 所有 Gameplay 生成请求和结果事件必须携带 `LevelRunId`，接收者拒绝过期会话的数据。
 - `AreAllEnemySpawnsDispatched` 属于 SpawnManager，不属于 LevelManager 的生成状态所有权。
-- `GameObject` 的获取和归还属于 PoolService；SpawnManager 只提交业务生成请求。
+- 生成实例的取得和归还属于 PoolService 类型池与对应 Manager 的协作；SpawnManager 只提交业务生成请求。ADR-031 已将原始 `GameObject + string key` 入口修订为具体 `MonoBehaviour` 类型池。
 - `TimeService` 必须同时定义时间域、时间倍率、暂停令牌、定时器句柄和取消语义。
 - 玩法碰撞对象使用 Collider2D 与显式 Cast/Overlap 查询的统一规则由 ADR-016 和 `CollisionRules.md` 维护。
 - 事件 payload、错误码、生成请求和目录描述必须使用明确的数据结构，不使用无意义字符串。
@@ -46,6 +46,7 @@ IObstacleManager
 IEventBus
 ITimeService
 IPoolService
+IComponentPool<T>
 ```
 
 ## 初始化失败
@@ -55,7 +56,7 @@ IPoolService
 ## 影响
 
 - 共享契约增加 ConfigLoadState、ConfigErrorCode、LevelDescriptor、EnemySpawnRequest、ObstacleSpawnRequest、TimeDomain、TimerHandle、SubscriptionToken、失败事件 payload 和场景加载错误码。原决策中的 `PauseToken` 已由 ADR-027 从当前 MVP 契约移除。
-- 事件目录需要记录初始化失败和 Gameplay 场景加载失败事件。
+- 事件目录需要记录初始化失败和应用场景加载/卸载失败事件；具体应用场景载荷已由 ADR-032 统一为 `AppScene...` 事件。
 - Gate/Prop 事实事件的监听者只保留表现、音频、调试和统计消费者；玩法状态变更由类型化接口完成。
 - 模块状态只有在接口名称、参数和所有权与本 ADR 一致后，才可提升到 `ContractReady`。
 
