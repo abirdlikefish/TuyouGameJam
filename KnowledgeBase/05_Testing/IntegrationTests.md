@@ -23,35 +23,43 @@
 - [ ] 冷启动和 Gameplay 重开期间始终只有一个 `GlobalRoot` 和一套 MVP 全局服务实例。
 - [ ] 服务唯一性由 GlobalBootstrap / Composition Root 持有，不要求各服务暴露静态 `Instance`；Gameplay 和 Presentation 代码不通过运行时 `Find` 或通用 Service Locator 取得必需服务。
 - [ ] GameStateService 可以注入假的 Config、Scene、Time 和 EventBus 实现，独立验证状态转换、失败和幂等行为。
-- [ ] Gameplay 场景装配入口只向 LevelManager、EnemyManager、ObstacleManager 等消费者注入其实际需要的最小接口。
+- [ ] Gameplay 场景装配入口只向 LevelManager、ArmyController、BulletManager、EnemyManager、ObstacleManager 等消费者注入其实际需要的最小接口。
 - [ ] Bullet、Monster、Gate 和 Prop 等池对象不访问全局服务集合；对应 Manager 在复用时传入本局配置快照、`LevelRunId`、`RuntimeInstanceId` 和必要回调。
-- [ ] Input Adapter 只存在于 Gameplay 场景，在 Playing 阶段启用，不创建跨场景 `InputService`，也不依赖 TimeService。
-- [ ] 除 Bootstrap/Config 的过渡加载边界外，模块不直接访问 `LubanTables.Instance`，所有运行时配置查询均经 `IConfigService`。
+- [ ] Input Adapter 只存在于 Gameplay 场景，在 Playing 阶段启用，不创建跨场景 `InputService`，也不注入或查询 TimeService；LevelManager 读取本帧 `RealTime` delta 并作为 `unscaledDeltaTime` 传给输入 Tick，Input 不直接读取 Unity `Time`。
+- [ ] 除 Bootstrap/Config 的过渡加载边界外，模块不直接访问 `LubanTables.Instance`；Army 只经注入的 `IArmyConfigProvider`、`IWeaponConfigProvider` 取得不可变快照，其他运行时配置查询经 `IConfigService` 或后续定案的最小类型化 Provider。
 
 ## 输入
 
-- [ ] 键盘、手柄和触屏都由 Gameplay Input Adapter 汇总，并通过 `IArmyController.SetHorizontalInput` 同步提交；项目 EventBus 不发布连续横向输入事件，Army 不反向查询 Input Adapter。
-- [ ] `TouchDragArea` 的 RectTransform 定义 Pointer 开始范围和归一化宽度；对应 UI Prefab 的 `horizontalMultiplier` 可在 Inspector 配置，默认值为 `1` 且不小于 `0`。
+- [ ] 当前只实现相对拖拽；设备触屏和 Editor 左键由 Gameplay Input Adapter 汇总，并通过 `IHorizontalInputReceiver.SetHorizontalInput` 同步提交。项目 EventBus 不发布连续横向输入事件，Army 不反向查询 Input Adapter，工程中不存在键盘、手柄或 `Horizontal` 轴读取路径。
+- [ ] `Assets/Prefabs/UI/PF_UI_TouchDragArea.prefab` 根为全屏拉伸 `TouchDragArea`，包含显式绑定根 RectTransform 的 TouchDragInput，以及 alpha 为 `0`、Raycast Target 开启的 Image；Prefab 不包含 Canvas、EventSystem、Input Adapter 或 Army 引用。
+- [ ] Gameplay Canvas 持有 GraphicRaycaster；GameplayScene 中恰好一个 EventSystem 使用 StandaloneInputModule；GameplayInputAdapter 在独立 `GameplayRoot/InputAdapter` 上并序列化引用 TouchDragInput 实例。
+- [ ] `TouchDragArea` 的 RectTransform 定义 Pointer 开始范围和归一化宽度；`horizontalMultiplier` 可在 Inspector 配置，默认值为 `1` 且不小于 `0`。
 - [ ] PointerDown 记录活动 `pointerId` 和局部位置但输出 `0`；Drag 使用当前位置与上一个有效采样位置的水平差，并能累积同一次输入更新前的多个 Pointer 采样。
 - [ ] 触屏先计算 `(accumulatedDeltaX / touchAreaWidth) / unscaledDeltaTime`，将该原始滑动速度 Clamp 到 `[-1,1]`，再乘 `horizontalMultiplier`；乘系数后的结果不再次 Clamp。
 - [ ] 当原始触屏输入为 `0.75`、`horizontalMultiplier = 2` 时，传给 Army 的输入为 `1.5`；Army 拒绝 NaN/无穷值，但不把该有限值截断为 `1`。
 - [ ] 手指仍按住但没有新的 Drag 差值时，下一次输入更新为 `0`，不会沿最后方向继续移动。
 - [ ] 相同物理滑动速度在不同稳定帧率、分辨率和 Canvas 缩放下产生近似一致的原始归一化值。
-- [ ] 活动触摸期间不叠加或回退到键盘/手柄；没有 Drag 时为 `0`，PointerUp 后才恢复桌面输入。
-- [ ] 一次只跟踪一个 Pointer；第二个 Pointer 不覆盖活动 Pointer。PointerUp、组件/Canvas 禁用、离开 Playing、场景卸载、应用失焦和 Pointer 失效都会清除累计值并向 Army 发送一次 `0`。
+- [ ] 没有 Drag 时输入为 `0`；PointerUp、EndDrag 或 Cancel 后保持 `0`，不存在键盘/手柄回退路径；右键和中键不开始拖拽。
+- [ ] 一次只跟踪一个 Pointer；第二个 Pointer 不覆盖活动 Pointer。PointerUp、EndDrag、Cancel、组件/Canvas 禁用、离开 Playing、场景卸载和应用失焦都会清除累计值并向当前接收者发送一次 `0`；实现不额外轮询 `Input.touchCount`。
 - [ ] Pointer 到达 TouchDragArea 边界后继续向外移动不再累加输入，返回区域内时产生正确的反向输入。
+- [ ] 每个 Playing 逻辑帧 `IGameplayInputController.TickInput` 在 `ArmyController.TickMovementAndFire` 前执行；同帧 Army 消费刚提交的倍率，不依赖 MonoBehaviour 的隐式同类 `Update` 顺序。
+- [ ] Input Adapter 初始化时先提交一次 `0`；同一接收者重复初始化幂等，空接收者、初始化前启用/Tick 或尝试替换为不同接收者均被拒绝并阻止错误装配进入 Ready。
+- [ ] `horizontalMultiplier` 非有限或小于 `0`、区域宽度无效、Raycast Target 关闭或必需场景引用缺失时 Gameplay 不进入 Ready；单帧 `unscaledDeltaTime` 无效时只输出 `0` 且不破坏 Pointer 状态；坐标转换失败或局部 x 非有限时不污染累计差值。
 
 ## 核心闭环
 
 - [ ] Gameplay 会话先进入 Preparing，初始化完成后进入 Playing。
 - [ ] 子弹可以命中怪物并造成伤害。
-- [ ] 子弹可以命中加法门并按 `HitIncrement` 增加数字。
-- [ ] 加法门接触 Army 时按加法规则更新总人数；负数门标记失败但仍应用人数变化。
-- [ ] 元素门在接触前 HP 清空后接触 Army，只更新一次元素。
+- [ ] 子弹可以命中没有 HP 的加法门并按实际伤害增加数字；命中只结算一次且子弹正常消费。
+- [ ] 非负加法门按增加规则更新总人数；负数门标记失败并把绝对值作为请求减员人数交给 Army，Gate 不选择槽位或直接设置 ArmyCount。
+- [ ] 负数门伤害按当前 HP、SlotIndex 稳定分配；请求减员、实际伤害和实际人数损失可分别验证。
+- [ ] 元素门最后一发清空 HP 时只把超过剩余 HP 的伤害计为额外伤害；HP 为 0 且仍待接触时继续接受并消费子弹，后续全部伤害累计为可兑换额外伤害。
+- [ ] 元素门成功接触时只给对应 ElementType 增加一次 `PostDepletionDamage × elementDurationSecondsPerDamage` 的持续时间，同类型累加且不覆盖其他元素；额外伤害为 0 时成功但不调用 Army 持续时间命令。
 - [ ] 元素门未清空时，对每个接触槽位造成相同伤害并继续向下离场。
+- [ ] 元素门接触失败后永久锁定奖励；继续受击可以消费子弹和播放表现，但不再累计可兑换伤害，也不能在随后清空 HP 后获得元素。
 - [ ] 门只对 Army 进行一次接触判定；未接触门可以直接从道路下方离场。
 - [ ] Gate/Prop 先通过 `IArmyController` 完成状态变更再发布事实事件；增删 UI 或 VFX 监听者不会改变结算结果。
-- [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按 `WeaponId` 更新武器并保留当前元素。
+- [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。
 - [ ] 道具未击破接触时，对每个接触槽位造成相同伤害并继续向下离场。
 - [ ] 怪物从固定出生横线上的配置位置向下移动，到达接近线后向最近的有效士兵槽位移动；初始横向位置不限制后续移动。
 - [ ] 初始总人数为 1，并按配置创建对应的上场槽位。
@@ -60,18 +68,26 @@
 - [ ] 新增人数优先补充受击后人数较少或为空的槽位。
 - [ ] 槽位聚合 HP 按 `HpPerSoldier` 计算，伤害按比例转换为槽位人数损失。
 - [ ] 每个激活槽位从独立发射点按同一武器间隔发射一枚子弹；改变代表人数不改变单次发射数量、伤害或速度。
-- [ ] Weapon 与 Element 组合后的子弹属性稳定且可复现。
-- [ ] 子弹、敌人、Enemy AttackCollider、Army 槽位、Gate 和 Prop 的 Prefab 均配置职责明确的 Collider2D 和 Layer。
+- [ ] 每局初始武器为 WeaponId=0，火/冰/雷剩余时间均为 0；三元素可以同时有效并从 Gameplay delta 扣减到不小于 0。
+- [ ] 子弹保存发射瞬间的 WeaponId 与 ElementMask；Army 后续换武器、获得元素或元素过期不修改飞行中的子弹。
+- [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
+- [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
+- [ ] 三类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。
+- [ ] 子弹、敌人 BodyCollider、Elite/Boss AttackCollider、Army 槽位、Gate 和 Prop 的 Prefab 均配置职责明确的 Collider2D 和 Layer。
 - [ ] 子弹沿上一位置到期望位置执行 Collider Cast，高速或掉帧时不穿透敌人、Gate 或 Prop，且一次命中只结算一次。
 - [ ] 精英/Boss 的 AttackCollider 只在攻击判定帧执行一次显式重叠查询，每个 Army 槽位最多受击一次。
 - [ ] Gate/Prop 与 Army 的接触通过显式查询完成，接触状态和运行时 ID 保证一次性结算。
 - [ ] 存活敌人的 BodyCollider 不重叠；前方敌人较慢或静止时，后方敌人在安全间距等待且不会推动前方敌人。
+- [ ] Monster 移动不查询 `ArmySlot`，Army 横向移动不查询 `EnemyBody`；士兵与敌人部分或完全重合时不发生推挤、接触伤害或位移修正。
+- [ ] 士兵与敌人重合且目标仍有效时，普通敌人可以对锁定槽位结算伤害，精英/Boss 可以通过 `AttackCollider` 正常命中范围内槽位。
 - [ ] 敌人进入 Dead 后退出受击和阻挡查询；死亡动画不会阻塞后方敌人。
 - [ ] 首版不会因敌人受阻而执行侧向绕行、通道预留或局部导航。
 - [ ] ArmyRoot 移动受当前激活槽位 AABB 限制，阵型变化后边界更新。
 - [ ] ArmyRoot 的可移动范围同时受固定道路左右边界限制，任何激活槽位都不能越过道路边界。
+- [ ] LevelConfig 只序列化一个有限且包含世界原点的 `roadBounds`；宽高与四边均从它派生，道路没有玩法 Collider。
+- [ ] ArmyRoot 每局准确重置到世界原点并保持 y=0；无道路 Collider 时仍能用槽位合并 AABB 完成左右限位。
 - [ ] 多个槽位同时接触同一门时只应用一次门接触结果。
-- [ ] `ObstacleManager` 能登记、查询、注销和回收 Gate/Prop，且同一配置的多个实例拥有不同运行时 ID。
+- [ ] `ObstacleManager` 能登记、查询、注销和回收 Gate/Prop，且相同生成参数的多个 Gate 或相同配置的多个 Prop 拥有不同运行时 ID。
 - [ ] 军队人数为 0 时进入 GameOver。
 - [ ] 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后进入 Victory。
 - [ ] Victory 携带当前关卡 ID 和配置中的 `unlockedLevelIds`。
@@ -83,7 +99,7 @@
 ## 时间系统
 
 - [ ] `Gameplay`、`Bullet`、`Gate`、`Monster` 和 `VFX` 都返回倍率为 `1` 的正常未缩放步进；同一帧输入下与 `RealTime` 数值一致。
-- [ ] Army 移动和 LevelManager 本局计时使用 `Gameplay`，SpawnManager 只消费由 LevelManager 累计的 `elapsedTime`；Bullet 使用 `Bullet`；Monster 使用 `Monster`；Gate/Prop 使用 `Gate`；Gameplay 世界特效使用 `VFX`。
+- [ ] LevelManager 集中读取 `RealTime`、`Gameplay`、`Bullet`、`Monster`、`Gate` delta：Input 使用 RealTime，Army 和本局计时使用 Gameplay，BulletManager 使用 Bullet，EnemyManager 使用 Monster，ObstacleManager 使用 Gate；SpawnManager 只消费累计的 `elapsedTime`，Gameplay 世界特效使用 VFX。
 - [ ] 单次移动、计时或调度只读取一个最具体的时间域，不把 `Gameplay` delta 与子系统域 delta 重复累计。
 - [ ] MainMenu 和 LevelSelect 的等待使用 `RealTime` 定时器，不依赖 Gameplay 推进。
 - [ ] `TimerHandle.Cancel()` 幂等；状态离开、加载失败、终局或会话失效后，旧回调不会执行或推进流程。
@@ -100,18 +116,21 @@
 - [ ] `LevelCatalog` 中每个引用的 `LevelConfig.levelId` 唯一，第一关默认解锁且存在有效引用。
 - [ ] LevelSelect 选定 `LevelId` 后，ConfigService 返回已校验的 `LevelConfig`；SceneService 不重复查询配置，并将同一关卡 ID、配置引用和新的 `LevelRunId` 传入 Gameplay。
 - [ ] 配置目录、关卡配置或共享表加载失败时发布错误并阻止进入 Gameplay。
-- [ ] `LevelConfig` 引用的敌人、Gate 和 Prop 配置 ID 全部存在；EnemyManager 的三个敌人规范 Prefab、ObstacleManager 的 Gate/Prop 规范 Prefab、子弹规范 Prefab、阵型槽位和发射点绑定完整。
+- [ ] `LevelConfig` 引用的敌人和 Prop 配置 ID 全部存在；Gate 生成项不含 ConfigId，并按类型正确填写 InitialValue，或 ElementType 与 MaxHp；EnemyManager 的三个敌人规范 Prefab、ObstacleManager 的 Gate/Prop 规范 Prefab、BulletManager 的子弹规范 Prefab、阵型槽位和发射点绑定完整。
 - [ ] `enemySpawns` 为空时返回 `InvalidLevelConfig` 并阻止进入 Gameplay；`gateSpawns` 或 `propSpawns` 为空仍可正常加载。
-- [ ] `TbGate` 的 Additive/Element 条件字段和 `TbProp` 的生命值、伤害及武器引用校验符合配置契约。
-- [ ] `TbArmy` 引用的 `TbWeapon`、`TbElement` 以及 `TbWeapon` 引用的 `TbBullet` 均存在，跨表引用校验失败时启动失败。
+- [ ] 当前不存在 `TbGate` 或 Gate 配置 Provider；包含元素门时 `elementDurationSecondsPerDamage` 有限且大于 0，不包含元素门时为 0；`TbProp` 的生命值、伤害及武器引用符合配置契约。
+- [ ] `TbArmy.Id=1` 和固定 `TbWeapon.Id=0/1/2` 均存在，`TbWeapon.BulletId` 引用有效；当前不建立 TbElement，缺失必需行或引用时启动失败。
 - [ ] `TbArmy.ArmyCountLimit = 0` 时不限制人数，大于 0 时正确应用上限；初始人数始终为固定值 1。
 - [ ] `TbArmy.MoveSpeed` 是 Army 横向基础速度；实际位移按 `horizontalInput × MoveSpeed × 有效玩法 delta` 计算，触屏系数通过输入倍率影响最终速度但不改写配置。
+- [ ] GameplaySceneEntry 的序列化 ArmyPrefabBinding 包含唯一 ArmyId=1；Prefab 根为 ArmyController，槽位数组非空、无空项或重复引用，SlotCapacity 准确等于数组长度。
 - [ ] MVP Luban 表不要求 `PrefabKey`、`FormationKey`、`SoldierPrefabKey`、`PropType`、`AttackType`、代表人数缩放字段或 `CollisionBehavior`。
 - [ ] 缺少必需的 Unity Prefab、Collider2D、阵型槽位或发射点绑定时阻止进入 Gameplay，并报告稳定来源。
 - [ ] `NormalMonster`、`EliteMonster`、`BossMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
+- [ ] AdditiveGate Prefab 只提供所有加法门共用的速度；ElementGate Prefab 提供所有元素门共用的速度与接触伤害。逐门初始数字、元素类型和 MaxHp 不重复配置在 Prefab。
 - [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。
+- [ ] `roadBounds.yMin <= despawnY < 0 < enemyApproachY < spawnY <= roadBounds.yMax`；无效 Rect、未包含原点或 Y 线顺序错误时返回 `InvalidLevelConfig`。
 - [ ] 相同 `spawnPosition` 的不同尺寸敌人、Gate 和 Prop 使用相同中心点坐标，不按碰撞体或渲染尺寸内缩。
 - [ ] 任一生成项的 `spawnPosition` 越界、为 NaN 或无穷值时返回 `InvalidLevelConfig` 并阻止进入 Gameplay。
 - [ ] 配置源不被运行时人数、生命值、门数字、道具 HP、生成游标或关卡计时覆盖。
@@ -120,7 +139,8 @@
 
 - [ ] 三个时间轴游标只存在于 SpawnManager，LevelManager 不直接访问生成列表。
 - [ ] LevelManager 每帧传入当前 `LevelRunId` 和 `elapsedTime`，生成条目只消费一次；过期会话的 Tick 不会推进新会话。
-- [ ] 终局后 SpawnManager 停止消费；新会话只调用一次 `StartRun(LevelConfig, LevelRunId)`，并重置全部游标。
+- [ ] 进入 Playing 时先执行一次 `SpawnManager.Tick(LevelRunId, 0)`；时间为 0 的生成项在首帧移动前只出现一次。
+- [ ] 终局后 SpawnManager 停止消费；新会话只调用一次 `StartRun(LevelConfig, RoadLayoutSnapshot, LevelRunId)`，并重置全部游标。
 - [ ] 过期 `LevelRunId` 的生成请求、管理器操作和结果事件不会影响新会话。
 - [ ] Config、Scene、Spawn、Enemy、Obstacle、EventBus、Time 和 Pool 接口均有明确输入、输出和失败语义；Pool 遵守 ADR-031 的类型身份、重复归还、业务重置和防御性失活契约。
 
@@ -140,7 +160,11 @@
 
 - [ ] MVP 所有时间域和对象局部倍率均为 `1`，未启用运行时倍率调整。
 - [ ] 所有包含 Army 身份的事件使用 `ArmyId = 1`。
-- [ ] 同一帧按移动阻挡、子弹、Gate/Prop、敌人攻击、终局判断的顺序结算。
+- [ ] LevelManager 是同一帧阶段顺序的唯一协调者，按生成、移动阻挡、子弹、Gate/Prop、敌人攻击、回收、终局判断的顺序同步调用；Manager/池对象独立 Update 不推进核心玩法。
+- [ ] LevelManager 在帧开始读取 Gameplay、Bullet、Gate、Monster delta 并分别传入对应阶段；具体池对象不直接访问 TimeService。
+- [ ] Physics2D Auto Sync Transforms 关闭时，每个 Playing 帧在全部移动后、首次显式查询前由 LevelManager 准确调用一次 SyncTransforms，其他 Manager 不重复调用。
+- [ ] Gameplay Layer 的自动物理矩阵默认全部关闭；目标 Unity 版本中，显式 ContactFilter2D/LayerMask 查询仍只能命中 ADR-037 规定的目标，不产生自动碰撞回调或刚体推挤。
+- [ ] `LevelRunStarted` 只让匹配会话进入 Playing，不作为逐帧命令广播；增删事件监听者不改变阶段调用。
 - [ ] Bullet Cast 同距离目标按 `Enemy > Gate > Prop > RuntimeInstanceId` 稳定选择。
 - [ ] EventBus 按注册顺序同步调用；发布期间使用订阅快照，异常隔离，重复订阅独立 Token，取消幂等。
 - [ ] EventBus 只按准确消息类型分发；基类或接口订阅不会收到具体子类型消息。

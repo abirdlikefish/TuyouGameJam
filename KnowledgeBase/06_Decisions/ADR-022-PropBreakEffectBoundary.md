@@ -15,7 +15,7 @@ Accepted
 ## 决策
 
 - Prop 的领域职责是承载“击破效果”，而不是固定承载武器。处于 `Pending` 的道具被击破时，只触发一次自身配置的击破效果。
-- 当前 MVP 已确认的击破效果只有“替换 Army 武器”：弹弓箱、弓箭箱和法杖箱分别引用一个 `WeaponId`，通过现有 `ApplyWeaponPickup` 契约生效，并保留当前 `ElementId`。
+- 当前 MVP 已确认的击破效果只有“替换 Army 武器”：弹弓箱、弓箭箱和法杖箱分别引用固定 `WeaponId = 0/1/2`，通过现有 `ApplyWeaponPickup` 契约生效，并保留火、冰、雷三种元素剩余持续时间。
 - `TbProp.WeaponId`、`IArmyController.ApplyWeaponPickup` 和当前 `PropBroken` 载荷是 MVP 的具体契约，不代表 Prop 永久只能修改武器。
 - 道具一旦先与 Army 接触并进入 `Failed`，后续即使被击破，也不得发放任何击破效果；锁定范围包括当前武器奖励和未来新增的其他效果。
 - 新效果进入实现范围前，必须先确认效果目录、单个道具能否组合多个效果、目标与叠加规则、配置结构、同步命令和事实事件载荷。相关问题记录在 `../00_Project/DesignBacklog.md` 的 `DES-031`。

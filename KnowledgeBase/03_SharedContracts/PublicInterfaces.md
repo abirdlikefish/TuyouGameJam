@@ -10,7 +10,17 @@
 ## 配置与应用流程接口
 
 ```csharp
-public interface IConfigService
+public interface IArmyConfigProvider
+{
+    bool TryGetArmyConfig(int armyId, out ArmyConfigSnapshot config);
+}
+
+public interface IWeaponConfigProvider
+{
+    bool TryGetWeaponConfig(int weaponId, out WeaponConfigSnapshot config);
+}
+
+public interface IConfigService : IArmyConfigProvider, IWeaponConfigProvider
 {
     void Initialize(
         LevelCatalog levelCatalog,
@@ -19,6 +29,21 @@ public interface IConfigService
     ConfigLoadState GetConfigLoadState();
     IReadOnlyList<LevelDescriptor> GetLevelDescriptors();
     bool TryGetLevelConfig(int levelId, out LevelConfig levelConfig);
+}
+
+public readonly struct ArmyConfigSnapshot
+{
+    public int Id { get; }
+    public int ArmyCountLimit { get; }
+    public int HpPerSoldier { get; }
+    public float MoveSpeed { get; }
+}
+
+public readonly struct WeaponConfigSnapshot
+{
+    public int Id { get; }
+    public float FireInterval { get; }
+    public int BulletId { get; }
 }
 
 public interface IResourceRegistry
@@ -55,7 +80,7 @@ public readonly struct LevelDescriptor
 }
 ```
 
-`GlobalBootstrap` 通过 Inspector 提供 `LevelCatalog` 和资源注册表，并创建唯一的 Luban `cfg.Tables` 实例，再调用 `IConfigService.Initialize`。`TryGetLevelConfig` 只返回已通过校验的关卡资产。初始化或选定关卡失败时发布 `InitializationFailed` 或 `LevelConfigLoadFailed`，不得返回缺省配置。
+`GlobalBootstrap` 通过 Inspector 提供 `LevelCatalog` 和资源注册表，并创建唯一的 Luban `cfg.Tables` 实例，再调用 `IConfigService.Initialize`。ConfigService 在初始化时验证并复制 Luban 行；`TryGetLevelConfig`、`TryGetArmyConfig` 和 `TryGetWeaponConfig` 只返回已通过校验的资产或不可变快照。查询只能在 `Ready` 状态成功，缺失 ID 返回 `false`，不得返回缺省配置。Gameplay 装配向 ArmyController 注入最小的 `IArmyConfigProvider` 和 `IWeaponConfigProvider`，不要求其取得完整 IConfigService。
 
 ```csharp
 public interface IGameStateService
@@ -72,7 +97,7 @@ public interface IGameStateService
 
 `GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
-`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
+`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 LevelConfig 的只读结果数据；接受 Victory 后从该配置防御性复制 `unlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
 ```csharp
 public interface ISceneService
@@ -109,48 +134,120 @@ MainMenu 和 LevelSelect 的 `LevelId`、`LevelRunId` 固定为 `0`。Gameplay �
 ## 军队接口
 
 ```csharp
-public interface IArmyController
+public enum ElementType
+{
+    None = 0,
+    Fire = 1,
+    Ice = 2,
+    Lightning = 3
+}
+
+[Flags]
+public enum ElementMask : byte
+{
+    None = 0,
+    Fire = 1 << 0,
+    Ice = 1 << 1,
+    Lightning = 1 << 2
+}
+
+public interface IHorizontalInputReceiver
+{
+    void SetHorizontalInput(float value);
+}
+
+public interface IArmyController : IHorizontalInputReceiver
 {
     int GetArmyCount();
     int GetActiveSlotCount();
-    int GetMaxDeployedSoldiers();
-    void AddArmy(int amount);
-    void RemoveArmy(int amount);
+    int GetSlotCapacity();
+    int GetCurrentWeaponId();
+    ArmyAdditionResult AddArmy(int amount);
+    ArmyRemovalResult RemoveArmy(int amount);
     void ApplySlotDamage(int slotIndex, int damage);
     bool TryGetNearestActiveSlot(Vector2 origin, out ArmySlotTarget target);
     bool TryGetSlotTarget(int slotIndex, out ArmySlotTarget target);
-    void ApplyGateEffect(GateEffect effect);
     void ApplyWeaponPickup(int weaponId, int sourceRuntimeInstanceId);
-    void ApplyElement(int elementId, int sourceRuntimeInstanceId);
-    void SetHorizontalInput(float value);
-
+    ElementDurationChangeResult AddElementDuration(
+        ElementType elementType,
+        float duration,
+        int sourceRuntimeInstanceId);
     // 返回只读槽位快照，不暴露槽位内部对象或可变集合。
     ArmyFormationSnapshot GetFormationSnapshot();
+    ArmyElementStateSnapshot GetElementStateSnapshot();
 }
 ```
 
-`SetHorizontalInput` 接受有限的有符号横向输入倍率，并覆盖 Army 保存的当前横向移动意图。键盘/手柄调用值限制在 `[-1,1]`；触屏最终值允许位于 `[-horizontalMultiplier, horizontalMultiplier]`。Army 必须拒绝 NaN 或无穷值，但不得把已经乘触屏系数的有限值再次 Clamp 到 `[-1,1]`。该命令要求当前 Army 直接接收，不通过 `EventBus` 广播，Army 也不反向读取 Input Adapter。
-
-键盘/手柄可以直接提供归一化轴值。触屏使用 ADR-028 的相对拖动语义：Input Adapter 累计相邻 Pointer 采样点在 `TouchDragArea` 局部空间中的水平差，按区域宽度和 `unscaledDeltaTime` 换算为归一化滑动速度，先 Clamp 到 `[-1,1]`，再乘 UI Prefab Inspector 中默认值为 `1` 的 `horizontalMultiplier`。没有新 Drag 差值、Pointer 结束、输入被禁用或 Gameplay 离开 `Playing` 时必须调用一次 `SetHorizontalInput(0)`，不得保留上一帧值。Army 的实际横向位移使用 `horizontalInput × TbArmy.MoveSpeed × 有效玩法 delta`。
-
-MVP 只有一个 Army，所有需要 Army 身份的事件和去重上下文使用固定 `ArmyId = 1`；不增加运行时 Army ID 分配接口。
-
-`GateEffect` 只描述已经通过接触判定的结果；负数加法门的 `ArmyCountDelta` 仍然可以为负数。
-
-Gate 和 Prop 使用 `IArmyController` 的方法同步提交玩法状态变更：门调用 `ApplyGateEffect` 或 `ApplySlotDamage`，当前 MVP 的武器箱调用 `ApplyWeaponPickup`，道具接触失败调用 `ApplySlotDamage`。调用方完成本地去重和状态转换后执行命令，再发布对应事实事件；ArmyController 不通过订阅这些事件重复执行命令。`ApplyWeaponPickup` 是当前 MVP 的具体道具效果接口，不代表未来所有 Prop 都必须修改武器；扩展边界见 ADR-022。
+`IArmyController` 保存 Army 的玩法命令与查询；LevelManager 通过单独的会话接口驱动生命周期和每帧阶段，避免让 Gate、Prop、Monster 或 Input 取得不需要的启动能力：
 
 ```csharp
-public readonly struct GateEffect
+public interface IArmyRunController : IArmyController
 {
-    public int RuntimeInstanceId { get; }
-    public GateType GateType { get; }
-    public int ArmyCountDelta { get; }
-    public int ElementId { get; }
-    public bool ContactSucceeded { get; }
+    void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
+    void TickMovementAndFire(int levelRunId, float gameplayDeltaTime);
+    void StopRun(int levelRunId);
+}
+
+public interface IGameplayInputGate
+{
+    void SetGameplayEnabled(bool enabled);
+}
+
+public interface IGameplayInputController : IGameplayInputGate
+{
+    void TickInput(float unscaledDeltaTime);
 }
 ```
 
-## 可受伤接口
+`IHorizontalInputReceiver` 是 Input 所需的最小玩法命令面，ArmyController 通过 `IArmyController` 继承并实现它。GameplayInputAdapter 只接收该最小接口，不取得 Army 的人数、伤害、装备或本局生命周期能力。
+
+`IGameplayInputController` 由 GameplayInputAdapter 实现并通过 Composition 注入 LevelManager。LevelManager 在每个 Playing 帧、Army 移动与发射之前调用一次 `TickInput(unscaledDeltaTime)`。禁用必须幂等，并立即重置 Pointer 状态、调用当前接收者的 `SetHorizontalInput(0)`；这些接口只控制当前场景输入适配器，不创建全局 InputService。
+
+`SetHorizontalInput` 接受有限的有符号横向输入倍率，并覆盖 Army 保存的当前横向移动意图。当前只由相对拖拽调用，最终值允许位于 `[-horizontalMultiplier, horizontalMultiplier]`。Army 必须拒绝 NaN 或无穷值，但不得把已经乘拖拽系数的有限值再次 Clamp 到 `[-1,1]`。该命令要求当前 Army 直接接收，不通过 `EventBus` 广播，Army 也不反向读取 Input Adapter。
+
+相对拖拽使用 ADR-028 与 ADR-036 的语义：`TouchDragInput` 累计相邻 Pointer 采样点在 `TouchDragArea` 局部空间中的水平差，按区域宽度和传入的 `unscaledDeltaTime` 换算为归一化滑动速度，先 Clamp 到 `[-1,1]`，再乘 UI Prefab Inspector 中默认值为 `1` 的 `horizontalMultiplier`。没有新 Drag 差值、Pointer 结束、输入被禁用或 Gameplay 离开 `Playing` 时必须提交 `0`，不得保留上一帧值。Army 的实际横向位移使用 `horizontalInput × TbArmy.MoveSpeed × 有效玩法 delta`。当前不读取键盘、手柄或旧 Input Manager 的 `Horizontal` 轴。
+
+MVP 只有一个 Army，固定 `ArmyId = 1` 同时选择 `TbArmy.Id = 1` 和序列化 `ArmyPrefabBinding.ArmyId = 1`；所有需要 Army 身份的事件和去重上下文使用该值，不增加运行时 Army ID 分配接口。最大可见士兵数由所选 Prefab 的序列化 `ArmySlotView[]` 长度派生，不能从 Luban 读取第二份容量。
+
+Gate 和 Prop 使用 `IArmyController` 的方法同步提交玩法状态变更：非负加法门调用 `AddArmy`，负数加法门把绝对值作为正的请求减员人数调用 `RemoveArmy`；成功元素门仅在计算持续时间大于 `0` 时调用 `AddElementDuration`，计算结果为 `0` 时仍成功但不提交空命令；失败元素门和道具调用 `ApplySlotDamage`，当前武器箱调用 `ApplyWeaponPickup`。调用方完成本地去重和状态转换后执行命令，再发布对应事实事件；ArmyController 不通过订阅这些事件重复执行命令。
+
+```csharp
+public readonly struct ArmyAdditionResult
+{
+    public int RequestedAddition { get; }
+    public int ActualAddition { get; }
+    public int RemainingArmyCount { get; }
+}
+
+public readonly struct ArmyRemovalResult
+{
+    public int RequestedRemoval { get; }
+    public long RequestedDamage { get; }
+    public long AppliedDamage { get; }
+    public int ActualArmyCountLoss { get; }
+    public int RemainingArmyCount { get; }
+}
+
+public readonly struct ElementDurationChangeResult
+{
+    public ElementType ElementType { get; }
+    public float PreviousDuration { get; }
+    public float AddedDuration { get; }
+    public float CurrentDuration { get; }
+}
+
+public readonly struct ArmyElementStateSnapshot
+{
+    public float FireRemainingDuration { get; }
+    public float IceRemainingDuration { get; }
+    public float LightningRemainingDuration { get; }
+    public ElementMask ActiveElements { get; }
+}
+```
+
+`AddArmy(amount)` 接受大于等于 `0` 的请求增员人数，按 `ArmyCountLimit` 截断后返回请求值、实际增加量和剩余总人数；`ArmyCountLimit = 0` 表示没有配置上限。`RemoveArmy(amount)` 只接受正的请求减员人数。Army 使用 `long` 计算 `amount × HpPerSoldier` 伤害预算，按 `CurrentHp` 升序、再按 `SlotIndex` 升序让激活槽位承担，并把未耗尽伤害继续传给下一个槽位。请求减员和实际人数损失可能不同，返回结果必须报告两者。`ElementType.None` 只作为不使用元素字段时的配置空值；`AddElementDuration` 必须拒绝 `None`，并只接受有限且大于 `0` 的持续时间，同类型重复获得时累加。
+
+## 子弹命中与可受伤接口
 
 ```csharp
 public interface IDamageable
@@ -159,10 +256,11 @@ public interface IDamageable
     bool IsAlive { get; }
 }
 
-// 需要根据子弹、武器和元素来源选择反馈的目标实现此扩展接口。
-public interface IBulletDamageable : IDamageable
+// 子弹统一查询此接口；可命中状态不从 HP 或 IsAlive 推断。
+public interface IBulletHittable
 {
-    void TakeDamage(BulletDamageContext damage);
+    bool CanReceiveBulletHit { get; }
+    void ReceiveBulletHit(BulletDamageContext damage);
 }
 
 public readonly struct BulletDamageContext
@@ -170,7 +268,7 @@ public readonly struct BulletDamageContext
     public int BulletInstanceId { get; }
     public int BulletId { get; }
     public int WeaponId { get; }
-    public int ElementId { get; }
+    public ElementMask ActiveElements { get; }
     public int Damage { get; }
     public Vector2 HitPosition { get; }
     public Vector2 HitDirection { get; }
@@ -190,13 +288,14 @@ public interface IObstacleRegistry
 }
 ```
 
-每个道路对象必须拥有唯一的 `RuntimeInstanceId`。配置表中的 `GateId` 或 `PropId` 只表示配置，不用于区分同时存在的实例。
+每个道路对象必须拥有唯一的 `RuntimeInstanceId`。Gate 不再拥有配置 ID；Prop 的 `TbProp.Id` 只表示配置，不用于区分同时存在的实例。两类对象都保存对应生成列表中的 `SpawnEntryIndex` 作为本局来源诊断。
 
 ```csharp
 public readonly struct RoadObjectSnapshot
 {
     public int RuntimeInstanceId { get; }
-    public int ConfigId { get; }
+    public int SpawnEntryIndex { get; }
+    public int? ConfigId { get; }
     public ObstacleKind Kind { get; }
     public Vector2 WorldPosition { get; }
     public bool IsOnRoad { get; }
@@ -222,8 +321,8 @@ public readonly struct ArmySlotSnapshot
 {
     public int SlotIndex { get; }
     public int RepresentedCount { get; }
-    public float CurrentHp { get; }
-    public float MaxHp { get; }
+    public int CurrentHp { get; }
+    public int MaxHp { get; }
     public bool IsActive { get; }
 }
 
@@ -293,6 +392,8 @@ public readonly struct RoadLayoutSnapshot
     public float Height { get; }
     public float LeftBoundary { get; }
     public float RightBoundary { get; }
+    public float BottomBoundary { get; }
+    public float TopBoundary { get; }
     public float SpawnY { get; }
     public float EnemyApproachY { get; }
     public float DespawnY { get; }
@@ -300,7 +401,9 @@ public readonly struct RoadLayoutSnapshot
 
 ```
 
-道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`；世界原点由道路 Prefab/场景决定，不属于公共契约。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。计算不考虑对象尺寸；敌人到达 `EnemyApproachY` 后由 Monster 选择最近的有效士兵槽位。
+道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadBounds` 是唯一序列化来源，宽高和四边均由它派生；ArmyRoot 每局从世界原点 `(0,0,0)` 开始且世界 y 固定为 `0`。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。计算不考虑对象尺寸；敌人到达 `EnemyApproachY` 后由 Monster 选择最近的有效士兵槽位。
+
+配置校验必须满足 `BottomBoundary <= DespawnY < 0 < EnemyApproachY < SpawnY <= TopBoundary`，且左右边界和上下边界包含世界原点；无效值不得在运行时 Clamp 或回退到场景 Renderer Bounds。
 
 ## 时间接口
 
@@ -312,6 +415,10 @@ public interface ITimeService
 }
 ```
 
+`ConfigId` 对 Gate 为 `null`，对 Prop 为 `TbProp.Id`；不得使用 `0` 伪装 Gate 配置 ID。`SpawnEntryIndex` 只在当前 LevelConfig 的对应生成列表内有意义，不是跨资产稳定 ID。
+
+`IDamageable` 只表达真正以生命值决定存活的对象。Enemy、Prop 等对象可以同时实现 `IDamageable` 和 `IBulletHittable`；加法门没有 HP，只实现 `IBulletHittable`。Pending 元素门即使 `CurrentHp == 0`，在接触结算前仍保持 `CanReceiveBulletHit == true`，后续子弹继续消费并累计 HP 归零后的额外伤害。元素门进入 `Failed` 后奖励永久锁定；若生命周期仍允许 `CanReceiveBulletHit == true`，命中只能用于表现或其他已明确的生命周期处理，不得增加可兑换额外伤害。BulletManager 不能用 `IsAlive` 或目标 HP 替代 `CanReceiveBulletHit`。
+
 `TimerHandle` 必须支持幂等取消。所有 RealTime 自动跳过计时都使用 `RealTime` 时间域；状态离开或会话失效后，旧回调不得继续推进应用流程。
 
 MVP 中所有时间域倍率固定为 `1`。当前公共契约不包含倍率查询/修改、暂停令牌、减速、加速或局部时停；未来启用前另行定案。
@@ -319,9 +426,8 @@ MVP 中所有时间域倍率固定为 `1`。当前公共契约不包含倍率查
 `TimeDomain` 是一次移动、计时或调度所选择的时间策略，不是对象可以同时加入的标签集合。每次操作只选择一个最具体的域，不把 `Gameplay` delta 与 `Bullet`、`Gate`、`Monster` 或 `VFX` delta 重复累计。MVP 归属固定为：
 
 - MainMenu、LevelSelect 和不依赖 Gameplay 推进的流程等待使用 `RealTime`。
-- Army 移动、LevelManager 本局计时和未单独分类的玩法逻辑使用 `Gameplay`；SpawnManager 只消费 LevelManager 基于该域累计的 `elapsedTime`，不直接访问 `ITimeService`。
-- 子弹使用 `Bullet`；怪物使用 `Monster`。
-- Gate、Prop 和其他道路对象暂时统一使用 `Gate`。
+- LevelManager 在逻辑帧开始集中读取 `Gameplay`、`Bullet`、`Gate` 和 `Monster` delta。Army 与未细分玩法消费传入的 `Gameplay` delta；SpawnManager 只消费 LevelManager 累计的 `elapsedTime`。
+- BulletManager 消费传入的 `Bullet` delta；EnemyManager 消费传入的 `Monster` delta；ObstacleManager 及 Gate/Prop 消费传入的 `Gate` delta。具体池对象不直接访问 `ITimeService`。
 - `VFX` 只表示跟随 Gameplay 世界推进的视觉特效；UI 动画和应用流程表现不使用该域。
 
 当前枚举不提供运行时父子关系或重叠归属。未来启用时间控制时，按 ADR-030 的单父级方向重新确认接口；不得由消费者自行组合多个域。
@@ -352,7 +458,10 @@ public enum TimeDomain
 public interface ISpawnManager
 {
     // 绑定本关配置、切换当前会话并将三个游标归零。
-    void StartRun(LevelConfig levelConfig, int levelRunId);
+    void StartRun(
+        LevelConfig levelConfig,
+        RoadLayoutSnapshot roadLayout,
+        int levelRunId);
     void Tick(int levelRunId, float elapsedTime);
     bool AreAllEnemySpawnsDispatched(int levelRunId);
     void StopRun(int levelRunId);
@@ -370,23 +479,68 @@ public readonly struct EnemySpawnRequest
     public Vector2 WorldPosition { get; }
 }
 
-public readonly struct ObstacleSpawnRequest
+public readonly struct GateSpawnRequest
 {
     public int LevelRunId { get; }
+    public int SpawnEntryIndex { get; }
+    public GateType GateType { get; }
+    public int InitialValue { get; }
+    public ElementType ElementType { get; }
+    public int MaxHp { get; }
+    public float ElementDurationSecondsPerDamage { get; }
+    public float SpawnPosition { get; }
+    public Vector2 WorldPosition { get; }
+}
+
+public readonly struct PropSpawnRequest
+{
+    public int LevelRunId { get; }
+    public int SpawnEntryIndex { get; }
     public int ConfigId { get; }
-    public ObstacleKind Kind { get; }
     public float SpawnPosition { get; }
     public Vector2 WorldPosition { get; }
 }
 ```
+
+`GateSpawnRequest` 来自已校验的 `LevelConfig.gateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`PropSpawnRequest.ConfigId` 继续引用 `TbProp.Id`。`SpawnEntryIndex` 是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。
+
+## BulletManager 接口
+
+```csharp
+public readonly struct BulletSpawnRequest
+{
+    public int LevelRunId { get; }
+    public int SourceArmyId { get; }
+    public int SourceSlotIndex { get; }
+    public int BulletId { get; }
+    public int WeaponId { get; }
+    public ElementMask ActiveElements { get; }
+    public Vector2 WorldPosition { get; }
+    public Vector2 Direction { get; }
+}
+
+public interface IBulletManager
+{
+    void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
+    void Spawn(BulletSpawnRequest request);
+    void TickMovementAndHits(int levelRunId, float bulletDeltaTime);
+    void FlushPendingRecycles(int levelRunId);
+    void StopRun(int levelRunId);
+}
+```
+
+BulletManager 通过 Inspector 持有唯一 Bullet 规范 Prefab，并以具体 `Bullet` 根类型取得类型池。它根据 `BulletSpawnRequest.BulletId` 通过注入的 IConfigService 取得已校验的基础伤害和速度；WeaponId、ActiveElements、来源槽位、位置和方向以发射瞬间快照为准。完成父节点、Transform、配置、LevelRunId、BulletInstanceId、回调和活动登记后才激活实例。飞行中的子弹不读取 Army 当前元素计时器，Army 后续获得或失去元素不会修改既有快照。
 
 ## EnemyManager 与 ObstacleManager 接口
 
 ```csharp
 public interface IEnemyManager
 {
-    void StartRun(int levelRunId);
+    void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
     void Spawn(EnemySpawnRequest request);
+    void TickMovement(int levelRunId, float monsterDeltaTime);
+    void ResolveAttacks(int levelRunId, float monsterDeltaTime);
+    void FlushPendingRecycles(int levelRunId);
     int GetAliveEnemyCount();
     int GetActiveEnemyCount();
     void StopRun(int levelRunId);
@@ -396,13 +550,17 @@ public interface IEnemyManager
 ```csharp
 public interface IObstacleManager : IObstacleRegistry
 {
-    void StartRun(int levelRunId);
-    void Spawn(ObstacleSpawnRequest request);
+    void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
+    void Spawn(GateSpawnRequest request);
+    void Spawn(PropSpawnRequest request);
+    void TickMovement(int levelRunId, float gateDeltaTime);
+    void ResolveContacts(int levelRunId);
+    void FlushPendingRecycles(int levelRunId);
     void StopRun(int levelRunId);
 }
 ```
 
-Manager 在 `StartRun` 时切换当前会话并清空上局状态，只接受当前 `LevelRunId` 的请求，并负责活动实例、回收和会话清理；SpawnManager 不复制这些集合。
+Manager 在 `StartRun` 时切换当前会话并清空上局状态，只接受当前 `LevelRunId` 的请求，并负责活动实例、阶段规则、延后回收和会话清理；SpawnManager 不复制这些集合。阶段方法只由 LevelManager 在 `Playing` 中调用，池对象不得通过独立 Update 绕过该顺序。伤害或死亡事实在对应阶段立即完成状态与计数，`FlushPendingRecycles` 只处理已登记的结束请求和对象池归还，不延迟权威数值结果。
 
 ## EventBus 与 PoolService 接口
 

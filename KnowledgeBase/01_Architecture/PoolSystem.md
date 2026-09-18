@@ -109,7 +109,7 @@ PoolService 和类型池不设置玩法父节点、位置、旋转、配置或�
 ## 非职责
 
 - 不决定生成时间、配置 ID、世界坐标、敌人存活统计或 Gate/Prop 接触结果。
-- 不替代 EnemyManager、ObstacleManager 或子弹生成所有者的活动实例所有权。
+- 不替代 EnemyManager、ObstacleManager 或 BulletManager 的活动实例所有权。
 - 不通过对象是否 Active 推断胜利、失败、死亡或时间轴完成。
 - 不在归还时发布玩法死亡、离场、回收或终局事件。
 - 不依赖 ConfigService、资源注册表、SpawnManager、EventBus 或具体玩法 Manager。

@@ -2,7 +2,9 @@
 
 ## 状态
 
-Accepted
+Accepted（槽位容量来源与负数门减员顺序由 ADR-035 修订）
+
+> ADR-035 已删除 `TbArmy.MaxDeployedSoldiers`，槽位容量改由 Army Prefab 的序列化槽位数组长度派生；负数门不再直接设置总人数，而是由 Army 按最低当前 HP 顺序分配等价伤害。本 ADR 的聚合生命值、槽位受击不主动迁移和人数守恒结论继续有效。
 
 ## 日期
 
@@ -15,8 +17,8 @@ Accepted
 ## 决策
 
 - `ArmyCount` 表示军队逻辑总人数，初始值为 1。
-- `ArmyCountLimit`（如果关卡需要总人数上限）与 `MaxDeployedSoldiers` 分离；前者限制逻辑人数，后者限制可见槽位数量。
-- 初始创建或没有受击缺口时，`ActiveSlotCount = Min(ArmyCount, MaxDeployedSoldiers)`；受击后启用槽位数量以 `RepresentedCount > 0` 为准，空槽位仍保留。
+- `ArmyCountLimit`（如果关卡需要总人数上限）与 Prefab 派生的 `SlotCapacity` 分离；前者限制逻辑人数，后者限制可见槽位数量。
+- 初始创建或没有受击缺口时，`ActiveSlotCount = Min(ArmyCount, SlotCapacity)`；受击后启用槽位数量以 `RepresentedCount > 0` 为准，空槽位仍保留。
 - 初始分配采用整数平均分配，余数按槽位索引从小到大依次加 1。
 - 每个槽位保存自己的 `RepresentedCount`、`CurrentHp`、`MaxHp`、碰撞体和子弹生成点。槽位人数不因其他槽位受击而重新平均。
 - 槽位最大生命值按 `MaxHp = RepresentedCount × HpPerSoldier` 计算。新增人数带来等量健康生命值。

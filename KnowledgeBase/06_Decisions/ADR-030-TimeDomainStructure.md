@@ -4,6 +4,8 @@
 
 Accepted
 
+> ADR-033 已将 Gameplay 核心阶段的 delta 读取集中到 LevelManager；时间域归属不变，但具体 Manager 和池对象消费由 LevelManager 传入的对应域 delta。
+
 ## 日期
 
 2026-09-18
@@ -33,10 +35,11 @@ MVP 尚不实现暂停、倍率修改和局部时停，因此需要先明确当�
 | 消费者或逻辑 | MVP 时间域 | 说明 |
 |---|---|---|
 | MainMenu、LevelSelect 和不依赖 Gameplay 推进的应用流程等待 | `RealTime` | 使用未缩放时间，独立于 Gameplay 语义 |
-| Army 移动、LevelManager 本局计时和未单独分类的玩法逻辑 | `Gameplay` | Gameplay 默认域；SpawnManager 只消费 LevelManager 基于该域累计的 `elapsedTime`，不直接读取 TimeService |
-| 子弹移动、寿命和命中查询 | `Bullet` | 子弹专用调用意图 |
-| 怪物移动、攻击和计时 | `Monster` | 怪物专用调用意图 |
-| Gate、Prop 和其他道路对象的移动与接触流程 | `Gate` | MVP 沿用现有名称；未来启用独立倍率时评估改名为 `RoadObject` |
+| Gameplay 相对拖拽归一化 | `RealTime` | LevelManager 读取后传给 Input；Input 不注入 TimeService，也不直接读取 Unity `Time` |
+| Army 移动、LevelManager 本局计时和未单独分类的玩法逻辑 | `Gameplay` | LevelManager 读取并传给 Army；SpawnManager 只消费累计的 `elapsedTime` |
+| 子弹移动、寿命和命中查询 | `Bullet` | LevelManager 读取并传给 BulletManager |
+| 怪物移动、攻击和计时 | `Monster` | LevelManager 读取并传给 EnemyManager |
+| Gate、Prop 和其他道路对象的移动与接触流程 | `Gate` | LevelManager 读取并传给 ObstacleManager；未来启用独立倍率时评估改名为 `RoadObject` |
 | 跟随 Gameplay 世界推进的视觉特效 | `VFX` | 不包含 UI 动画和应用流程表现；后者使用 `RealTime` 或未来单独定案 |
 
 ### 未来只采用单父级层次，不采用任意重叠
@@ -81,4 +84,5 @@ MVP 尚不实现暂停、倍率修改和局部时停，因此需要先明确当�
 - `../05_Testing/IntegrationTests.md`
 - `ADR-001-TimeSystem.md`
 - `ADR-021-MvpRuntimeDeterminismAndBindings.md`
+- `ADR-036-DragOnlyInputImplementationSlice.md`
 - `ADR-027-MvpGlobalServiceScope.md`

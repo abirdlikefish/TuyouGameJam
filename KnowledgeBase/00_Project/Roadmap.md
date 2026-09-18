@@ -12,21 +12,22 @@
 - [ ] Bootstrap、MainMenu、LevelSelect、Gameplay 四个场景及固定根 SceneEntry；同步 Additive 加载、异步卸载和结构化日志切换验证
 - [ ] 军队人数和自动射击
 - [ ] 军队固定槽位、聚合生命值和横向移动
-- [ ] Gameplay 场景键盘/手柄横向输入，以及 UI 区域内停手即停的触屏相对拖动输入
+- [ ] Gameplay 场景 UI 区域内停手即停的相对拖动输入；设备触屏与 Editor 左键共用 Pointer 路径，键盘/手柄延后
 - [ ] 子弹命中怪物、加法门、元素门和道具
 - [ ] 门/道具接触 Army 并执行一次性结算
 - [ ] ObstacleManager 登记、查询和回收道路上的门与道具
 - [ ] 怪物生成、接近军队、攻击、死亡与胜负判断
 - [ ] 所有玩法碰撞对象配置 Collider2D、职责 Layer 和显式 Cast/Overlap 查询
 - [ ] 存活敌人身体不重叠，后方敌人被较慢或静止的前方敌人阻挡并排队
-- [ ] 固定道路宽高、出生横线、归一化横向出生位置、Army 左右边界和敌人接近线
+- [ ] 唯一数值 `roadBounds`、无道路玩法 Collider、Army 世界原点、出生/接近/离场线和归一化横向出生位置
+- [ ] LevelManager 同步驱动生成、移动、子弹、道路接触、敌人攻击、回收和终局的固定帧阶段
 
 ## 阶段 2：关卡化
 
 - [ ] 无波次的三类时间轴生成控制
 - [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID
-- [ ] Luban 配置角色/军队、敌人、Gate、Prop 和子弹属性
-- [ ] Luban 配置 Weapon、Element、阵型槽位和每名士兵生命值
+- [ ] Luban 配置角色/军队、敌人、Prop 和子弹属性；Gate 不读表，由 LevelConfig 生成项与对应 Prefab 提供配置
+- [ ] Luban 配置 Army 基础数值、固定 Weapon 0/1/2 和每名士兵生命值；当前不建立 TbElement，阵型槽位由 Army Prefab 序列化绑定
 - [ ] 当前临时流程：MainMenuScene 与 LevelSelectScene 各在 Entry Ready 后等待 1 秒；胜利/失败后清理 Gameplay 并切换回 LevelSelectScene，再开始当前关卡
 
 ## 阶段 3：表现和性能
@@ -38,7 +39,7 @@
 
 ## 阶段 4：可选扩展
 
-- [ ] `+N`、`-N`、`÷N` 门
+- [ ] 扩展 `+N`、`-N` 加法门的关卡编排与表现；当前及可选扩展范围均不恢复乘法门
 - [ ] 多种怪物和子弹
 - [ ] 武器替换之外的道具击破效果及组合规则
 - Deferred：声音、AudioService、音量设置和音频资源

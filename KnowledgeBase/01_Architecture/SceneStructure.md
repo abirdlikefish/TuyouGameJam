@@ -53,8 +53,9 @@ MainMenuSceneEntry 和 LevelSelectSceneEntry 是场景装配入口，当前只�
 GameplayScene
 └── GameplayRoot [GameplaySceneEntry]
     ├── MainCamera
-    ├── Road
-    ├── ArmyRoot [ArmyController]
+    ├── Road [RoadView；无玩法 Collider]
+    ├── ArmyContainer [固定场景容器]
+    │   └── ArmyRoot [ArmyController；序列化绑定选择并实例化的 PF_Army_001；每局从世界原点开始]
     ├── LevelSystems
     │   ├── LevelManager
     │   └── SpawnManager
@@ -62,20 +63,25 @@ GameplayScene
     ├── ObstacleRoot [ObstacleManager]
     │   ├── GateRoot
     │   └── PropRoot
-    ├── BulletRoot
-    ├── InputAdapter [GameplayInputAdapter]
-    ├── UI
-    │   └── TouchDragArea [TouchDragInput；horizontalMultiplier = 1]
+    ├── BulletRoot [BulletManager]
+    ├── InputAdapter [GameplayInputAdapter；实现 IGameplayInputController]
+    ├── UI [Gameplay Canvas；GraphicRaycaster]
+    │   └── TouchDragArea [PF_UI_TouchDragArea；TouchDragInput；horizontalMultiplier = 1]
+    ├── EventSystem [EventSystem；StandaloneInputModule]
     └── VFXRoot
 ```
 
-`GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理。`ArmyRoot` 是军队整体移动和槽位表现的容器，业务状态由 `ArmyController` 负责。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收。具体移动、HP 与接触规则仍由对象自身负责。
+`GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 1` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到世界坐标 `(0,0,0)`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的唯一 `roadBounds` 提供视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收。
 
-`InputAdapter` 是 Gameplay 场景组件，只在 `LevelManager.Playing` 期间启用并向 `IArmyController` 发送横向输入倍率。它汇总键盘/手柄和触屏输入，不跨场景保留，不依赖 TimeService，也不直接修改 ArmyRoot Transform。
+LevelManager 是 Gameplay 逻辑帧阶段顺序的唯一协调者。Army、Enemy、Obstacle 和 Bullet Manager 仍拥有自己的规则和集合，但不通过独立 Update 推进核心移动、命中、接触或攻击；LevelManager 在 Playing 中按 ADR-033 使用同步阶段接口驱动它们。
 
-`TouchDragArea` 虽然位于 Gameplay Canvas/UI 层级中，但职责归属 Input 模块。它通过 UGUI Pointer 回调采集相邻位置的水平拖动差值，使用 RectTransform 宽度和未缩放帧时间归一化，并将结果交给 `InputAdapter`；跨模块传递仍使用同步命令，不发布项目事件。灵敏度系数 `horizontalMultiplier` 默认值为 `1`，在对应 UI Prefab 的 Inspector 中配置。详细规则见 [Input 模块](../02_Modules/Input/README.md) 和 [ADR-028](../06_Decisions/ADR-028-MvpRelativeDragInput.md)。
+`InputAdapter` 是 Gameplay 场景组件，只在 `LevelManager.Playing` 期间启用并通过 `IHorizontalInputReceiver` 向当前 Army 发送横向输入倍率。当前只消费相对拖拽，设备触屏与 Editor 左键共用 UGUI Pointer 路径；键盘/手柄延后。它不跨场景保留，不依赖 TimeService，也不直接修改 ArmyRoot Transform。
 
-`GameplaySceneEntry` 通过 Inspector 持有本场景 Manager 和固定组件引用；SceneService 的 Unity 适配器向它注入 `LevelConfig`、`LevelId`、`LevelRunId` 和所需最小服务。Entry 完成订阅与 `LevelManager.Preparing` 后才允许发布 `AppSceneReady(Gameplay)`；Gameplay 对象随后等待 `LevelRunStarted` 才进入 `Playing`。
+`TouchDragArea` 是 `Assets/Prefabs/UI/PF_UI_TouchDragArea.prefab` 的实例，虽然位于 Gameplay Canvas/UI 层级中，但职责归属 Input 模块。Prefab 根为全屏拉伸 RectTransform，带透明且开启 Raycast Target 的 Image 和 TouchDragInput；它不包含 Canvas、EventSystem、InputAdapter 或 Army 引用。TouchDragInput 通过 UGUI Pointer 回调采集相邻位置的水平拖动差值，使用 RectTransform 宽度和未缩放帧时间归一化，并将结果交给 `InputAdapter`；跨模块传递仍使用同步命令，不发布项目事件。灵敏度系数 `horizontalMultiplier` 默认值为 `1`。详细规则见 [Input 模块](../02_Modules/Input/README.md)、[ADR-028](../06_Decisions/ADR-028-MvpRelativeDragInput.md) 和 [ADR-036](../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md)。
+
+Gameplay Canvas 必须持有 GraphicRaycaster；GameplayScene 中恰好一个 EventSystem 使用 StandaloneInputModule。GameplayInputAdapter 通过 Inspector 引用 TouchDragInput 实例，并在场景装配时通过 `Initialize(IHorizontalInputReceiver)` 绑定本局 Army。LevelManager 每个 Playing 帧在 Army 移动与发射前显式调用 `TickInput(unscaledDeltaTime)`，不依赖 MonoBehaviour 的隐式同类 `Update` 顺序。
+
+`GameplaySceneEntry` 通过 Inspector 持有本场景 Manager、RoadView、Input Adapter、TouchDragInput、Gameplay Canvas、EventSystem、ArmyContainer、序列化 Army Prefab 绑定和固定 Root 引用；SceneService 的 Unity 适配器向它注入 `LevelConfig`、`LevelId`、`LevelRunId` 和所需最小服务。Entry 必须先取得 `TbArmy.Id = 1` 快照、解析唯一 `ArmyId = 1` Prefab、实例化并校验槽位绑定，再向 Input 注入最小 `IHorizontalInputReceiver`、向其他模块注入所需的 IArmyController。完成输入 Prefab/EventSystem 校验、Manager `StartRun`、订阅与 `LevelManager.Preparing` 后才允许发布 `AppSceneReady(Gameplay)`；Gameplay 对象随后等待 `LevelRunStarted` 才进入 `Playing`。
 
 军队固定在屏幕下方；怪物、Gate 和 Prop 从道路上方生成并通过自身移动向下推进。玩法 Prefab 的 `Collider2D` 由 Inspector 绑定并按职责配置 Layer；对象移动和碰撞结算不依赖 Dynamic Rigidbody2D 的自动回调。
 
@@ -105,4 +111,5 @@ BootstrapScene 创建 GlobalRoot
 - [ADR-019：应用流程公共接口与场景握手](../06_Decisions/ADR-019-ApplicationFlowContract.md)
 - [ADR-025：场景层级与运行时职责命名](../06_Decisions/ADR-025-SceneHierarchyAndRuntimeRoleNaming.md)
 - [ADR-028：MVP 触屏相对拖动输入](../06_Decisions/ADR-028-MvpRelativeDragInput.md)
+- [ADR-036：MVP 最小拖拽输入实现切片](../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md)
 - [ADR-032：MVP 应用场景入口、切换协议与分阶段初始化](../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md)

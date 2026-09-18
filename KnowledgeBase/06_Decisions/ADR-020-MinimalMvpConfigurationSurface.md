@@ -2,7 +2,9 @@
 
 ## 状态
 
-Accepted（池化规范 Prefab 与类型身份由 ADR-031 进一步收敛）
+Accepted（池化规范 Prefab 与类型身份由 ADR-031 收敛；Army、Weapon 与 Element 字段由 ADR-035 修订；Gate 配置由 ADR-038 修订）
+
+> ADR-035 已从 `TbArmy` 删除 `MaxDeployedSoldiers`、`WeaponId`、`ElementId`，并删除当前 `TbElement`。ADR-038 又删除当前 `TbGate`，将逐门字段移入 LevelConfig、同类共用速度/伤害移入规范 Prefab，并用额外伤害换算元素持续时间。下文旧字段表仅保留决策演进背景，当前实现以 ADR-035、ADR-038 和 `ConfigurationTables.md` 为准。
 
 ## 日期
 
@@ -31,11 +33,10 @@ MVP 初始字段如下：
 
 | 表 | 字段 |
 |---|---|
-| `TbArmy` | `Id`、`ArmyCountLimit`、`MaxDeployedSoldiers`、`HpPerSoldier`、`MoveSpeed`、`WeaponId`、`ElementId` |
+| `TbArmy` | `Id`、`ArmyCountLimit`、`HpPerSoldier`、`MoveSpeed` |
 | `TbWeapon` | `Id`、`FireInterval`、`BulletId` |
-| `TbElement` | `Id`、`ElementType` |
 | `TbEnemy` | `Id`、`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange`、`AttackCooldown` |
-| `TbGate` | `Id`、`GateType`、`InitialValue`、`HitIncrement`、`MaxHp`、`ElementId`、`ContactDamage`、`MoveSpeed` |
+| `TbGate` | `Id`、`GateType`、`InitialValue`、`HitIncrement`、`MaxHp`、`ElementType`、`ElementDuration`、`ContactDamage`、`MoveSpeed` |
 | `TbProp` | `Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed` |
 | `TbBullet` | `Id`、`Damage`、`MoveSpeed` |
 
@@ -57,7 +58,7 @@ MVP 初始字段如下：
 
 - 动态资源换肤或同一玩法配置选择多个 Prefab。
 - 多弹道、散射以及按代表人数缩放射速、伤害或弹丸数量。
-- 元素伤害倍率、状态类型和持续时间。
+- 元素伤害倍率和具体状态效果；元素持续时间已由 ADR-035 纳入元素门配置。
 - 可穿透、弹跳、范围爆炸等子弹碰撞行为。
 - 全局平衡参数表。
 

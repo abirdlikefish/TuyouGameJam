@@ -64,6 +64,7 @@ Assets/Tests/
 ## 服务依赖
 
 - `GameStateService` 通过 `IConfigService` 校验选关，通过 `ITimeService` 创建 RealTime 流程定时器，通过 `ISceneService` 发出类型化切换命令，并通过 `IEventBus` 发布应用状态和结果事实。
+- GameStateService 在创建 Gameplay 会话时保留本次已校验 LevelConfig 的只读结果数据；Victory 的 `unlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。
 - `SceneService` 依赖 `IEventBus` 和 Unity 场景适配能力；它持有当前场景、待切换目标和内部操作状态，不读取配置目录，不决定下一状态。
 - `GameStateService` 订阅 `AppSceneReady`、`AppSceneUnloaded`、`AppSceneLoadFailed`、`AppSceneUnloadFailed`，并校验 `AppSceneId`、`LevelId`、`LevelRunId` 和内部 pending target；Unloaded 只用于确认旧场景事实，不直接推进稳定状态。
 - `LevelManager` 只依赖 `IGameStateService` 提交终局。`GameplaySceneEntry` 向 LevelManager 注入已校验的 `LevelConfig`、`LevelId`、`LevelRunId` 和最小服务接口。

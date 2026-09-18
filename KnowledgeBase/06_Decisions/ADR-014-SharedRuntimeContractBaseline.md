@@ -2,9 +2,13 @@
 
 ## 状态
 
-Accepted（Pool 公共契约由 ADR-031 修订为具体组件类型池）
+Accepted（Pool 公共契约由 ADR-031 修订为具体组件类型池；Gate/Prop 生成请求由 ADR-038 修订）
 
 > ADR-027 已从当前 MVP 公共契约移除 `PauseToken` 和倍率修改能力；本 ADR 对其他接口、请求、事件和会话 ID 的决策继续有效。
+
+> ADR-033 已新增 Army 本局接口、BulletManager、InputGate 和 Manager 阶段方法；ADR-034 已把 RoadLayoutSnapshot 扩展为从唯一 `roadBounds` 派生的完整四边。
+
+> ADR-038 已用 `GateSpawnRequest` 与 `PropSpawnRequest` 取代统一 `ObstacleSpawnRequest`，并以 `IBulletHittable` 表达无 HP 或 HP 归零后仍可接收子弹的目标。下文旧名称只保留决策演进背景。
 
 ## 日期
 
@@ -23,7 +27,7 @@ Accepted（Pool 公共契约由 ADR-031 修订为具体组件类型池）
 - 所有 Gameplay 生成请求和结果事件必须携带 `LevelRunId`，接收者拒绝过期会话的数据。
 - `AreAllEnemySpawnsDispatched` 属于 SpawnManager，不属于 LevelManager 的生成状态所有权。
 - 生成实例的取得和归还属于 PoolService 类型池与对应 Manager 的协作；SpawnManager 只提交业务生成请求。ADR-031 已将原始 `GameObject + string key` 入口修订为具体 `MonoBehaviour` 类型池。
-- `TimeService` 必须同时定义时间域、时间倍率、暂停令牌、定时器句柄和取消语义。
+- `TimeService` 当前只定义固定倍率时间域读取、定时器句柄和取消语义；暂停与倍率能力按 ADR-027 延后。Gameplay 核心各域 delta 由 LevelManager 按 ADR-033 集中读取并传给对应阶段。
 - 玩法碰撞对象使用 Collider2D 与显式 Cast/Overlap 查询的统一规则由 ADR-016 和 `CollisionRules.md` 维护。
 - 事件 payload、错误码、生成请求和目录描述必须使用明确的数据结构，不使用无意义字符串。
 - `EventCatalog.md` 中所有 Gameplay 对象事件统一携带 `LevelRunId`；涉及具体道路对象或敌人实例时使用明确的运行时实例 ID。初始化、应用流程全局事件可不携带会话 ID，但跨场景或延迟处理的事件不得例外。
@@ -38,8 +42,13 @@ IResourceRegistry
 IGameStateService
 ISceneService
 ILevelRuntime
+IHorizontalInputReceiver
 IArmyController
+IArmyRunController
+IGameplayInputGate
+IGameplayInputController
 ISpawnManager
+IBulletManager
 IEnemyManager
 IObstacleRegistry
 IObstacleManager

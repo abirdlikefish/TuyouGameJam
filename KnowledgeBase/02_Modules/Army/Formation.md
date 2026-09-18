@@ -6,10 +6,10 @@
 
 ## 槽位状态
 
-每个槽位具有稳定的 `SlotIndex` 和局部位置，并绑定：
+ArmyController 通过 Inspector 序列化 `ArmySlotView[] slots`。数组下标就是稳定 `SlotIndex`，`SlotCapacity = slots.Length`，不从 `TbArmy` 读取第二份最大槽位数。每个槽位具有固定局部位置，并绑定：
 
 - `RepresentedCount`：当前槽位代表的士兵数量。
-- `CurrentHp`、`MaxHp`：槽位聚合生命值。
+- `CurrentHp`、`MaxHp`：整数槽位聚合生命值。
 - 独立 `SlotCollider`（Collider2D）受击碰撞体。
 - 一个子弹生成点。
 - `NeedsRefill`：是否存在受击后未补齐的人数缺口。
@@ -21,7 +21,7 @@
 初始创建时，或没有受击缺口时需要创建新的上场槽位，使用整数平均分配：
 
 ```text
-active = Min(ArmyCount, MaxDeployedSoldiers)
+active = Min(ArmyCount, SlotCapacity)
 if active == 0: 所有槽位保持 0 人并结束分配。
 base = ArmyCount / active
 remainder = ArmyCount % active
@@ -32,7 +32,7 @@ Slot[i].RepresentedCount = base + (i < remainder ? 1 : 0)
 
 1. 先选择 `RepresentedCount` 最少的受击缺口/空槽位。
 2. 人数相同时选择 `SlotIndex` 较小的槽位。
-3. 没有受击缺口且总人数小于最大上场人数时，按槽位顺序启用未使用槽位。
+3. 没有受击缺口且总人数小于槽位容量时，按槽位顺序启用未使用槽位。
 4. 所有槽位都已启用后，继续补充当前人数最少的槽位。
 
 受击不会触发其他槽位向少人数槽位的转移。任何分配后都必须满足：
@@ -43,7 +43,7 @@ Sum(Slot[i].RepresentedCount) == ArmyCount
 
 ## 聚合生命值与受击
 
-配置提供 `HpPerSoldier`。槽位最大生命值为：
+`TbArmy.Id = 1` 的不可变配置快照提供整数 `HpPerSoldier`。槽位最大生命值为：
 
 ```text
 MaxHp = RepresentedCount × HpPerSoldier
@@ -57,6 +57,44 @@ RepresentedCount = CurrentHp <= 0 ? 0 : Ceil(CurrentHp / HpPerSoldier)
 
 人数减少后重新计算 `MaxHp`，但不把其他槽位的人数迁移过来。槽位人数变为 0 时标记 `NeedsRefill`。受击导致的代表人数减少量同步从 `ArmyCount` 扣除，并发布人数和阵型变化事件。
 
+## 负数门请求减员
+
+负数加法门不直接指定目标槽位，也不直接设置 ArmyCount。Gate 只调用：
+
+```text
+RemoveArmy(Abs(GateValue))
+```
+
+Army 内部执行：
+
+```text
+damageRemaining = requestedRemoval × HpPerSoldier
+candidates = 所有 RepresentedCount > 0 且 CurrentHp > 0 的槽位
+candidates 按 CurrentHp 升序，再按 SlotIndex 升序排序
+
+for slot in candidates:
+    if damageRemaining <= 0:
+        break
+
+    oldCount = slot.RepresentedCount
+    applied = Min(damageRemaining, slot.CurrentHp)
+    slot.CurrentHp -= applied
+    damageRemaining -= applied
+
+    slot.RepresentedCount = slot.CurrentHp <= 0
+        ? 0
+        : (slot.CurrentHp + HpPerSoldier - 1) / HpPerSoldier
+
+    if slot.CurrentHp == 0:
+        清空并禁用该槽位的表现、碰撞体和发射
+
+    actualArmyCountLoss += oldCount - slot.RepresentedCount
+```
+
+伤害预算和剩余伤害统一使用 `long`；单个槽位 HP 与单次槽位扣减仍使用 `int`。ArmyCount 在结算后等于所有槽位代表人数之和。如果 Army 已全部死亡，未使用的伤害直接丢弃。
+
+请求减员人数与实际损失人数必须分开。例如 `HpPerSoldier = 10`，两个单兵槽位都只剩 `5 HP` 时，`RemoveArmy(1)` 产生 `10` 点伤害并会依次清空两个槽位，实际损失为 `2`。`ArmyRemovalResult` 分别报告请求减员、请求/实际伤害、实际人数损失和剩余总人数。
+
 ## 碰撞与发射
 
 - 每个激活槽位的碰撞体独立实现 `IDamageable` 适配，并把 `SlotIndex` 回传 Army。
@@ -66,4 +104,11 @@ RepresentedCount = CurrentHp <= 0 ? 0 : Ceil(CurrentHp / HpPerSoldier)
 
 ## 动态边界
 
-ArmyRoot 作为唯一移动对象。移动边界使用当前激活槽位碰撞体的合并 AABB 计算；槽位启用、禁用或阵型配置变化后重新计算边界。
+ArmyRoot 作为唯一移动对象。移动边界使用当前激活槽位碰撞体的合并 AABB 计算；槽位启用、禁用或 Prefab 阵型变化后重新计算边界。
+
+## Prefab 绑定校验
+
+- `slots.Length > 0`，不存在空项或重复引用。
+- 每个 ArmySlotView 必须绑定 SoldierVisual、SlotCollider 和 FirePoint。
+- SlotCollider 使用 ArmySlot Layer；空槽位只禁用表现、Collider 和发射资格，SlotIndex 与局部位置保持不变。
+- Prefab 在 ArmyRoot 位于世界原点时的最大激活槽位合并宽度必须能放入道路宽度，否则 Gameplay Preparing 失败。

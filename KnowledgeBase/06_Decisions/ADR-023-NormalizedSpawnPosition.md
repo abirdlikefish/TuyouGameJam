@@ -14,7 +14,7 @@ Accepted
 
 ## 决策
 
-- 移除三路生成点和生成点 ID。敌人、Gate、Prop 共用一条由 `LevelConfig.spawnY` 定义的固定出生横线。
+- 移除三路生成点和生成点 ID。敌人、Gate、Prop 共用一条由 `LevelConfig.spawnY` 定义的固定出生横线；左右边界由 ADR-034 的唯一 `roadBounds` 派生。
 - 每条 `enemySpawns`、`gateSpawns`、`propSpawns` 生成项使用 `spawnPosition`，类型为 `float`，有效范围为闭区间 `[0, 1]`。
 - `spawnPosition = 0` 表示道路最左边界，`spawnPosition = 1` 表示道路最右边界，中间值按道路宽度线性插值：
 
@@ -34,7 +34,7 @@ WorldY = SpawnY
 
 ## 影响
 
-- `RoadLayoutSnapshot` 保留 `SpawnY`、`LeftBoundary` 和 `RightBoundary`，移除 `LaneSpawnPoints`。
-- `EnemySpawnRequest`、`ObstacleSpawnRequest` 用 `float SpawnPosition` 替代 `int SpawnPoint`。
+- `RoadLayoutSnapshot` 保留 `SpawnY`、`LeftBoundary` 和 `RightBoundary`，移除 `LaneSpawnPoints`；后续 ADR-034 又加入从 `roadBounds` 派生的 BottomBoundary、TopBoundary、Width 和 Height。
+- `EnemySpawnRequest`、`GateSpawnRequest` 和 `PropSpawnRequest` 用 `float SpawnPosition` 替代 `int SpawnPoint`；其中 Gate/Prop 类型化请求由 ADR-038 取代原统一的 `ObstacleSpawnRequest`。
 - `MonsterSpawned` 不再携带生成点编号，改为携带归一化出生位置和解析后的初始世界坐标。
 - 关卡配置、模块说明和测试必须覆盖 `0`、`1`、中间值及非法范围，并验证计算不考虑对象尺寸。

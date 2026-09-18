@@ -7,7 +7,7 @@
 - [ ] MVP 类型池采用懒创建且空闲实例跨 Gameplay 重开保留；在没有实测依据前不预热、不配置容量上限。
 - [ ] 记录首次创建、稳定复用和场景重开后的实例数量；只有数据表明有必要时才新增预热、容量或溢出策略。
 - [ ] 军队逻辑人数增加时，不创建等量 GameObject。
-- [ ] 士兵 GameObject、碰撞体和发射点数量不超过 `MaxDeployedSoldiers`。
+- [ ] 士兵 GameObject、碰撞体和发射点数量不超过所选 Army Prefab 的 `SlotCapacity = slots.Length`。
 - [ ] 总人数增大时，子弹数量按激活槽位和武器发射规则受控，不按逻辑人数线性创建无限对象。
 - [ ] 场景重开后没有重复的 GlobalRoot。
 - [ ] 终局回到 LevelSelect 并重新进入同一关后，上一局对象已清理。

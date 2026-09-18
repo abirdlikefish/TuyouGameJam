@@ -6,6 +6,8 @@ Accepted
 
 > ADR-027 将暂停、减速和局部时停移出当前 MVP；本文涉及这些能力的碰撞规则只作为未来重新设计的输入，不属于当前验收。
 
+> ADR-037 进一步移除 Monster `TargetSensor`，明确 Enemy `BodyCollider` 与 Army `SlotCollider` 不进行移动碰撞，并定案 Gameplay Layer 与自动碰撞矩阵；本文其余显式查询与敌人间阻挡规则继续有效。
+
 ## 日期
 
 2026-09-14
@@ -51,4 +53,5 @@ Accepted
 - `../02_Modules/Bullet/README.md`
 - `../03_SharedContracts/CollisionRules.md`
 - `../05_Testing/IntegrationTests.md`
+- `ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`
 

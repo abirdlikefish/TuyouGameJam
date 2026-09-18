@@ -2,14 +2,18 @@
 
 ## Gate 规则
 
-- [ ] 加法门子弹命中一次只增加一次 `HitIncrement`。
+- [ ] 加法门没有 HP；每次有效子弹命中只按 `BulletDamageContext.Damage` 增加一次门值，并正常消费子弹。
 - [ ] Gate 的 BodyCollider 可被 Bullet Cast 命中；命中结果不依赖自动碰撞回调顺序。
-- [ ] 加法门正数、零和负数数字均按 `ArmyCount + GateValue` 计算。
-- [ ] 加法门负数接触结果为失败，但人数变化仍应用一次。
+- [ ] 加法门正数和零调用 AddArmy 并受 ArmyCountLimit 限制；返回的 `ArmyAdditionResult` 分别记录请求增员、实际增员和剩余总人数；负数只调用 `RemoveArmy(Abs(GateValue))`。
+- [ ] 加法门负数接触结果为失败；Army 按 `Abs(GateValue) × HpPerSoldier` 生成伤害预算，优先由当前 HP 最少、同 HP 时 SlotIndex 最小的槽位承担。
+- [ ] 请求减员、实际伤害和实际人数损失分别记录；多个受伤单兵槽位可以使实际人数损失大于请求减员。
 - [ ] 同一门与同一 Army 多槽位、多帧碰撞只产生一次接触结果。
 - [ ] 门先通过 `IArmyController` 应用效果或槽位伤害，再发布一次事实事件；ArmyController 不订阅该事件重复结算。
-- [ ] 元素门在接触前 HP 清空并接触 Army 时只成功应用一次 `ElementId`。
-- [ ] 元素门接触失败后 HP 被打空时不更新 `ElementId`。
+- [ ] 元素门每个生成项使用 LevelConfig 中各自的 `MaxHp` 和 `ElementType`；最后一发清空 HP 时只有超过剩余 HP 的部分进入 `PostDepletionDamage`。
+- [ ] HP 已为 0 且仍处于 Pending 的元素门继续是合法子弹目标；后续命中消费子弹，并把全部实际伤害累计到 `PostDepletionDamage`。
+- [ ] 元素门成功接触时只按 `PostDepletionDamage × elementDurationSecondsPerDamage` 计算一次持续时间；同类型累加且当前不设上限。
+- [ ] `PostDepletionDamage == 0` 时接触仍成功，但不调用 `AddElementDuration`，也不发布 `ArmyElementDurationChanged`。
+- [ ] 元素门接触失败后奖励永久锁定；后续命中不增加可兑换的 `PostDepletionDamage`，即使 HP 被打空也不增加任何元素持续时间。
 - [ ] 元素门 HP 未清空时，每个接触槽位受到相同伤害。
 - [ ] 元素门失败后继续向下移动并在离开道路后注销；负数加法门沿用普通加法门接触后流程回收。
 - [ ] 未接触离场不发布成功或失败接触事件。
@@ -29,9 +33,9 @@
 ## ObstacleManager 生命周期
 
 - [ ] 每个生成实例拥有唯一 `RuntimeInstanceId`。
-- [ ] 相同配置的多个 Gate/Prop 可以同时登记和查询。
+- [ ] 相同生成参数的多个 Gate 以及相同配置的多个 Prop 可以同时登记和查询。
 - [ ] 成功回收、失败后离场和未接触离场都只注销一次。
 - [ ] 已注销对象不再出现在活动快照中。
-- [ ] 归还对象池前数字、HP、接触状态和运行时 ID 已重置。
+- [ ] 归还对象池前数字、HP、`PostDepletionDamage`、奖励锁定状态、接触状态和运行时 ID 已重置。
 - [ ] `AdditiveGate`、`ElementGate`、`WeaponProp` 类型池均返回未激活对象；ObstacleManager 完成 Transform、配置、ID、回调和登记后才激活。
 - [ ] Gate/Prop 不在 `OnDisable`、`OnDestroy` 中归还自身；ObstacleManager 主动失活后归还，类型池再次防御性失活且重复归还不改变状态。

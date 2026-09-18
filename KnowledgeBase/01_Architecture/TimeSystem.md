@@ -7,7 +7,7 @@ MVP 为玩法模块提供统一的正常时间步进，并为 MainMenu、LevelSe
 ## 时间域
 
 ```text
-RealTime   应用流程自动等待、本地系统任务
+RealTime   应用流程自动等待、本地系统任务、拖拽输入归一化
 Gameplay   关卡和普通游戏逻辑
 Bullet     子弹
 Gate       Gate、Prop 与其他道路对象
@@ -22,10 +22,11 @@ VFX        视觉特效
 | 消费者或逻辑 | MVP 时间域 | 边界 |
 |---|---|---|
 | MainMenu、LevelSelect 和不依赖 Gameplay 推进的流程等待 | `RealTime` | UI 或应用流程计时不归入 Gameplay |
-| Army 移动、LevelManager 本局计时及未细分的玩法逻辑 | `Gameplay` | Gameplay 默认域；SpawnManager 只消费 LevelManager 基于该域累计的 `elapsedTime` |
-| 子弹移动、寿命和命中查询 | `Bullet` | 不再额外叠加 `Gameplay` delta |
-| 怪物移动、攻击和计时 | `Monster` | 不再额外叠加 `Gameplay` delta |
-| Gate、Prop 和其他道路对象的移动与接触流程 | `Gate` | MVP 沿用现有名称；独立倍率启用前再评估改名为 `RoadObject` |
+| Gameplay 相对拖拽归一化 | `RealTime` | LevelManager 读取后作为 `unscaledDeltaTime` 传给 Input；Input 不注入 TimeService，也不直接读取 Unity `Time` |
+| Army 移动、LevelManager 本局计时及未细分的玩法逻辑 | `Gameplay` | LevelManager 读取后传给 Army；SpawnManager 只消费由此累计的 `elapsedTime` |
+| 子弹移动、寿命和命中查询 | `Bullet` | LevelManager 读取后传给 BulletManager；不叠加 Gameplay delta |
+| 怪物移动、攻击和计时 | `Monster` | LevelManager 读取后传给 EnemyManager；不叠加 Gameplay delta |
+| Gate、Prop 和其他道路对象的移动与接触流程 | `Gate` | LevelManager 读取后传给 ObstacleManager；独立倍率启用前再评估改名为 `RoadObject` |
 | 跟随 Gameplay 世界推进的视觉特效 | `VFX` | 不包含 UI 动画和应用流程表现 |
 
 当前公共契约是扁平枚举，不实现父子关系或重叠归属。`Gameplay` 表示默认玩法域，同时也是未来可能的概念父域；这一未来关系目前不产生额外运行时行为。
@@ -36,7 +37,7 @@ VFX        视觉特效
 MVP 最终 deltaTime = unscaledDeltaTime
 ```
 
-MVP 保留时间域参数作为调用意图，但所有域倍率固定为 `1`。玩法对象通过 `TimeService.GetDeltaTime(domain)` 获取时间，不直接依赖 `Time.deltaTime`，以便未来扩展时不改动各模块的时间来源。
+MVP 保留时间域参数作为调用意图，但所有域倍率固定为 `1`。LevelManager 在逻辑帧开始集中调用 `TimeService.GetDeltaTime(domain)`，再把单一对应域的 delta 传给 Input、Army、BulletManager、EnemyManager 和 ObstacleManager；Input、具体 Manager 和池对象不直接访问 TimeService 或 Unity `Time`。这一边界使 ADR-033 的阶段顺序可以由一个协调者验证。
 
 ## 公共接口
 
@@ -73,7 +74,7 @@ MVP 中所有时间域倍率固定为 `1`，不提供运行时倍率查询或修
 ## 注意事项
 
 - `WaitForSeconds` 会受 Unity 全局时间缩放影响；当前应用流程统一使用 `RealTime` 定时器。
-- Collider2D 作为碰撞形状和查询依据，不改变时间权威；子弹、敌人、Gate、Prop 和 Army 的移动与碰撞结算使用各自有效 delta。
+- Collider2D 作为碰撞形状和查询依据，不改变时间权威；LevelManager 把各自有效 delta 传给对应阶段，一次操作不重复读取或累计其他域。
 - 当前不实现暂停或局部时停下的 Collider2D 行为；未来启用时另行确认。
 
 ## 关联决策
@@ -82,3 +83,5 @@ MVP 中所有时间域倍率固定为 `1`，不提供运行时倍率查询或修
 - `../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`
 - `../06_Decisions/ADR-027-MvpGlobalServiceScope.md`
 - `../06_Decisions/ADR-030-TimeDomainStructure.md`
+- `../06_Decisions/ADR-033-LevelManagerFramePipeline.md`
+- `../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`

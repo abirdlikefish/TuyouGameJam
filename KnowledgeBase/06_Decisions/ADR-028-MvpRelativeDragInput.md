@@ -8,6 +8,8 @@ Accepted
 
 2026-09-18
 
+> 后续变更：ADR-036 保留本文的相对拖拽公式、Pointer 生命周期、边界和清理规则，但将首个工程切片收窄为设备触屏与 Editor 左键共用的单一拖拽输入；键盘/手柄和输入源回退延后，并补齐代码、Prefab 与同步 Tick 契约。
+
 ## 背景
 
 ADR-027 已确认 Input 是 Gameplay 场景适配器而不是全局服务，当时将触摸输入延后。当前 MVP 进一步确认需要在指定 UI 区域内支持触屏横向滑动。该操作不是虚拟摇杆：手指停在按下点右侧时不应持续移动，只有相邻采样位置发生水平变化时才产生输入。
@@ -19,7 +21,7 @@ ADR-027 已确认 Input 是 Gameplay 场景适配器而不是全局服务，当�
 ### 模块边界与通信
 
 - Input 继续作为 Gameplay 场景内的 Presentation / Gameplay Adapter，不创建跨场景 `InputService`。
-- 键盘、手柄和触屏输入统一汇入 Input Adapter，由它通过同步命令 `IArmyController.SetHorizontalInput(float)` 传给当前 Army；横向输入不是事实事件，不通过项目 `EventBus` 发布。
+- （已由 ADR-036 取代输入源范围与最小接收接口）本 ADR 当时定义键盘、手柄和触屏统一汇入 Input Adapter，由它通过同步命令 `IArmyController.SetHorizontalInput(float)` 传给当前 Army；横向输入不是事实事件，不通过项目 `EventBus` 发布。
 - Army 不反向查询 Input Adapter。Input Adapter 不直接修改 `ArmyRoot` Transform，不计算道路边界，也不决定 `TbArmy.MoveSpeed`。
 - 触屏控件虽然挂在 Gameplay Canvas 下，但职责归属 Input 模块。UGUI Pointer 回调只负责采集本地交互，不等同于跨模块 EventBus。
 
@@ -40,7 +42,7 @@ accumulatedDeltaX += localDeltaX
 previousLocalX = currentLocalX
 ```
 
-Input Adapter 在每次输入更新时消费自上次更新以来累计的水平差值，并立即将累计值清零。限制顺序固定为先限制原始归一化滑动速度，再乘 Inspector 系数：
+每次输入更新消费自上次更新以来累计的水平差值，并立即将累计值清零。ADR-036 后由 `TouchDragInput.ConsumeHorizontalInput` 承担该计算，GameplayInputAdapter 负责调用与提交。限制顺序固定为先限制原始归一化滑动速度，再乘 Inspector 系数：
 
 ```text
 normalizedVelocity = (accumulatedDeltaX / touchAreaWidth) / unscaledDeltaTime
@@ -57,7 +59,7 @@ horizontalInput = baseTouchInput * horizontalMultiplier
 ### 输入源优先级与清理
 
 - 存在活动触摸 Pointer 时由触屏取得控制权：本次更新有拖动则使用触屏结果，没有拖动则输入 `0`。
-- 没有活动触摸 Pointer 时，Input Adapter 使用键盘/手柄的横向输入并限制到 `[-1,1]`。
+- （已由 ADR-036 取代）本 ADR 当时定义没有活动触摸 Pointer 时使用键盘/手柄横向输入；当前工程切片没有桌面轴回退。
 - `PointerUp`、触控组件或 Canvas 禁用、Gameplay 离开 `Playing`、场景卸载、应用失去焦点或活动 Pointer 失效时，必须清除 Pointer、累计差值和上一位置，并向 Army 发送一次 `0`。
 - Army 只在当前会话 `Playing` 状态消费移动意图，并使用 `horizontalInput × TbArmy.MoveSpeed × 有效玩法 delta`、道路边界和阵型 AABB 计算实际位移。Army 不得把乘系数后的有限输入再次限制到 `[-1,1]`。
 
@@ -74,7 +76,7 @@ horizontalInput = baseTouchInput * horizontalMultiplier
 - ADR-027 中“触摸输入延后”的决定被本 ADR 取代；Input 仍保持 Gameplay 场景适配器，不升级为全局服务。
 - Input 模块进入 `ContractReady`，补充触控区域、公式、输入源优先级、清理规则和验收标准。
 - `SceneStructure.md` 在 Gameplay UI 下记录 `TouchDragArea`，但其职责归属 Input 模块。
-- `PublicInterfaces.md` 保持 `SetHorizontalInput(float)` 签名不变，补充值域和触屏归一化语义。
+- `SetHorizontalInput(float)` 签名保持不变；ADR-036 后由 `IHorizontalInputReceiver` 拥有该最小命令，`IArmyController` 继承它。
 - `ConfigurationTables.md` 明确 `TbArmy.MoveSpeed` 是基础速度，触屏 Inspector 系数通过输入倍率缩放最终位移，不形成第二份基础速度配置。
 - 集成测试增加停手即停、跨分辨率/帧率归一化、Inspector 系数、Pointer 清理和禁止 EventBus 传递连续输入的检查。
 

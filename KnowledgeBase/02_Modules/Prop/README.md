@@ -5,7 +5,7 @@
 - ID：`MOD-PROP`
 - 层级：Gameplay
 - 状态：`InDesign`
-- 依赖：TimeService、EventBus、Army、Bullet、ObstacleManager、ConfigService
+- 依赖：EventBus、Army、Bullet、ObstacleManager、ConfigService、Level
 - 决策：`../../06_Decisions/ADR-022-PropBreakEffectBoundary.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 
 ## 玩法定位
@@ -14,15 +14,15 @@ Prop 是“可被击破并触发效果的道路对象”，不等同于武器箱
 
 ## 当前 MVP 道具
 
-- 弹弓箱：在接触前击破后将 Army 的 `WeaponId` 更新为弹弓配置。
-- 弓箭箱：在接触前击破后将 Army 的 `WeaponId` 更新为弓箭配置。
-- 法杖箱：在接触前击破后将 Army 的 `WeaponId` 更新为法杖配置。
+- 弹弓箱：在接触前击破后将 Army 的 `WeaponId` 更新为 `0`。
+- 弓箭箱：在接触前击破后将 Army 的 `WeaponId` 更新为 `1`。
+- 法杖箱：在接触前击破后将 Army 的 `WeaponId` 更新为 `2`。
 
-这三种道具的配置直接引用一个 `WeaponId`。不同参数的武器必须使用不同的武器配置 ID。该字段是当前 MVP 武器箱的具体配置，不代表未来所有 Prop 都必须以武器作为身份。
+这三种道具的配置直接引用一个固定 `WeaponId`：`0 = Slingshot`、`1 = Bow`、`2 = Staff`。该字段是当前 MVP 武器箱的具体配置，不代表未来所有 Prop 都必须以武器作为身份。
 
 ## 职责
 
-- 控制道具从道路上方生成并向下移动；移动和接触流程沿用 `Gate` 时间域，一次更新不再叠加 `Gameplay` delta。
+- 控制道具从道路上方生成并向下移动；移动流程使用 LevelManager 传给 ObstacleManager 的 `Gate` 时间域 delta，一次更新不再读取或叠加 `Gameplay` delta。
 - 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；移动后通过显式 Cast/Overlap 查询，不依赖自动碰撞回调。
 - 保存运行时 HP、接触状态、运行时实例 ID 和配置 ID。
 - 接收子弹伤害，并在 `Pending` 状态下 HP 首次清空时触发一次配置的击破效果。
@@ -61,6 +61,7 @@ Pending
 - 不负责 Spawn 时序、活动列表和对象池管理。
 - 不决定敌人生成完成和关卡胜负条件。
 - 不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身；只通过 ObstacleManager 注入的窄回调请求结束当前实例。
+- 不使用独立 Update 推进移动或接触；由 ObstacleManager 在 LevelManager 指定阶段驱动。
 
 ## 测试标准
 

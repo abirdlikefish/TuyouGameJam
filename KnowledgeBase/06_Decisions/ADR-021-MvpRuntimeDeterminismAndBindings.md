@@ -8,6 +8,8 @@ Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
 > ADR-029 已进一步补充 EventBus 的精确类型匹配、嵌套发布、Token 身份、异常报告、载荷类型和订阅生命周期；本 ADR 的同步快照分发基础语义继续有效。
 
+> ADR-033 已将本 ADR 的同帧顺序落实为 LevelManager 持有的同步阶段管线；ADR-034 已把道路空间收敛为唯一 `roadBounds` 并固定 ArmyRoot 世界原点。
+
 ## 日期
 
 2026-09-14
@@ -44,6 +46,8 @@ Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 → LevelManager 执行终局判断
 ```
 
+该顺序由 LevelManager 通过类型化同步阶段接口执行；`LevelRunStarted` 只启动会话，Manager 和池对象不使用独立 Update 绕过阶段顺序。
+
 同一次 Bullet Cast 返回多个不同目标且距离相同时，按以下顺序选择：
 
 1. Cast 命中距离更近者优先。
@@ -56,14 +60,14 @@ Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
 - 道路和所有玩法位置使用世界坐标的 XY 平面，运行时 `z = 0`。
 - 世界右方为 `+x`，世界上方为 `+y`；`SpawnY`、`EnemyApproachY`、`DespawnY` 和道路边界都在同一世界坐标系中。横向出生位置由 ADR-023 的 `[0,1]` 归一化规则解析。
-- 道路 Prefab/场景提供实际坐标和边界；世界原点可以按场景摆放，不是公共契约约束，但所有相关对象必须使用同一坐标系。
+- LevelConfig 的唯一世界坐标 `roadBounds` 提供实际边界，宽高和四边由它派生；ArmyRoot 每局从世界原点 `(0,0,0)` 开始且 y 保持为 0。道路 Prefab 只负责视觉，不提供玩法 Collider。
 
 ### Army 移动速度
 
 - Army 横向移动速度由 Luban `TbArmy.MoveSpeed` 提供。
 - Input 只传入归一化方向，不保存或决定速度；Army 使用该配置值结合输入和道路边界计算移动。
 
-> 后续变更：ADR-028 将触屏相对拖动纳入 MVP。键盘/手柄仍传入 `[-1,1]` 轴值；触屏先将原始归一化滑动速度限制到 `[-1,1]`，再乘 Inspector 系数，最终输入可以超过该范围。`TbArmy.MoveSpeed` 保持为基础速度来源。
+> 后续变更：ADR-028 将相对拖动纳入 MVP；ADR-036 又将首个工程切片收窄为设备触屏与 Editor 左键共用的单一拖拽输入，键盘/手柄延后。拖拽先将原始归一化滑动速度限制到 `[-1,1]`，再乘 Inspector 系数，最终输入可以超过该范围。`TbArmy.MoveSpeed` 保持为基础速度来源。
 
 ### Gate/Prop 状态快照
 
@@ -96,9 +100,9 @@ Gate/Prop 的专用接触枚举仍负责本对象的细节状态；快照只暴�
 - 同一键只能注册一个兼容类型的资源；缺失或类型不匹配在进入 Gameplay 前报告 `ResourceMissing`。
 - ADR-031 已明确资源键不作为对象池身份或 PoolService 的 Prefab 选择入口。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供，PoolService 使用准确的具体根组件类型区分类型池；本节继续约束其他运行时资源绑定。
 
-## 未在本 ADR 定案
+## 后续定案
 
-Layer Collision Matrix 的最终允许/禁止关系仍需根据 Unity 工程中的查询方式评审后单独定案；本 ADR 只确定查询顺序和目标类别优先级。
+Layer Collision Matrix 的最终允许/禁止关系已由 ADR-037 定案；本 ADR 继续只负责查询顺序和目标类别优先级。
 
 ## 影响
 
@@ -121,3 +125,4 @@ Layer Collision Matrix 的最终允许/禁止关系仍需根据 Unity 工程中�
 - `../05_Testing/IntegrationTests.md`
 - `ADR-029-EventBusImplementationAndPayloads.md`
 - `ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
+- `ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`

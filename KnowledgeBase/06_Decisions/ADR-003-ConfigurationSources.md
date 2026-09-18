@@ -2,7 +2,9 @@
 
 ## 状态
 
-Accepted（资源键范围由 ADR-020 收窄；生成位置由 ADR-023 修订）
+Accepted（资源键范围由 ADR-020 收窄；生成位置由 ADR-023 修订；Gate 配置来源由 ADR-038 修订）
+
+> ADR-038 已覆盖本文中 Gate 使用 Luban 数值配置和 Gate ConfigId 的部分：当前 Gate 逐门字段来自 LevelConfig，两个门类型的共用速度/接触伤害来自对应规范 Prefab，不建立 `TbGate`。其余配置来源边界继续有效。
 
 ## 日期
 

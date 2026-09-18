@@ -2,20 +2,44 @@
 
 ## 组成
 
-Army 同时持有一个 `WeaponId` 和一个 `ElementId`。二者是独立配置维度，并作用于全军所有激活槽位：
+Army 的本局装备状态由一个当前武器和三个并行元素计时器组成：
 
-- `WeaponId` 唯一确定一条 `TbWeapon` 配置，决定发射间隔和基础子弹配置。
-- `ElementId` 决定当前元素身份和表现分类；MVP 不配置元素伤害倍率或状态效果。
-- Bullet 在生成时组合两者，形成不可变的运行时子弹快照。
+```text
+CurrentWeaponId
+FireRemainingDuration
+IceRemainingDuration
+LightningRemainingDuration
+```
 
-不同参数的弓、法杖或弹弓都视为不同武器，必须使用不同的 `WeaponId` 和配置行。运行时不维护第二份 `WeaponType` 武器身份；表现层如需分类，应由 `WeaponId` 查询配置派生。
+- WeaponId 唯一确定一条 `TbWeapon` 配置，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`，运行时不维护第二份 WeaponType。
+- 当前不建立 `TbElement`。`ElementType.None` 只作为未使用配置字段的空值，Army 只接受火、冰、雷三种可获得元素；具体效果延后设计。
+- 三个元素可以任意组合同时有效；ActiveElements 只从剩余时间是否大于 `0` 派生，不保存第四份可变状态。
+- Bullet 在生成时保存当前 WeaponId 和发射瞬间的 ElementMask，形成不可变运行时快照。
 
 ## 运行时切换
 
-- 武器箱通过 `WeaponId` 更新 Army 的当前武器。
-- 更新武器时保留当前 `ElementId`。
-- Army 发布 `ArmyLoadoutChanged`，事件携带旧、新 `WeaponId` 和当前 `ElementId`。
-- 元素门通过 `ElementId` 更新 Army 的当前元素，不能修改当前 `WeaponId`。
+- 每次 StartRun 把当前武器重置为 `0`，三元素剩余时间全部重置为 `0`。
+- 武器箱通过 WeaponId 更新当前武器，不改变任何元素剩余时间；Army 发布 `ArmyWeaponChanged`。
+- 成功元素门通过 `AddElementDuration(ElementType, duration, sourceRuntimeInstanceId)` 增加对应计时，不改变当前武器或另外两种元素；传入 `None` 必须拒绝。
+- 同类型持续时间直接累加，当前不设上限；增加时发布 `ArmyElementDurationChanged`。
+- 某元素从大于 `0` 首次变为 `0` 时发布一次 `ArmyElementExpired`；剩余时间不通过 EventBus 每帧广播。
+
+## 元素计时与掩码
+
+Army 在 `TickMovementAndFire` 中先扣减计时，再生成本帧发射快照：
+
+```text
+FireRemainingDuration = Max(0, FireRemainingDuration - gameplayDeltaTime)
+IceRemainingDuration = Max(0, IceRemainingDuration - gameplayDeltaTime)
+LightningRemainingDuration = Max(0, LightningRemainingDuration - gameplayDeltaTime)
+
+ActiveElements = None
+if FireRemainingDuration > 0: ActiveElements |= Fire
+if IceRemainingDuration > 0: ActiveElements |= Ice
+if LightningRemainingDuration > 0: ActiveElements |= Lightning
+```
+
+ElementMask 固定为 `None = 0`、`Fire = 1`、`Ice = 2`、`Lightning = 4`。Gate 接触晚于 Army 发射阶段，因此本帧新获得的元素从下一逻辑帧发射开始生效。子弹生成后不随 Army 的计时器变化。
 
 ## MVP 发射规则
 
@@ -26,14 +50,18 @@ Army 同时持有一个 `WeaponId` 和一个 `ElementId`。二者是独立配置
 ```text
 WeaponId 对应的基础参数
 → BulletId 对应的基础伤害和速度
-→ 携带当前 ElementId
+→ 携带发射瞬间的 ActiveElements
 → 生成 Bullet 快照
 ```
 
 ## 测试标准
 
-- 武器箱只能通过有效的 `WeaponId` 更新 Army。
-- 换武器不会意外清除当前元素。
+- `TbWeapon` 必须准确包含 0、1、2 三个固定 ID，0 不得被当作未配置值。
+- 每局以弹弓和三个 0 秒元素计时开始。
+- 武器箱只能通过有效的 WeaponId 更新 Army，换武器不会改变任何元素计时。
+- 火、冰、雷可以同时生效；重复获得同元素累加持续时间，不覆盖另外两种。
+- 计时只在 Playing 使用传入的 Gameplay delta 扣减且不会小于 0；每次有效期只发布一次过期事实。
 - 相同武器 ID 在不同槽位生成的子弹基础参数一致。
 - 不同武器 ID 即使外观相似，也按独立配置验证和表现。
 - 改变槽位的 `RepresentedCount` 不改变单次发射数量、子弹伤害或速度。
+- 子弹保存发射瞬间的 ElementMask；Army 后续获得或失去元素不修改飞行中的子弹。

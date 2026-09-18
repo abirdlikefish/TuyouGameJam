@@ -42,11 +42,13 @@ Accepted
 ### Input 保持为场景适配器
 
 - 当前 MainMenu 和 LevelSelect 自动跳过，MVP 没有跨场景输入消费需求，因此不创建全局 `InputService`。
-- Input Adapter 属于 Gameplay 场景，只在 `LevelManager` 的 `Playing` 阶段启用，读取键盘/手柄横向值并调用 `IArmyController.SetHorizontalInput`。
+- （已由 ADR-036 取代输入源与最小接收接口）Input Adapter 属于 Gameplay 场景，只在 `LevelManager` 的 `Playing` 阶段启用；本 ADR 当时定义为读取键盘/手柄横向值并调用 `IArmyController.SetHorizontalInput`。
 - Army 使用 `TimeService` 和 `TbArmy.MoveSpeed` 计算移动；Input Adapter 不依赖 `TimeService`，不决定速度，也不自行修改 Transform。
 - 触摸输入和多设备切换延后；启用前再决定是否需要跨场景输入服务。
 
 > 后续变更：ADR-028 已将触屏相对拖动纳入 MVP，并取代上一条“触摸输入延后”的决定；Input 仍保持 Gameplay 场景适配器，不创建全局服务。
+
+> 后续变更：ADR-036 将首个工程切片收窄为单一相对拖拽输入，键盘/手柄延后，并以 `IHorizontalInputReceiver` 和 `IGameplayInputController` 补齐最小工程契约；Input 的场景级生命周期不变。
 
 ### MVP 使用精简 TimeService
 

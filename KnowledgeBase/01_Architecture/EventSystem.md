@@ -128,10 +128,10 @@ GameStateService → SceneService.SwitchToGameplay(levelId, levelConfig, levelRu
 SceneService → AppSceneReady / AppSceneLoadFailed / AppSceneUnloadFailed → GameStateService
 GameStateService → LevelRunStarted → LevelManager、UI
 Gate / Prop → 调用 IArmyController 类型化命令 → Army 状态变更
-Gate / Prop → GateValueChanged、GateContactResolved、PropBroken、PropContactDamage → UI、VFX
-ArmyController → ArmyCountChanged、ArmyFormationChanged、SoldierHit → UI、ArmyVisual、VFX
+Gate / Prop → GateValueChanged、ElementGateDamageChanged、GateContactResolved、PropBroken、PropContactDamage → UI、VFX
+ArmyController → ArmyCountChanged、ArmyFormationChanged、SoldierHit、ArmyWeaponChanged、ArmyElementDurationChanged、ArmyElementExpired → UI、ArmyVisual、VFX
 Monster → 必执行回调通知 EnemyManager 死亡
-EnemyManager → 更新 AliveEnemyCount → 发布 MonsterKilled → LevelManager、VFX
+EnemyManager → 更新 AliveEnemyCount → 发布 MonsterKilled → VFX
 LevelManager → GameStateService.CompleteGameplay(LevelCompletion)
 GameStateService → SceneService.SwitchToLevelSelect()
 SceneService → AppSceneUnloaded(Gameplay) → 加载并初始化 LevelSelectScene
@@ -141,6 +141,8 @@ SceneService → AppSceneReady(LevelSelect) → GameStateService → LevelSelect
 `GameStateService` 负责应用流程和结果事件；`LevelManager` 负责当前 Gameplay 会话的玩法运行、终局判定和结果提交。`Victory`、`GameOver` 是结果事实，不是应用流程状态。
 
 Gate/Prop 必须先通过 `IArmyController` 完成玩法状态变更，再发布接触、击破或伤害事实。Monster 死亡时必须先通过 EnemyManager 的必执行回调完成死亡去重和 `AliveEnemyCount` 更新，再由 EnemyManager 发布 `MonsterKilled`；事件监听者不承担敌人注销、计数或回收的必需步骤。
+
+元素门 HP 清空后的伤害累计属于 Gate 自身同步规则，不由事件监听者完成。`ElementGateDamageChanged` 只报告 HP 伤害、额外伤害、累计可兑换伤害和奖励锁定状态；接触成功后若计算持续时间为 `0`，只发布成功的 `GateContactResolved`，不发布并不存在的 `ArmyElementDurationChanged`。
 
 ## 新增或修改事件的流程
 

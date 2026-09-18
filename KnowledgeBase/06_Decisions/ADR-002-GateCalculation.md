@@ -2,7 +2,9 @@
 
 ## 状态
 
-Superseded by `ADR-006-AdditiveGateAndContactResolution.md`
+Superseded by `ADR-006-AdditiveGateAndContactResolution.md` and `ADR-038-LevelConfiguredDamageDrivenGates.md`
+
+> 当前数字门只保留加法门，明确不恢复乘法门或除法门；以下内容仅保留历史决策轨迹，不属于实现范围。
 
 ## 历史决策
 
@@ -16,4 +18,4 @@ NewArmyCount = Clamp(ArmyCount × GateValue, 0, ArmyCountLimit)
 
 ## 后续扩展
 
-可以在不改变 Army 公共接口的情况下增加 `+N`、`-N` 和 `÷N` 门。
+历史上曾考虑增加 `+N`、`-N` 和 `÷N` 门；现行范围已由 ADR-038 收敛为只有加法门与元素门。
