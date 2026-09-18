@@ -25,3 +25,6 @@
 | 2026-09-14 | 新增 ADR-021，定案 MVP ArmyId=1、时间倍率固定为 1、同帧碰撞与同距离命中顺序、世界坐标约束、Army MoveSpeed 配置、Gate/Prop 状态映射、EventBus 语义和资源键命名；Layer Collision Matrix 保留为单独待评审项 | Army、Time、Level、碰撞、EventBus、Config、资源、测试 | Codex |
 | 2026-09-18 | 补全项目定位中的加法门、元素门和道具交互说明；新增 ADR-022，明确 Prop 承载通用击破效果、当前 MVP 仅确认三种武器箱，其他效果类型与组合规则记录为 DES-031；同步模块、契约、路线图与测试表述 | 项目定位、Gate、Prop、Army、配置、事件、测试、路线图、设计待决 | Codex |
 | 2026-09-18 | 区分核心玩法循环与当前临时应用流程；新增 ADR-023，移除三路生成点和 `spawnPoint` ID，敌人、Gate、Prop 生成项统一改用 `[0,1]` 的 `spawnPosition`，由固定 `spawnY` 与道路边界计算中心点坐标且不考虑对象尺寸 | 项目定位、Level、Spawn、Monster、配置、共享契约、事件、测试、架构、设计决策 | Codex |
+| 2026-09-18 | 新增 ADR-024，明确分层图箭头表示允许的代码依赖，核心依赖链为表现层→玩法层→全局基础层；将本地存档与设置改为当前不启用的旁路扩展模块 | 架构、全局服务、后续扩展、设计决策 | Codex |
+| 2026-09-18 | 新增 ADR-025，区分 Controller、Manager、Service、Root 和 Bootstrap 的职责语义；在场景结构中拆分 GlobalRoot 常驻层与 Gameplay 单局层，补充 EnemyManager，并明确不引入通用 GameManager | 场景、架构、全局服务、共享命名、设计决策 | Codex |
+| 2026-09-18 | 新增 ADR-026 与程序集边界文档，将 Contracts、Foundation、Gameplay、Presentation 和 Composition 的粗粒度划分记录为 MVP 后工程化要求，当前不创建 `.asmdef`；明确同步接口、事实事件、依赖倒置接口和用例协调器的选择边界 | 项目路线、架构、EventBus、全部运行时模块、设计决策 | Codex |

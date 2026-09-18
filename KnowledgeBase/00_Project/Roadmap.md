@@ -40,3 +40,7 @@
 - Deferred：本地进度存档
 - [ ] 升级和关卡解锁
 - [ ] 后方敌人从侧面绕过较慢、静止或局部时停的前方敌人
+
+## MVP 后工程化要求
+
+- Deferred：在公共契约和脚本目录稳定后，按 ADR-026 将 Contracts、Foundation、Gameplay、Presentation 和 Composition 划分为粗粒度程序集，并验证单向引用、依赖倒置、Unity 序列化引用与完整游玩闭环。当前不创建 `.asmdef`。

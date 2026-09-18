@@ -44,6 +44,7 @@
 | DES-030 | Layer Collision Matrix 最终关系 | InDesign | Bullet、Army、Gate、Prop、Monster、Project Settings | 先按 `CollisionRules.md` 评审显式查询目标和是否启用物理接触，再单独定案允许/禁止矩阵 |
 | DES-031 | 道具击破效果目录、单个/组合方式、目标与叠加规则 | InDesign | Prop、Army、Config、事件、UI、测试 | 当前 MVP 保留三种武器箱；实现其他效果前确认效果模型、配置结构、同步命令和事实事件载荷，见 ADR-022 |
 | DES-032 | 生成对象的横向出生位置表达 | Accepted | Level、Spawn、Monster、Gate、Prop、Config | 见 ADR-023；移除三路生成点 ID，所有生成项改用 `[0,1]` 的 `spawnPosition` |
+| DES-033 | 程序集分层与跨层通信方式 | Accepted（实现延后） | 架构、全局服务、全部 Gameplay、UI、AudioVFX | 见 ADR-024、ADR-026；当前不创建 `.asmdef`，后续以粗粒度程序集强制单向依赖，同步接口用于必须执行的操作，事件只传递已发生的事实 |
 
 ## 已接受决策
 
@@ -67,3 +68,6 @@
 - `../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`：定案 ArmyId、MVP 时间倍率、同帧碰撞顺序、世界坐标、Army 移动速度、状态映射、EventBus 和资源键；Layer Collision Matrix 保留待评审。
 - `../06_Decisions/ADR-022-PropBreakEffectBoundary.md`：定案 Prop 承载通用击破效果、当前 MVP 只实现武器替换，以及其他效果细节保持待决。
 - `../06_Decisions/ADR-023-NormalizedSpawnPosition.md`：定案固定出生横线、所有生成项使用 `[0,1]` 归一化横向位置，以及出生坐标不考虑对象尺寸。
+- `../06_Decisions/ADR-024-LayerDependencyDirection.md`：定案表现层、玩法层和全局基础层的依赖方向，并将存档和设置改为旁路扩展。
+- `../06_Decisions/ADR-025-SceneHierarchyAndRuntimeRoleNaming.md`：定案常驻层与 Gameplay 单局层的场景层级，以及 Controller、Manager、Service、Root 和 Bootstrap 的职责命名。
+- `../06_Decisions/ADR-026-AssemblyBoundariesAndCommunication.md`：定案后续粗粒度程序集目标、Composition 装配边界，以及同步接口、事实事件、依赖倒置和协调器的选择规则；工程实现延后。

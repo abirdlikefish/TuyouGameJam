@@ -11,11 +11,12 @@
 1. `ProjectOverview.md`：项目定位、当前玩法基线和非目标。
 2. `DesignBacklog.md`：尚未定案的机制、需要比较的方案和决策优先级。
 3. `../01_Architecture/SystemOverview.md`：分层和依赖原则。
-4. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 与 Luban 的边界和加载流程。
-5. `../02_Modules/README.md`：模块总表、并行认领和模块入口。
-6. 目标模块的 `README.md`：职责、输入、输出、测试标准和已知问题。
-7. `../03_SharedContracts`：接口、事件、配置表、字段、命名规则和 `CollisionRules.md`。
-8. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
+4. `../01_Architecture/AssemblyBoundaries.md`：后续程序集划分、依赖倒置和跨层通信边界。
+5. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 与 Luban 的边界和加载流程。
+6. `../02_Modules/README.md`：模块总表、并行认领和模块入口。
+7. 目标模块的 `README.md`：职责、输入、输出、测试标准和已知问题。
+8. `../03_SharedContracts`：接口、事件、配置表、字段、命名规则和 `CollisionRules.md`。
+9. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
 
 ## 按任务选择入口
 
