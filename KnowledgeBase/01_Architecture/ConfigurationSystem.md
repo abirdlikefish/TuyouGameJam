@@ -9,7 +9,7 @@
 | 内容 | 权威来源 | 典型消费者 |
 |---|---|---|
 | 可用关卡目录和首次运行默认解锁状态 | `LevelCatalog` ScriptableObject | ConfigService、GameStateService、UI |
-| 关卡元数据、固定道路、三路生成点、生成时间轴和出现顺序 | `LevelConfig` ScriptableObject | Level、Spawn |
+| 关卡元数据、固定道路、出生横线、归一化横向出生位置、生成时间轴和出现顺序 | `LevelConfig` ScriptableObject | Level、Spawn |
 | 角色/军队基础属性 | Luban `TbArmy` | Army |
 | 武器发射属性 | Luban `TbWeapon` | Army、Bullet |
 | 元素身份和类型 | Luban `TbElement` | Army、Bullet |
@@ -91,7 +91,7 @@ LevelManager → Initialize(levelConfig, levelRunId)
 ### 修改关卡编排
 
 1. 打开 `LevelCatalog` 确认关卡条目和默认解锁标记。
-2. 打开对应 `LevelConfig` 资产，修改道路尺寸、三路生成点、生成时间轴或配置 ID。
+2. 打开对应 `LevelConfig` 资产，修改道路尺寸、`spawnY`、各生成项的 `spawnPosition`、生成时间轴或配置 ID。
 3. 确认 `levelId` 唯一，引用的 `TbEnemy`、`TbGate`、`TbProp` 存在，且本关需要的 Unity 资源绑定完整。
 4. 运行目录加载、选定关卡注入、时间轴顺序和终局重开测试。
 

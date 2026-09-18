@@ -63,7 +63,7 @@ MVP 初始人数固定为 `1`，不配置 `InitialCount`。`ArmyCountLimit = 0` 
 
 初始字段：`Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed`。
 
-道具的玩法身份和实际装备效果均由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱的 Prefab 与表现由 Unity 侧按 `WeaponId` 绑定。不同武器必须使用不同的 `WeaponId`。
+当前 MVP 的道具均为武器箱，其装备效果、Prefab 与表现由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱由 Unity 侧按 `WeaponId` 绑定，不同武器必须使用不同的 `WeaponId`。该字段集只描述当前 MVP；Prop 的领域职责允许未来配置其他击破效果，但在 DES-031 定案前不预留通用效果字段，见 ADR-022。
 
 每条 `TbProp` 必须具有有效 `WeaponId`、`MaxHp > 0`、`ContactDamage > 0` 和 `MoveSpeed >= 0`。
 
@@ -94,7 +94,7 @@ entries[].initiallyUnlocked bool
 
 - 关卡 ID 和展示信息。
 - 通关后应解锁的关卡 ID 列表 `unlockedLevelIds`；首版不执行下一关跳转。它不是当前玩家已解锁状态。
-- 固定道路的宽度、高度、坐标、左右边界和左/中/右三个生成点，所有位置使用世界 XY 坐标且运行时 `z = 0`。
+- 固定道路的宽度、高度、坐标、左右边界和出生横线 `spawnY`，所有位置使用世界 XY 坐标且运行时 `z = 0`。
 - `spawnY`、`enemyApproachY`、`despawnY` 等关卡空间参数。
 - `enemySpawns`、`gateSpawns`、`propSpawns` 三个按本局开始时间编排的列表。
 
@@ -103,10 +103,10 @@ entries[].initiallyUnlocked bool
 ```text
 spawnTime  相对本局开始的秒数，非负
 configId   对应 TbEnemy / TbGate / TbProp 的稳定 ID
-spawnPoint 左、中、右三路编号（0、1、2）
+spawnPosition 道路从左到右的归一化出生位置，范围为 [0,1]
 ```
 
-生成列表按 `spawnTime` 非递减排序；同一时间按列表顺序处理。`spawnPoint` 只决定初始位置，不约束对象生成后的移动路径。MVP 的 `enemySpawns` 至少包含一个条目；`gateSpawns` 和 `propSpawns` 可以为空。
+生成列表按 `spawnTime` 非递减排序；同一时间按列表顺序处理。每条敌人、Gate、Prop 生成项都必须提供有限且位于 `[0,1]` 的 `spawnPosition`，越界、NaN 或无穷值以 `InvalidLevelConfig` 拒绝。SpawnManager 按道路左右边界线性计算 `x`，使用固定 `spawnY` 作为 `y`；坐标以对象中心点为准，不考虑 Collider、Renderer 或 Prefab 尺寸。该值不约束对象生成后的移动路径。MVP 的 `enemySpawns` 至少包含一个条目；`gateSpawns` 和 `propSpawns` 可以为空。
 
 它不负责保存敌人 HP、门数字、子弹伤害等可复用数值。
 
@@ -137,3 +137,4 @@ TbProp.weaponId            -> TbWeapon.Id
 - 修改主键或引用语义必须新增 ADR 或更新现有 ADR。
 - 生成代码只读；代码问题回溯到表、`luban.conf` 或模板。
 - 当前 MVP 字段边界见 `../06_Decisions/ADR-020-MinimalMvpConfigurationSurface.md`；延期能力进入范围前不得预留空字段。
+- 固定出生横线与 `spawnPosition` 的坐标解析和校验见 `../06_Decisions/ADR-023-NormalizedSpawnPosition.md`。

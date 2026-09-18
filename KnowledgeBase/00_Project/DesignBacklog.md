@@ -36,12 +36,14 @@
 | DES-022 | Luban MVP 初始字段和 Unity 资源绑定边界 | Accepted | Config、Army、Monster、Gate、Prop、Bullet、资源 | 见 ADR-020；只保留当前玩法数值和稳定 ID，Prefab 等资源由 Unity 侧绑定 |
 | DES-023 | MVP Army 身份与时间倍率范围 | Accepted | Army、Time、事件、全部 Gameplay | 见 ADR-021；`ArmyId` 固定为 `1`，MVP 所有时间倍率固定为 `1`，倍率和暂停扩展延后 |
 | DES-024 | 同帧碰撞阶段与同距离命中优先级 | Accepted | Bullet、Gate、Prop、Monster、Level、碰撞契约 | 见 ADR-021；移动阻挡→子弹→Gate/Prop→敌人攻击→终局，同距离按 Enemy > Gate > Prop > RuntimeInstanceId |
-| DES-025 | 道路世界坐标系 | Accepted | Level、Army、Spawn、Monster、Gate、Prop | 见 ADR-021；世界 XY 平面、z=0、右为 +x、上为 +y，原点由场景决定 |
+| DES-025 | 道路世界坐标系 | Accepted | Level、Army、Spawn、Monster、Gate、Prop | 见 ADR-021、ADR-023；世界 XY 平面、z=0、右为 +x、上为 +y，出生位置在固定 `SpawnY` 上按 `[0,1]` 横向映射 |
 | DES-026 | Army 横向移动速度来源 | Accepted | Army、Input、Config | 见 ADR-021；由 `TbArmy.MoveSpeed` 提供，Input 只传方向 |
 | DES-027 | Gate/Prop 统一道路状态快照映射 | Accepted | Gate、Prop、Obstacle、UI、调试 | 见 ADR-021；专用接触状态保留，快照使用统一 `ObstacleState` |
 | DES-028 | EventBus 分发语义 | Accepted | EventBus、全部事件消费者、测试 | 见 ADR-021；同步、注册顺序、异常隔离、独立 Token、取消幂等 |
 | DES-029 | Unity 资源注册表键命名 | Accepted | Config、资源、Spawn、Army、Monster、Gate、Prop、Bullet | 见 ADR-021；使用大小写敏感的 `类别/身份` 键，资源侧维护 |
 | DES-030 | Layer Collision Matrix 最终关系 | InDesign | Bullet、Army、Gate、Prop、Monster、Project Settings | 先按 `CollisionRules.md` 评审显式查询目标和是否启用物理接触，再单独定案允许/禁止矩阵 |
+| DES-031 | 道具击破效果目录、单个/组合方式、目标与叠加规则 | InDesign | Prop、Army、Config、事件、UI、测试 | 当前 MVP 保留三种武器箱；实现其他效果前确认效果模型、配置结构、同步命令和事实事件载荷，见 ADR-022 |
+| DES-032 | 生成对象的横向出生位置表达 | Accepted | Level、Spawn、Monster、Gate、Prop、Config | 见 ADR-023；移除三路生成点 ID，所有生成项改用 `[0,1]` 的 `spawnPosition` |
 
 ## 已接受决策
 
@@ -51,7 +53,7 @@
 - `../06_Decisions/ADR-007-WeaponIdentity.md`：定案使用 `WeaponId` 作为唯一武器身份。
 - `../06_Decisions/ADR-008-ObstacleManager.md`：定案由 `ObstacleManager` 管理道路上的 Gate/Prop 实例。
 - `../06_Decisions/ADR-005-MonsterCombatAndManager.md`：定案三类敌人的接近与攻击流程、碰撞判定和 EnemyManager 生命周期。
-- `../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`：定案固定三路道路、无波次时间轴和 Gameplay 内终局判定；终局后的应用流程见 ADR-011。
+- `../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`：定案固定道路、无波次时间轴和 Gameplay 内终局判定；三路生成部分已由 ADR-023 替代，终局后的临时应用流程见 ADR-011。
 - `../06_Decisions/ADR-011-ApplicationFlowAndGameplaySession.md`：定案应用级流程、单局状态、1 秒自动跳过和终局回到选关。
 - `../06_Decisions/ADR-010-CanonicalRuntimeNames.md`：统一 ArmyController、LevelManager、EnemyManager 和 GameStateService 的运行时命名。
 - `../06_Decisions/ADR-012-LevelCatalogConfigurationBootstrap.md`：定案 LevelCatalog、默认解锁和 LevelConfig 注入流程。
@@ -63,3 +65,5 @@
 - `../06_Decisions/ADR-020-MinimalMvpConfigurationSurface.md`：定案 Luban 的 MVP 最小字段、固定规则和 Unity 资源绑定边界。
 - `../06_Decisions/ADR-019-ApplicationFlowContract.md`：定案应用流程公共命令、GameplayLoading 状态、场景就绪/卸载握手、会话 ID 所有权和流程定时器归属。
 - `../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`：定案 ArmyId、MVP 时间倍率、同帧碰撞顺序、世界坐标、Army 移动速度、状态映射、EventBus 和资源键；Layer Collision Matrix 保留待评审。
+- `../06_Decisions/ADR-022-PropBreakEffectBoundary.md`：定案 Prop 承载通用击破效果、当前 MVP 只实现武器替换，以及其他效果细节保持待决。
+- `../06_Decisions/ADR-023-NormalizedSpawnPosition.md`：定案固定出生横线、所有生成项使用 `[0,1]` 归一化横向位置，以及出生坐标不考虑对象尺寸。

@@ -20,6 +20,15 @@
 
 ## 门类型
 
+两类门共享“子弹先改变门状态、Army 接触时只判定一次”的交互骨架，但子弹命中与接触结果不同：
+
+| 类型 | 子弹命中 | Army 接触成功 | Army 接触失败 |
+|---|---|---|---|
+| 加法门 | `GateValue += HitIncrement` | `GateValue >= 0`，按当前数字增减总人数 | `GateValue < 0`，仍按当前数字扣减总人数 |
+| 元素门 | 扣减运行时 HP | `Hp <= 0`，更新 `ElementId` | `Hp > 0`，对每个接触槽位造成相同伤害并锁定元素奖励 |
+
+子弹不会直接把门效果发给 Army；Army 接触才是 Gate 效果的结算点。加法门没有 HP，元素门也不维护可加减的门数字。
+
 ### 加法门
 
 - `GateValue` 是可为负数的当前数字。
@@ -61,7 +70,7 @@ Pending
 
 - 从 Luban `TbGate` 读取 `GateType`、`InitialValue`、`HitIncrement`、`MaxHp`、`ElementId`、`ContactDamage` 和 `MoveSpeed`。
 - 加法门与元素门 Prefab 由 Unity 侧按 `GateType` 绑定，不读取 Luban 资源键。
-- 关卡出现顺序和生成点由 `LevelConfig` 提供。
+- 关卡出现顺序和每条生成项的 `[0,1]` 横向出生位置由 `LevelConfig` 提供；SpawnManager 解析固定 `spawnY` 上的中心点世界坐标。
 - 当前数字、HP、接触状态和位置属于运行时状态，不回写 Luban。
 
 ## 非职责

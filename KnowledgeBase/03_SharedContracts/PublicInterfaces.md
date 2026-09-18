@@ -121,7 +121,7 @@ MVP 只有一个 Army，所有需要 Army 身份的事件和去重上下文使�
 
 `GateEffect` 只描述已经通过接触判定的结果；负数加法门的 `ArmyCountDelta` 仍然可以为负数。
 
-Gate 和 Prop 使用 `IArmyController` 的方法同步提交玩法状态变更：门调用 `ApplyGateEffect` 或 `ApplySlotDamage`，道具调用 `ApplyWeaponPickup` 或 `ApplySlotDamage`。调用方完成本地去重和状态转换后执行命令，再发布对应事实事件；ArmyController 不通过订阅这些事件重复执行命令。
+Gate 和 Prop 使用 `IArmyController` 的方法同步提交玩法状态变更：门调用 `ApplyGateEffect` 或 `ApplySlotDamage`，当前 MVP 的武器箱调用 `ApplyWeaponPickup`，道具接触失败调用 `ApplySlotDamage`。调用方完成本地去重和状态转换后执行命令，再发布对应事实事件；ArmyController 不通过订阅这些事件重复执行命令。`ApplyWeaponPickup` 是当前 MVP 的具体道具效果接口，不代表未来所有 Prop 都必须修改武器；扩展边界见 ADR-022。
 
 ```csharp
 public readonly struct GateEffect
@@ -273,11 +273,10 @@ public readonly struct RoadLayoutSnapshot
     public float SpawnY { get; }
     public float EnemyApproachY { get; }
     public float DespawnY { get; }
-    public IReadOnlyList<Vector2> LaneSpawnPoints { get; }
 }
 ```
 
-`LaneSpawnPoints` 固定包含左、中、右三个位置。道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`；世界原点由道路 Prefab/场景决定，不属于公共契约。车道编号只用于初始生成；敌人到达 `EnemyApproachY` 后由 Monster 选择最近的有效士兵槽位。
+道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`；世界原点由道路 Prefab/场景决定，不属于公共契约。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。计算不考虑对象尺寸；敌人到达 `EnemyApproachY` 后由 Monster 选择最近的有效士兵槽位。
 
 ## 时间接口
 
@@ -346,7 +345,7 @@ public readonly struct EnemySpawnRequest
 {
     public int LevelRunId { get; }
     public int ConfigId { get; }
-    public int SpawnPoint { get; }
+    public float SpawnPosition { get; }
     public Vector2 WorldPosition { get; }
 }
 
@@ -355,7 +354,7 @@ public readonly struct ObstacleSpawnRequest
     public int LevelRunId { get; }
     public int ConfigId { get; }
     public ObstacleKind Kind { get; }
-    public int SpawnPoint { get; }
+    public float SpawnPosition { get; }
     public Vector2 WorldPosition { get; }
 }
 ```

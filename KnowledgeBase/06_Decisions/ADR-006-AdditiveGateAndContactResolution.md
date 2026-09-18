@@ -57,7 +57,7 @@ Pending -> ExitedUncontacted
 
 - Gate 和 Prop 对 Army 产生的状态变更使用 `IArmyController` 的同步命令接口，不把事实事件当作修改 Army 的命令。
 - 加法门和成功元素门分别调用 `ApplyGateEffect`；元素门失败时对已去重的接触槽位调用 `ApplySlotDamage`。
-- 道具成功时调用 `ApplyWeaponPickup`；道具失败时对已去重的接触槽位调用 `ApplySlotDamage`。
+- 当前 MVP 的武器箱成功时调用 `ApplyWeaponPickup`；道具失败时对已去重的接触槽位调用 `ApplySlotDamage`。Prop 的通用击破效果边界和未来扩展见 ADR-022。
 - 对象完成本地状态转换和 Army 命令调用后，才发布 `GateContactResolved`、`PropBroken` 或 `PropContactDamage`。这些事件只供 UI、音频、VFX 和调试等观察者消费，`ArmyController` 不订阅它们重复执行效果。
 
 ### 范围
@@ -73,5 +73,5 @@ Pending -> ExitedUncontacted
 
 ## 道具失败后的击破
 
-- 道具接触失败后，后续子弹即使将其 HP 打空，也不再发放 `WeaponId` 奖励。
-- 失败状态锁定接触奖励；对象仍可按生命周期规则受击、销毁或离场。
+- 道具接触失败后，后续子弹即使将其 HP 打空，也不再发放任何击破效果；当前 MVP 包括 `WeaponId` 奖励。
+- 失败状态锁定全部击破效果；对象仍可按生命周期规则受击、销毁或离场。

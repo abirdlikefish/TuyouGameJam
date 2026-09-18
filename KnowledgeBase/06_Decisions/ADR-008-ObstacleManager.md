@@ -11,7 +11,7 @@ Accepted
 ## 决策
 
 - 新增 `ObstacleManager`，统一管理道路上的 Gate 和 Prop 实例。
-- `SpawnManager` 负责生成时机、数量和生成点；`ObstacleManager` 负责实例获取、登记、查询、注销和回收。
+- `SpawnManager` 负责生成时机、数量和出生世界坐标；`ObstacleManager` 负责实例获取、登记、查询、注销和回收。横向出生坐标规则见 ADR-023。
 - Gate/Prop 自身负责移动、HP、子弹命中、接触判定和效果应用；`ObstacleManager` 不计算这些规则。
 - 管理器以运行时 `RuntimeInstanceId` 区分同一配置生成的多个对象，不能只使用 `GateId` 或 `PropId`。
 - 管理器提供按对象类型和实例 ID 查询当前道路对象的只读快照。

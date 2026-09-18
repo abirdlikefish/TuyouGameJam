@@ -15,8 +15,8 @@
 - 向 Monster 提供有士兵槽位的只读位置和索引查询，不暴露槽位内部对象。
 - 控制 ArmyRoot 的整体横向移动；移动范围受 LevelConfig 固定道路左右边界和当前激活槽位 AABB 共同限制。
 - 按当前激活槽位自动发射子弹，将武器和元素组合成运行时子弹配置。
-- 通过 `IArmyController` 的同步命令接口接收加法门、元素门和道具造成的人数、槽位伤害或装备变化，不订阅接触/击破事实事件重复结算。
-- 通过 `WeaponId` 应用武器箱效果，通过 `ElementId` 应用元素门效果；两种切换互不覆盖另一维度。
+- 通过 `IArmyController` 的同步命令接口接收加法门、元素门和道具造成的人数、槽位伤害或玩法状态变化，不订阅接触/击破事实事件重复结算。
+- 当前 MVP 通过 `WeaponId` 应用武器箱效果，通过 `ElementId` 应用元素门效果；两种切换互不覆盖另一维度。未来道具效果的 Army 命令边界需在 DES-031 定案，不能由 Prop 直接写入 Army 私有状态。
 - 发布 `ArmyCountChanged`、`ArmyFormationChanged`、`SoldierHit`、`ArmyReachedZero`、`ArmyLoadoutChanged`。
 
 ## 配置输入
@@ -61,7 +61,7 @@ void SetHorizontalInput(float value);
 - 同一个门效果只应用一次，即使门同时接触多个槽位。
 - `GateContactResolved`、`PropBroken` 和 `PropContactDamage` 的订阅顺序不会改变 Army 数值，且不会触发第二次效果。
 - 元素门失败时，每个接触槽位受到相同伤害；成功时只切换一次 `ElementId`。
-- 武器箱成功击破时只切换一次 `WeaponId`，并保留当前 `ElementId`。
+- 当前 MVP 的武器箱成功击破时只切换一次 `WeaponId`，并保留当前 `ElementId`；道具接触失败后不得触发任何击破效果。
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
 - 横向移动速度只来自 `TbArmy.MoveSpeed`，Input 的输入值只表示方向和强度。

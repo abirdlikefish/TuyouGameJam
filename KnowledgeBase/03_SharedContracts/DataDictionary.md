@@ -30,8 +30,7 @@
 | `LevelResult` | `enum` | 单局结束结果 | `Victory`、`GameOver` |
 | `RoadWidth` | `float` | 固定道路宽度 | 大于 0 |
 | `RoadHeight` | `float` | 固定道路高度 | 大于 0 |
-| `SpawnY` | `float` | 三路对象的初始生成高度 | 位于固定道路空间内；三路生成点使用该高度 |
-| `LaneSpawnPoints` | `IReadOnlyList<Vector2>` | 左、中、右三路的初始生成位置 | 固定包含 3 个位置，顺序为左、中、右；仅影响初始位置 |
+| `SpawnY` | `float` | 敌人、Gate、Prop 共用的固定出生横线高度 | 位于固定道路空间内 |
 | `LeftBoundary` | `float` | Army 可移动道路左边界 | 小于 `RightBoundary` |
 | `RightBoundary` | `float` | Army 可移动道路右边界 | 大于 `LeftBoundary` |
 | `EnemyApproachY` | `float` | 敌人结束垂直下移、开始接近 Army 的高度 | 位于固定道路空间内 |
@@ -60,7 +59,7 @@
 | `BulletInstanceId` | `int` | 本次生成的具体子弹实例 ID | 活动子弹中唯一；用于碰撞去重 |
 | `LevelElapsedTime` | `float` | 本局开始后的关卡运行时间 | `value >= 0`；由 LevelManager 运行时维护 |
 | `SpawnTime` | `float` | 生成项相对本局开始的触发时间 | `value >= 0`；按列表非递减排序 |
-| `SpawnPoint` | `int` | 左、中、右三路生成点编号 | 仅允许 `0`、`1`、`2`，只影响初始位置 |
+| `SpawnPosition` | `float` | 道路从左到右的归一化出生位置 | 闭区间 `[0,1]`；`0` 为左边界，`1` 为右边界；按对象中心点计算且只影响初始位置 |
 | `SpawnKind` | `enum` | 生成请求类别 | `Enemy`、`Gate`、`Prop` |
 | `TimeScale` | `float` | 时间倍率 | MVP 固定为 `1`；后续扩展范围另行定案 |
 
@@ -72,7 +71,7 @@ MVP 初始人数固定为 `1`，不是配置字段。
 
 加法门接触结果：`GateValue >= 0` 为成功，`GateValue < 0` 为失败；两者都应用相同的 `ArmyCount` 变化，负数门沿用普通加法门接触后流程回收且不重复判定。
 
-元素门和道具接触失败时，对每一个接触到的 Army 槽位应用配置的相同伤害；成功效果只应用一次。
+元素门和道具接触失败时，对每一个接触到的 Army 槽位应用配置的相同伤害；成功效果只应用一次。道具失败后锁定所有击破效果，不只锁定当前 MVP 的武器替换。
 
 槽位受击：
 

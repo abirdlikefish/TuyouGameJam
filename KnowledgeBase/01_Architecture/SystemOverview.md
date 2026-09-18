@@ -17,7 +17,7 @@
 - 全局服务不依赖具体关卡对象。
 - 玩法模块通过接口和事件通信，不直接访问其他模块的私有字段。
 - UI、音效和特效只监听事件，不参与核心数值计算。
-- 关卡道路、三路生成点和按时间轴的生成编排放入 `LevelConfig` ScriptableObject，不散落在 MonoBehaviour 中。
+- 关卡道路、固定出生横线和按时间轴的生成编排放入 `LevelConfig` ScriptableObject；每条生成项使用 `[0,1]` 的归一化横向出生位置，不把坐标散落在 MonoBehaviour 中。
 - 角色/军队、敌人、Gate、Prop 和子弹的可复用玩法数值由 Luban 表提供；当前不建立独立的全局平衡参数表，Unity 资源引用通过资源侧稳定键绑定。
 - `ObstacleManager` 只管理 Gate/Prop 的生成实例、活动登记、查询和回收，不参与门数字、HP 或 Army 效果计算。
 - 配置来源和运行时状态分离，运行时状态不得回写配置资产或 Luban 数据。

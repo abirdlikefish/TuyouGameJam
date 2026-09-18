@@ -46,7 +46,7 @@ MovingDown
 ```
 
 - `MovingDown`：向道路接近线移动。
-- 初始生成车道只决定生成位置；进入 `ApproachingTarget` 后不保留车道约束。
+- 归一化横向出生位置只决定初始中心点；进入 `ApproachingTarget` 后不保留出生位置约束。
 - `ApproachingTarget`：从 ArmyController 获取最近的有效士兵槽位并向其当前位置移动。
 - `Blocked`：保持与前方敌人的安全间距并等待；首版不从侧面绕行。阻挡解除后恢复原移动状态。
 - `Attacking`：进入攻击起始范围后停止移动。
@@ -103,7 +103,7 @@ MovingDown
 ## 配置输入
 
 - 从 Luban `TbEnemy` 读取敌人类型、生命值、攻击力、移动速度、攻击起始范围和攻击冷却；攻击类型由敌人类型派生，Prefab 从 Unity 资源绑定取得。
-- 关卡何时生成哪一种敌人及其初始生成点由 `LevelConfig` 提供；敌人模块只消费生成后的请求和配置。
+- 关卡何时生成哪一种敌人及其 `[0,1]` 横向出生位置由 `LevelConfig` 提供；敌人模块只消费 SpawnManager 已解析世界坐标的生成请求和配置。
 
 ## 测试标准
 
@@ -117,5 +117,5 @@ MovingDown
 - 子弹碰撞只对敌人造成一次伤害，并将 BulletId、WeaponId、ElementId 传递到受击/击杀事件。
 - 生命值为 0 时只死亡一次；死亡后不再移动、攻击或接受新的伤害结算。
 - `AliveEnemyCount` 与死亡事件、对象池回收保持一致。
-- 敌人从左、中、右任一路生成后均先垂直下移，到达 `enemyApproachY` 后可以跨越车道接近最近的有效士兵槽位。
+- 敌人在固定 `spawnY` 横线上按 `spawnPosition` 生成后先垂直下移，到达 `enemyApproachY` 后可以横向接近最近的有效士兵槽位。
 - 敌人移动和攻击计时使用 Monster 时间域。

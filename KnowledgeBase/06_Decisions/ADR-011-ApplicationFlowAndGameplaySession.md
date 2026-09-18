@@ -36,6 +36,7 @@ Initializing
 - 进入 Gameplay 前必须完成游玩场景加载和本关 `LevelConfig` 初始化；场景加载中的状态仅作为内部过渡，不作为用户可见页面。
 - 游玩结束后不返回 MainMenu，而是清理本局并回到 `LevelSelect`；选关等待 1 秒后再次开始同一关。
 - MainMenu 和 LevelSelect 当前可以只作为流程状态存在，不要求创建实际 Unity 场景或交互 UI。
+- 上述 1 秒自动跳转、终局回到 LevelSelect 并重开同一关属于临时应用串联流程，不定义一局内反复发生的核心玩法循环；核心玩法循环以 `ProjectOverview.md` 为准。
 - 应用流程由 `GameStateService` 唯一推进；场景加载期间使用内部 `GameplayLoading` 状态，收到 `GameplaySceneReady` 后才进入 `Gameplay`。
 
 `Victory` 和 `GameOver` 是游玩结果事实，不再作为 `GameStateService` 的应用状态。

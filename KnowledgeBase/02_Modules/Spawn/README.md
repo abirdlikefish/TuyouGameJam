@@ -13,7 +13,7 @@
 - 按 `LevelConfig` 的时间轴安排敌人、Gate 和 Prop 的生成。
 - 唯一维护 `enemySpawns`、`gateSpawns`、`propSpawns` 的游标。
 - 接受 LevelManager 传入的当前 `LevelRunId` 和 `elapsedTime`，在每次 `Tick` 中消费到时条目；拒绝过期会话的 Tick。
-- 将每条生成项的配置 ID 和三路生成点编号解析为生成请求。
+- 将每条生成项的配置 ID 和 `[0,1]` 归一化横向出生位置解析为生成请求。
 - 向 EnemyManager 发送敌人生成请求，向 ObstacleManager 发送 Gate/Prop 生成请求。
 - 在 LevelManager 进入终局后停止消费未来生成项，并在新会话开始时重置三个游标。
 
@@ -24,10 +24,10 @@
 ```text
 spawnTime  本局开始后的相对秒数
 configId   对应 TbEnemy / TbGate / TbProp 的稳定 ID
-spawnPoint 左、中、右三路编号
+spawnPosition 道路从左到右的归一化位置，范围为 [0,1]
 ```
 
-`spawnPoint` 只决定对象的初始位置，不约束生成后的路径。敌人生成后先由 Monster 沿道路向下移动，到达接近线后再向最近 Army 槽位移动。
+SpawnManager 使用已校验的 `spawnPosition` 计算 `WorldX = Lerp(LeftBoundary, RightBoundary, spawnPosition)`，并令 `WorldY = SpawnY`。坐标以对象中心点为准，不读取 Collider、Renderer 或 Prefab 尺寸。该值只决定初始位置，不约束生成后的路径；敌人生成后先由 Monster 沿道路向下移动，到达接近线后再向最近 Army 槽位移动。
 
 生成项应按 `spawnTime` 非递减顺序配置；同一列表中相同时间的项按列表顺序处理。三个列表之间不定义额外的跨类型顺序。每个游标只递增一次，不能因为对象回收或重开前的重复更新而重复生成。
 
@@ -45,8 +45,9 @@ spawnPoint 左、中、右三路编号
 - 三类生成列表在精确的 `spawnTime` 触发，时间相同的项保持列表顺序。
 - LevelManager 每帧传入的 `elapsedTime` 不会导致同一条目重复生成。
 - 每条生成项只生成一次，游标与配置列表长度一致。
-- 三个生成点编号正确映射到道路左、中、右初始位置。
-- 生成位置只影响初始位置，敌人进入接近线后可以跨越车道选择最近士兵。
+- `spawnPosition = 0`、`1` 和中间值分别映射到道路左边界、右边界和对应插值坐标，生成请求同时携带归一化值与解析后的世界坐标。
+- 不同尺寸的敌人、Gate 和 Prop 在相同 `spawnPosition` 下使用相同中心点坐标，不按对象半宽内缩。
+- 生成位置只影响初始位置，敌人进入接近线后可以横向接近最近士兵。
 - EnemyManager 收到敌人请求并正确注册敌人。
 - ObstacleManager 收到 Gate/Prop 请求并正确注册运行时实例。
 - 同一配置对象的多个实例可以同时存在且可独立回收。

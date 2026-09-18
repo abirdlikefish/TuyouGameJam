@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted（资源键范围由 ADR-020 收窄）
+Accepted（资源键范围由 ADR-020 收窄；生成位置由 ADR-023 修订）
 
 ## 日期
 
@@ -14,7 +14,7 @@ Accepted（资源键范围由 ADR-020 收窄）
 
 ## 决策
 
-- `LevelConfig` 使用 Unity `ScriptableObject`，包含关卡元数据、固定道路布局、三路生成点、按时间轴的敌人/Gate/Prop 生成项和配置 ID。
+- `LevelConfig` 使用 Unity `ScriptableObject`，包含关卡元数据、固定道路布局、固定出生横线、按时间轴的敌人/Gate/Prop 生成项、归一化横向出生位置和配置 ID。
 - 角色/军队、敌人、Gate、Prop、子弹及全局平衡参数使用 Luban 表。
 - Weapon 和 Element 作为军队/子弹共享的 Luban 表，MVP 分别保存基础发射规则和元素身份。
 - Luban 表保存稳定玩法数值和跨表 ID，不直接保存 `UnityEngine.Object` 引用；MVP 也不保存 `PrefabKey` 等 Unity 资源键。
@@ -42,3 +42,4 @@ Accepted（资源键范围由 ADR-020 收窄）
 - `../00_Project/DesignBacklog.md`
 - `ADR-012-LevelCatalogConfigurationBootstrap.md`
 - `ADR-020-MinimalMvpConfigurationSurface.md`
+- `ADR-023-NormalizedSpawnPosition.md`

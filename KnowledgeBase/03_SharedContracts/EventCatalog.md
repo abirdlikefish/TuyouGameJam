@@ -21,11 +21,11 @@
 | `GateContactResolved` | Gate | UI、VFX、Audio、调试 | `LevelRunId`、运行时门实例 ID、`ArmyId`、门类型、是否成功、已应用的 `GateEffect`、是否继续移动 |
 | `GateExitedRoad` | ObstacleManager | 调试 | `LevelRunId`、运行时门实例 ID、是否接触过 Army |
 | `PropSpawned` | ObstacleManager | UI、VFX、调试 | `LevelRunId`、运行时道具实例 ID、配置 ID、WeaponId、位置 |
-| `PropBroken` | Prop | UI、VFX、Audio、调试 | `LevelRunId`、运行时道具实例 ID、WeaponId、命中上下文、接触状态、是否已发放 Weapon 奖励 |
+| `PropBroken` | Prop | UI、VFX、Audio、调试 | 当前 MVP：`LevelRunId`、运行时道具实例 ID、WeaponId、命中上下文、接触状态、是否已发放武器替换效果；未来效果载荷需按 ADR-022 另行定案 |
 | `PropContactDamage` | Prop | UI、VFX、Audio、调试 | `LevelRunId`、运行时道具实例 ID、`ArmyId`、接触槽位索引、已应用伤害 |
 | `PropExitedRoad` | ObstacleManager | 调试 | `LevelRunId`、运行时道具实例 ID、是否接触过 Army |
 | `ObstacleRecycled` | ObstacleManager | 调试、对象池统计 | `LevelRunId`、运行时实例 ID、对象类别、回收原因 |
-| `MonsterSpawned` | EnemyManager | LevelManager、UI | `LevelRunId`、运行时敌人实例 ID、敌人配置 ID、敌人类型、初始生成点编号 |
+| `MonsterSpawned` | EnemyManager | LevelManager、UI | `LevelRunId`、运行时敌人实例 ID、敌人配置 ID、敌人类型、`SpawnPosition`、初始世界坐标 |
 | `MonsterDamaged` | Monster | UI、VFX、Audio | `LevelRunId`、运行时敌人实例 ID、`BulletDamageContext`、剩余生命值、是否致命 |
 | `MonsterAttackLanded` | Monster | VFX、Audio | `LevelRunId`、运行时敌人实例 ID、攻击类型、命中槽位索引、每槽位伤害 |
 | `MonsterKilled` | Monster | EnemyManager、LevelManager、VFX | `LevelRunId`、运行时敌人实例 ID、造成击杀的 `BulletDamageContext` |
