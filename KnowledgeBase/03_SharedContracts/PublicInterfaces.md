@@ -1,5 +1,12 @@
 # 公共接口
 
+## 获取与注入约定
+
+- 本文件中的服务接口由 `GlobalBootstrap` / Composition Root 创建实现并注入消费者，不为每个服务定义静态 `Instance`。
+- 纯 C# 状态所有者优先构造注入；Unity 场景组件使用明确的初始化入口或 Inspector 引用。不得通过运行时 `Find` 或通用 Service Locator 隐式取得必需依赖。
+- Gameplay 场景装配入口只向每个 Manager 提供它实际需要的最小接口；Bullet、Monster、Gate、Prop 等池对象接收配置快照、会话 ID、实例 ID 和必要回调，不接收完整全局服务集合。
+- 类型化接口承载必须执行、需要返回值或有顺序要求的操作；`IEventBus` 只传播已经发生且允许零监听者的事实。
+
 ## 配置与应用流程接口
 
 ```csharp
@@ -116,6 +123,10 @@ public interface IArmyController
     ArmyFormationSnapshot GetFormationSnapshot();
 }
 ```
+
+`SetHorizontalInput` 接受有限的有符号横向输入倍率，并覆盖 Army 保存的当前横向移动意图。键盘/手柄调用值限制在 `[-1,1]`；触屏最终值允许位于 `[-horizontalMultiplier, horizontalMultiplier]`。Army 必须拒绝 NaN 或无穷值，但不得把已经乘触屏系数的有限值再次 Clamp 到 `[-1,1]`。该命令要求当前 Army 直接接收，不通过 `EventBus` 广播，Army 也不反向读取 Input Adapter。
+
+键盘/手柄可以直接提供归一化轴值。触屏使用 ADR-028 的相对拖动语义：Input Adapter 累计相邻 Pointer 采样点在 `TouchDragArea` 局部空间中的水平差，按区域宽度和 `unscaledDeltaTime` 换算为归一化滑动速度，先 Clamp 到 `[-1,1]`，再乘 UI Prefab Inspector 中默认值为 `1` 的 `horizontalMultiplier`。没有新 Drag 差值、Pointer 结束、输入被禁用或 Gameplay 离开 `Playing` 时必须调用一次 `SetHorizontalInput(0)`，不得保留上一帧值。Army 的实际横向位移使用 `horizontalInput × TbArmy.MoveSpeed × 有效玩法 delta`。
 
 MVP 只有一个 Army，所有需要 Army 身份的事件和去重上下文使用固定 `ArmyId = 1`；不增加运行时 Army ID 分配接口。
 
@@ -284,23 +295,15 @@ public readonly struct RoadLayoutSnapshot
 public interface ITimeService
 {
     float GetDeltaTime(TimeDomain domain);
-    float GetTimeScale(TimeDomain domain);
-    void SetTimeScale(TimeDomain domain, float scale);
-    PauseToken PushPause(TimeDomain domain, string reason);
     TimerHandle Schedule(float seconds, Action callback, TimeDomain domain);
 }
 ```
 
-`PauseToken` 必须支持释放；`TimerHandle` 必须支持取消。所有 RealTime 自动跳过计时都使用 `RealTime` 时间域。
+`TimerHandle` 必须支持幂等取消。所有 RealTime 自动跳过计时都使用 `RealTime` 时间域；状态离开或会话失效后，旧回调不得继续推进应用流程。
 
-MVP 中所有时间域倍率和对象局部倍率固定为 `1`，不启用运行时倍率调整；暂停、减速、加速和局部时停规则延后。
+MVP 中所有时间域倍率固定为 `1`。当前公共契约不包含倍率查询/修改、暂停令牌、减速、加速或局部时停；未来启用前另行定案。
 
 ```csharp
-public readonly struct PauseToken
-{
-    public void Dispose();
-}
-
 public readonly struct TimerHandle
 {
     public bool IsValid { get; }

@@ -2,7 +2,7 @@
 
 ## 设计目的
 
-通过事件让模块松耦合。发布者只发布事实，监听者自行决定是否更新显示、音效或逻辑。
+通过事件让模块松耦合。发布者只发布事实，监听者自行决定是否更新显示、视觉反馈或其他非必需表现。MVP 完全无声音，不创建音频监听者。
 
 ## 事件命名
 
@@ -17,12 +17,12 @@ GlobalBootstrap → GameStateService.NotifyInitializationReady()
 GameStateService → MainMenu / LevelSelect 定时器 → TrySelectLevel / TryStartSelectedGameplay
 GameStateService → SceneService.LoadGameplay(levelId, levelConfig, levelRunId)
 SceneService → GameplaySceneReady / GameplaySceneLoadFailed → GameStateService
-GameStateService → LevelRunStarted → LevelManager、UI、Audio、调试
+GameStateService → LevelRunStarted → LevelManager、UI
 Gate / Prop → 调用 IArmyController 类型化命令 → Army 状态变更
-Gate / Prop → GateValueChanged、GateContactResolved、PropBroken、PropContactDamage → UI、VFX、Audio、调试
+Gate / Prop → GateValueChanged、GateContactResolved、PropBroken、PropContactDamage → UI、VFX
 ArmyController → ArmyCountChanged → UI、ArmyVisual
 ArmyController → ArmyFormationChanged / SoldierHit → ArmyVisual、UI、VFX
-EnemyManager / Monster → MonsterSpawned、MonsterDamaged、MonsterAttackLanded、MonsterKilled → LevelManager、VFX、Audio
+EnemyManager / Monster → MonsterSpawned、MonsterDamaged、MonsterAttackLanded、MonsterKilled → LevelManager、VFX
 LevelManager → calls GameStateService.CompleteGameplay(LevelCompletion)
 GameStateService → SceneService.UnloadGameplay(levelRunId)
 SceneService → GameplaySceneUnloaded → GameStateService → LevelSelect

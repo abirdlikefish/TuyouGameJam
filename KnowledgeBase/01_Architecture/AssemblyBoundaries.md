@@ -33,6 +33,8 @@ Game.Contracts 可被各层引用，但不引用各层具体实现。
 
 `Game.Composition` 是编译期和运行时的最外层装配边界，不等于新增一个通用 `GameManager`，也不改变 `GlobalBootstrap` “只初始化和注册全局服务”的职责。实现时可由现有入口和职责明确的场景装配器承担绑定，不因程序集划分增加笼统管理器。
 
+全局服务由 Composition 创建为应用级唯一实例，再以最小接口注入消费者。程序集边界不通过静态 `XxxService.Instance`、运行时 `Find` 或通用 Service Locator 连接；否则依赖会绕过编译期引用方向和测试替代边界。场景装配入口可以集中取得服务，但只能向下分发消费者实际需要的接口。
+
 `Game.Contracts` 只收录真正跨程序集的稳定契约，并按所有模块维护命名空间和文档归属，不作为无归属类型的“杂项”程序集。
 
 ## 通信方式
@@ -66,6 +68,7 @@ Game.Contracts 可被各层引用，但不引用各层具体实现。
 - 必须的反向能力通过依赖倒置接口注入，不使用请求型事件伪装同步调用。
 - 玩法在无 UI、音效和特效订阅者时仍能完成正确结算。
 - `Game.Composition` 只负责装配和生命周期连接，不包含玩法计算。
+- Gameplay、Presentation 和池对象代码中不存在对全局服务静态 `Instance` 或通用 Service Locator 的依赖。
 - Unity 编译、相关 EditMode 测试、启动场景和完整游玩闭环验证通过，且现有 Inspector、Prefab 和场景脚本引用没有丢失。
 
 ## 关联决策

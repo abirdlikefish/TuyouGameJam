@@ -17,7 +17,7 @@
 | Gate 属性、数字变化和接触参数 | Luban `TbGate` | Gate、Spawn、ObstacleManager |
 | Prop 属性、生命值和武器奖励 | Luban `TbProp` | Prop、Spawn、ObstacleManager |
 | 子弹属性 | Luban `TbBullet` | Bullet、Army |
-| Prefab、Sprite、AudioClip | Unity 资源注册表/Inspector | 表现和生成系统 |
+| Prefab、Sprite | Unity 资源注册表/Inspector | 表现和生成系统 |
 | 当前人数、生命值、生成游标、关卡计时和胜负状态 | 运行时对象或服务 | Gameplay、UI |
 
 ## Luban 工程
@@ -62,7 +62,7 @@ Assets/StreamingAssets/Luban
 
 资源注册表键使用大小写敏感的 ASCII `类别/身份` 格式，例如 `Enemy/Normal`、`Gate/Additive`、`Prop/Weapon/{WeaponId}`、`Bullet/{BulletId}`。这些键属于 Unity 资源侧，不写入 Luban，也不使用绝对路径。
 
-进入 LevelSelect 后，`ConfigService` 从 `LevelCatalog` 根据选定的 `LevelId` 提供对应的 `LevelConfig`。Gameplay 由 SceneService 接收并注入这份已校验的 `LevelConfig`；Level、Spawn 等模块消费注入的关卡配置，并通过 `ConfigService` 查询 Luban 可复用数值，不直接读取文件、访问 `StreamingAssets` 或创建新的 Tables。
+进入 LevelSelect 后，`ConfigService` 从 `LevelCatalog` 根据选定的 `LevelId` 提供对应的 `LevelConfig`。Gameplay 由 SceneService 接收并注入这份已校验的 `LevelConfig`；Level 和 Spawn 只消费注入的关卡配置与道路快照，Army、EnemyManager、ObstacleManager 等实际数值消费者通过注入的 `IConfigService` 查询 Luban 可复用数值。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables 或访问静态 `LubanTables.Instance`。
 
 `LevelCatalog` 只保存 `LevelConfig` 引用和 `initiallyUnlocked` 标记。`LevelConfig.levelId` 是唯一 ID，目录不重复保存 ID；当前目录只有第一关且该条目默认解锁。
 
@@ -98,7 +98,7 @@ LevelManager → Initialize(levelConfig, levelRunId)
 ## 关键约束
 
 - Luban ID 是跨配置引用的稳定键，不能使用会随排序变化的行号。
-- MVP Luban 表不保存 `PrefabKey`；Prefab、Sprite、Animator、AudioClip、阵型槽位和发射点由 Unity Inspector 或 Unity 资源注册表绑定。
+- MVP Luban 表不保存 `PrefabKey`；Prefab、Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 资源注册表绑定。MVP 完全无声音，不要求 AudioClip 绑定。
 - Unity 资源注册表如使用字符串键，键只属于 Unity 资源侧，不构成 Luban 表字段。
 - LevelConfig 只描述本关卡如何编排，不复制敌人、军队和门的数值。
 - Luban 表只描述可复用的数据，不承担场景对象的生命周期。

@@ -20,7 +20,7 @@
 
 - 不直接修改 Army 总人数，只通过 ArmyController 的槽位伤害接口结算攻击。
 - 不决定生成时间轴和关卡胜负条件。
-- 不负责具体的 Sprite、AudioClip、粒子或 Animator Controller 资源选择。
+- 不负责具体的 Sprite、粒子或 Animator Controller 资源选择；MVP 不使用 AudioClip。
 
 ## 敌人类型与配置
 
@@ -39,7 +39,7 @@
 ```text
 MovingDown
   -> ApproachingTarget
-  <-> Blocked（前方存活敌人较慢、静止或局部时停）
+  <-> Blocked（前方存活敌人较慢或静止）
   -> Attacking
   -> MovingDown / ApproachingTarget（攻击结束后重新判断）
   -> Dead
@@ -90,7 +90,7 @@ MovingDown
 
 ## 受击与反馈
 
-子弹碰撞向敌人传入 `BulletDamageContext`，包含 `BulletId`、`WeaponId`、`ElementId`、最终伤害、命中位置和方向。Monster 发布 `MonsterDamaged`；造成生命值归零的最后一次上下文随 `MonsterKilled` 发布。反馈表现由 Animator、AudioVFX 或其他表现适配器消费，不在 Monster 内写死具体资源。
+子弹碰撞向敌人传入 `BulletDamageContext`，包含 `BulletId`、`WeaponId`、`ElementId`、最终伤害、命中位置和方向。Monster 发布 `MonsterDamaged`；造成生命值归零的最后一次上下文随 `MonsterKilled` 发布。MVP 的反馈表现由 Animator、VFX 或其他视觉适配器消费，不在 Monster 内写死具体资源；声音功能延后。
 
 ## 性能约束
 
@@ -112,7 +112,7 @@ MovingDown
 - 普通敌人单体攻击锁定目标；目标在判定帧前变为空时取消攻击并重新选目标。
 - 精英和 Boss 的攻击碰撞体只在攻击判定帧执行一次显式重叠查询，所有命中槽位受到相同伤害且每槽位只结算一次。
 - 所有敌人 Prefab 都提供职责明确的 `BodyCollider`；存活敌人不重叠，后方敌人遇到较慢或静止的前方敌人时保持安全距离等待。
-- 敌人局部时停时 BodyCollider 仍可被其他活动敌人查询为阻挡体；进入 `Dead` 后立即退出受击和阻挡查询。
+- MVP 不实现局部时停；敌人进入 `Dead` 后立即退出受击和阻挡查询。未来启用局部时停时另行确认其碰撞行为。
 - 首版不实现后方敌人从侧面绕行、通道预留或局部导航。
 - 子弹碰撞只对敌人造成一次伤害，并将 BulletId、WeaponId、ElementId 传递到受击/击杀事件。
 - 生命值为 0 时只死亡一次；死亡后不再移动、攻击或接受新的伤害结算。

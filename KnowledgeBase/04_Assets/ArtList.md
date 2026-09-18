@@ -14,10 +14,12 @@
 | Boss 怪物 | Sprite / Animator | 首版 Boss；Prefab 需要 `BodyCollider`、`AttackCollider`、`TargetSensor` | Planned |
 | 子弹 | Sprite | 自动射击 | Planned |
 | 命中特效 | Particle / Prefab | 子弹反馈 | Planned |
+| 触屏拖动区域 | UI Prefab / Graphic | 定义 Gameplay 触控范围并承载 `TouchDragInput`；Graphic 可透明但需启用 Raycast Target | Planned |
 
 ## 绑定规则
 
-- MVP 不在 Luban 表配置 `PrefabKey`。Prefab、Sprite、Animator、AudioClip、阵型槽位和发射点通过 Unity Inspector 或 Unity 侧资源注册表绑定。
+- MVP 不在 Luban 表配置 `PrefabKey`。Prefab、Sprite、Animator、阵型槽位和发射点通过 Unity Inspector 或 Unity 侧资源注册表绑定；MVP 完全无声音，不要求 AudioClip。
 - 敌人资源按 `EnemyType`，Gate 资源按 `GateType`，武器箱资源按 `WeaponId`，子弹资源按 `BulletId` 选择；这些映射属于 Unity 资源侧。
 - 资源注册表键统一使用大小写敏感的 ASCII `类别/身份` 格式，例如 `Enemy/Normal`、`Gate/Additive`、`Prop/Weapon/{WeaponId}`、`Bullet/{BulletId}`；不使用绝对路径或 Luban 资源键。
 - 进入 Gameplay 前验证本关使用的资源绑定、Collider2D 和 Layer；缺失时报告配置或资源来源，不静默创建替代对象。
+- 触屏拖动区域 Prefab 的 `RectTransform` 定义输入归一化宽度；`TouchDragInput.horizontalMultiplier` 通过 Inspector 配置且默认值为 `1`。该 Prefab 不直接保存对场景 Army 的资源引用，由场景装配或 Prefab 内 Input Adapter 完成运行时绑定。

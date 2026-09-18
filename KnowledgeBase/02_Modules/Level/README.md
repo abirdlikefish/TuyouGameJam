@@ -5,7 +5,7 @@
 - ID：`MOD-LEVEL`
 - 层级：Gameplay
 - 状态：`Planned`
-- 依赖：GameStateService、Spawn、Monster、Army、ObstacleManager、ConfigService、EventBus、SceneService
+- 依赖：GameStateService、Spawn、Monster、Army、ObstacleManager、EventBus
 - 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`
 
 ## 职责
@@ -17,6 +17,8 @@
 - 通过 EnemyManager 统计已生成敌人的 `AliveEnemyCount`，并通过 SpawnManager 查询敌人时间轴是否已消费完成。
 - 在帧末判断胜利或失败，并保证终局只触发一次。
 - 终局后停止本局逻辑并清理当前会话，向 GameStateService 提交本局结果；GameStateService 在场景卸载完成后回到 LevelSelect。
+
+`LevelManager` 接收 SceneService 已注入的配置和会话数据，但不直接依赖或调用 SceneService。它也不重新查询 ConfigService；配置来源校验和场景交接属于应用流程边界。
 
 ## 配置输入
 
@@ -60,6 +62,7 @@ Army 归零优先于胜利，因此同一帧最后一只敌人死亡且 Army 归
 - 不维护敌人、Gate、Prop 的活动实例集合。
 - 不把归一化横向出生位置当作敌人的后续移动约束；敌人路径由 Monster 模块处理。
 - 不实现下一关跳转；`unlockedLevelIds` 仅作为当前关卡的解锁结果数据。
+- 不加载或卸载 Unity 场景，不访问静态全局服务；终局只通过注入的 `IGameStateService` 提交一次结果。
 
 ## 测试标准
 

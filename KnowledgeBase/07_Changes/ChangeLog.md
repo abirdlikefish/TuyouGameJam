@@ -28,3 +28,6 @@
 | 2026-09-18 | 新增 ADR-024，明确分层图箭头表示允许的代码依赖，核心依赖链为表现层→玩法层→全局基础层；将本地存档与设置改为当前不启用的旁路扩展模块 | 架构、全局服务、后续扩展、设计决策 | Codex |
 | 2026-09-18 | 新增 ADR-025，区分 Controller、Manager、Service、Root 和 Bootstrap 的职责语义；在场景结构中拆分 GlobalRoot 常驻层与 Gameplay 单局层，补充 EnemyManager，并明确不引入通用 GameManager | 场景、架构、全局服务、共享命名、设计决策 | Codex |
 | 2026-09-18 | 新增 ADR-026 与程序集边界文档，将 Contracts、Foundation、Gameplay、Presentation 和 Composition 的粗粒度划分记录为 MVP 后工程化要求，当前不创建 `.asmdef`；明确同步接口、事实事件、依赖倒置接口和用例协调器的选择边界 | 项目路线、架构、EventBus、全部运行时模块、设计决策 | Codex |
+| 2026-09-18 | 新增并扩展 ADR-027、启动装配与应用流程文档：定案全局服务由 Composition 以应用级唯一实例持有并显式注入，不普遍使用静态单例或 Service Locator；Input 保持 Gameplay 场景适配器；MVP 完全无声音，Audio/Save/Debug 服务延后；GameStateService 与 SceneService 保持独立职责；TimeService 缩为固定倍率时间读取和可取消定时器；同步服务清单、接口、模块依赖、资源、测试与路线图，并将对象池未决语义集中到 PoolSystem | 全局服务、应用流程、Input、Time、AudioVFX、Pool、共享契约、资源、测试、路线图 | Codex |
+| 2026-09-18 | 新增 ADR-028，将触屏相对拖动纳入 MVP：Input 保持 Gameplay 场景适配器，UGUI 区域采集相邻 Pointer 位置差并按区域宽度与未缩放帧时间归一化；原始滑动速度先限制到 `[-1,1]`，再乘 UI Prefab Inspector 中默认值为 `1` 的系数，停手和生命周期结束时清零；同步 Input、Army、UI、场景、配置契约、共享接口、资源、路线图与测试 | Input、Army、UI、场景、配置、共享契约、资源、测试、路线图、设计决策 | Codex |
+| 2026-09-18 | 收敛全局服务活文档的分类边界：当前服务清单只保留 Time、GameState、EventBus、Scene、Config 和 Pool；移除场景级 Input Adapter、非服务的 GlobalBootstrap 及 Deferred 候选行，并在启动装配与路线图中分开表示 Composition Root、ServiceHost 和场景模块 | 全局服务、启动装配、Input、路线图、设计决策 | Codex |

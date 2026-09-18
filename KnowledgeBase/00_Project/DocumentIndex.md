@@ -12,11 +12,14 @@
 2. `DesignBacklog.md`：尚未定案的机制、需要比较的方案和决策优先级。
 3. `../01_Architecture/SystemOverview.md`：分层和依赖原则。
 4. `../01_Architecture/AssemblyBoundaries.md`：后续程序集划分、依赖倒置和跨层通信边界。
-5. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 与 Luban 的边界和加载流程。
-6. `../02_Modules/README.md`：模块总表、并行认领和模块入口。
-7. 目标模块的 `README.md`：职责、输入、输出、测试标准和已知问题。
-8. `../03_SharedContracts`：接口、事件、配置表、字段、命名规则和 `CollisionRules.md`。
-9. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
+5. `../01_Architecture/BootstrapAndComposition.md`：GlobalBootstrap 的装配、初始化、失败和清理边界。
+6. `../01_Architecture/ApplicationFlow.md`：GameStateService 与 SceneService 的职责边界和应用流程。
+7. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 与 Luban 的边界和加载流程。
+8. `../01_Architecture/PoolSystem.md`：对象池已确认边界和实现前待决语义。
+9. `../02_Modules/README.md`：模块总表、并行认领和模块入口。
+10. 目标模块的 `README.md`：职责、输入、输出、测试标准和已知问题。
+11. `../03_SharedContracts`：接口、事件、配置表、字段、命名规则和 `CollisionRules.md`。
+12. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
 
 ## 按任务选择入口
 

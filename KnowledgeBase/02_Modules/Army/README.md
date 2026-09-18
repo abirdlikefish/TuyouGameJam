@@ -64,7 +64,7 @@ void SetHorizontalInput(float value);
 - 当前 MVP 的武器箱成功击破时只切换一次 `WeaponId`，并保留当前 `ElementId`；道具接触失败后不得触发任何击破效果。
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
-- 横向移动速度只来自 `TbArmy.MoveSpeed`，Input 的输入值只表示方向和强度。
+- `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × 有效玩法 delta`。键盘/手柄输入位于 `[-1,1]`，触屏先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。
 
 ## 相关设计
 

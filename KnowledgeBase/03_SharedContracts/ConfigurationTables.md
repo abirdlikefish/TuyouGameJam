@@ -24,7 +24,7 @@
 
 初始字段：`Id`、`ArmyCountLimit`、`MaxDeployedSoldiers`、`HpPerSoldier`、`MoveSpeed`、`WeaponId`、`ElementId`。
 
-MVP 初始人数固定为 `1`，不配置 `InitialCount`。`ArmyCountLimit = 0` 表示不设总人数上限；大于 `0` 时才限制逻辑总人数。`TbArmy.MoveSpeed` 是 Army 横向移动速度，Input 不提供速度。阵型槽位、士兵 Prefab 和槽位发射点由 Unity Inspector 绑定，不配置 `FormationKey` 或 `SoldierPrefabKey`。
+MVP 初始人数固定为 `1`，不配置 `InitialCount`。`ArmyCountLimit = 0` 表示不设总人数上限；大于 `0` 时才限制逻辑总人数。`TbArmy.MoveSpeed` 是 Army 横向基础速度，Input 不提供另一份基础速度配置；实际位移使用 `horizontalInput × MoveSpeed × 有效玩法 delta`，其中触屏输入可按 [ADR-028](../06_Decisions/ADR-028-MvpRelativeDragInput.md) 的 Inspector 系数缩放。阵型槽位、士兵 Prefab 和槽位发射点由 Unity Inspector 绑定，不配置 `FormationKey` 或 `SoldierPrefabKey`。
 
 ### `TbWeapon`
 

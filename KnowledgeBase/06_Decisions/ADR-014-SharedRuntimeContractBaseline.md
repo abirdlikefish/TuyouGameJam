@@ -4,6 +4,8 @@
 
 Accepted
 
+> ADR-027 已从当前 MVP 公共契约移除 `PauseToken` 和倍率修改能力；本 ADR 对其他接口、请求、事件和会话 ID 的决策继续有效。
+
 ## 日期
 
 2026-09-14
@@ -52,7 +54,7 @@ IPoolService
 
 ## 影响
 
-- 共享契约需要增加 ConfigLoadState、ConfigErrorCode、LevelDescriptor、EnemySpawnRequest、ObstacleSpawnRequest、TimeDomain、PauseToken、TimerHandle、SubscriptionToken、失败事件 payload 和场景加载错误码的定义。
+- 共享契约增加 ConfigLoadState、ConfigErrorCode、LevelDescriptor、EnemySpawnRequest、ObstacleSpawnRequest、TimeDomain、TimerHandle、SubscriptionToken、失败事件 payload 和场景加载错误码。原决策中的 `PauseToken` 已由 ADR-027 从当前 MVP 契约移除。
 - 事件目录需要记录初始化失败和 Gameplay 场景加载失败事件。
 - Gate/Prop 事实事件的监听者只保留表现、音频、调试和统计消费者；玩法状态变更由类型化接口完成。
 - 模块状态只有在接口名称、参数和所有权与本 ADR 一致后，才可提升到 `ContractReady`。

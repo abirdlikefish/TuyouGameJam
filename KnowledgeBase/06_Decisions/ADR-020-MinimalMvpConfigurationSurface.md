@@ -17,7 +17,7 @@ MVP 只需要完成启动、游玩、胜负和重新开始闭环，因此配置�
 ## 决策
 
 - Luban 只保存可复用玩法数值、规则分类和跨表稳定 ID；运行时状态以及 Unity 对象引用不进入 Luban。
-- MVP 的 Luban 表不配置 `PrefabKey`、`SoldierPrefabKey` 或 `FormationKey`。Prefab、Sprite、Animator、AudioClip、阵型槽位和发射点由 Unity Inspector 或 Unity 侧资源绑定管理。
+- MVP 的 Luban 表不配置 `PrefabKey`、`SoldierPrefabKey` 或 `FormationKey`。Prefab、Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 侧资源绑定管理；ADR-027 已将 AudioClip 和全部声音能力延后。
 - Unity 侧资源绑定可以按 `EnemyType`、`GateType`、`WeaponId`、`BulletId` 等已有语义标识选择资源，但资源键属于 Unity 资源侧，不反向成为 Luban 字段。
 - Army 初始人数固定为 `1`，不建立 `InitialCount` 字段。`ArmyCountLimit` 保留；`0` 表示不设上限，大于 `0` 时才作为上限。
 - `AttackType` 由 `EnemyType` 派生：`Normal -> SingleTarget`，`Elite/Boss -> Area`，不在 `TbEnemy` 重复配置。

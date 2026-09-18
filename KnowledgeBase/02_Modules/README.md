@@ -18,11 +18,11 @@
 | Obstacle | InDesign | `Obstacle/README.md` | ConfigService、PoolService、TimeService、Gate、Prop、EventBus |
 | Monster | InDesign | `Monster/README.md` | TimeService、Bullet、Army、EventBus、ConfigService、PoolService |
 | Bullet | Planned | `Bullet/README.md` | TimeService、PoolService、IDamageable、IBulletDamageable |
-| Level | Planned | `Level/README.md` | GameStateService、Spawn、Monster、Army、ObstacleManager、ConfigService、EventBus、SceneService |
-| Spawn | Planned | `Spawn/README.md` | ConfigService、PoolService、TimeService、EnemyManager、ObstacleManager |
+| Level | Planned | `Level/README.md` | GameStateService、Spawn、Monster、Army、ObstacleManager、EventBus |
+| Spawn | Planned | `Spawn/README.md` | LevelConfig、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
 | UI | Planned | `UI/README.md` | EventBus、GameStateService |
-| AudioVFX | Planned | `AudioVFX/README.md` | EventBus、PoolService、AudioMixer |
-| Input | InDesign | `Input/README.md` | Army、TimeService |
+| AudioVFX | Audio Deferred / VFX Planned | `AudioVFX/README.md` | VFX：EventBus、PoolService；Audio：后续另行设计 |
+| Input | ContractReady | `Input/README.md` | Army、UGUI EventSystem；由 Gameplay 场景装配控制启停 |
 
 ## 模块交付前检查
 

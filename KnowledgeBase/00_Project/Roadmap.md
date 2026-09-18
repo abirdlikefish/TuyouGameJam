@@ -2,13 +2,15 @@
 
 > 本文复选框只表示工程实现和相应验证已经完成，不表示 ADR 是否已接受或设计是否已收敛。当前仍处于文档优先阶段，尚未获得工程实现授权，因此所有工程条目保持未勾选。设计成熟度以模块状态表和 `DesignBacklog.md` 为准，见 ADR-015。
 
-> 当前 MVP 明确不考虑得分、SaveService、本地进度存档和设置持久化；阶段 4 中相关条目仅表示未来扩展（Deferred），不属于当前验收范围。
+> 当前 MVP 明确不考虑得分、声音、AudioService、SaveService、DebugService、本地进度存档、设置持久化、暂停、减速和局部时停；阶段 4 中相关条目仅表示未来扩展（Deferred），不属于当前验收范围。
 
 ## 阶段 1：核心闭环
 
-- [ ] GlobalBootstrap、GameStateService、TimeService、EventBus
+- [ ] GlobalBootstrap / Composition Root 与唯一 GlobalRoot
+- [ ] GameStateService、TimeService、EventBus、SceneService、ConfigService、PoolService
 - [ ] 军队人数和自动射击
 - [ ] 军队固定槽位、聚合生命值和横向移动
+- [ ] Gameplay 场景键盘/手柄横向输入，以及 UI 区域内停手即停的触屏相对拖动输入
 - [ ] 子弹命中怪物、加法门、元素门和道具
 - [ ] 门/道具接触 Army 并执行一次性结算
 - [ ] ObstacleManager 登记、查询和回收道路上的门与道具
@@ -28,7 +30,7 @@
 ## 阶段 3：表现和性能
 
 - [ ] UI 完整反馈
-- [ ] 音效、粒子和命中特效
+- [ ] 粒子和命中特效
 - [ ] 子弹、怪物、特效对象池
 - [ ] 多分辨率和移动设备验证
 
@@ -37,6 +39,9 @@
 - [ ] `+N`、`-N`、`÷N` 门
 - [ ] 多种怪物和子弹
 - [ ] 武器替换之外的道具击破效果及组合规则
+- Deferred：声音、AudioService、音量设置和音频资源
+- Deferred：DebugService 和通用调试指令
+- Deferred：暂停、减速、加速和局部时停
 - Deferred：本地进度存档
 - [ ] 升级和关卡解锁
 - [ ] 后方敌人从侧面绕过较慢、静止或局部时停的前方敌人
