@@ -4,10 +4,10 @@
 
 - ID：`MOD-LEVEL`
 - 层级：Gameplay
-- 状态：`InDesign`
+- 状态：`ContractReady`
 - 依赖：IGameStateService、ITimeService、IEventBus、ISpawnManager、IArmyRunController、IBulletManager、IEnemyManager、IObstacleManager、IGameplayInputController
 - 被依赖模块：Army、Spawn、Monster、GameplaySceneEntry、Input、UI
-- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
+- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
 ## 模块目标
 
@@ -32,7 +32,7 @@
 - 不维护敌人、Gate、Prop 或 Bullet 的活动实例集合。
 - 不直接解析 Prefab。池化规范 Prefab 由对应 Manager 的 Inspector 引用；数值配置由对应 Manager 通过注入的 Bullet、Enemy、Prop 最小类型化 Provider 获取。
 - 不让事件监听者参与必须执行的帧阶段、伤害、死亡计数或终局结果。
-- 不实现下一关跳转；`unlockedLevelIds` 只作为 GameStateService 发布 Victory 时使用的本局结果数据。
+- 不实现下一关跳转；`unlockedLevelIds` 只作为 GameStateService 发布 Victory 时使用的本局结果数据，并且只消费 ConfigService 已过滤的运行时快照。
 
 ## 输入
 
@@ -99,7 +99,7 @@ Assets/Configs/Levels/CFG_Level_001.asset
 
 Level 不创建 `PF_LevelManager`。LevelManager 和 SpawnManager 是 GameplayScene 中 `LevelSystems` 下的固定场景组件。`PF_Road_Default` 只包含道路视觉与 RoadView，不包含玩法 Collider。
 
-完整 Gameplay 闭环还依赖 Army 模块的 `PF_Army_001`、三种 Monster、两种 Gate、`PF_Prop_Weapon`、`PF_Bullet` 和 Gameplay UI/TouchDragArea；这些 Prefab 不由 LevelConfig 引用。GameplaySceneEntry 使用序列化 ArmyPrefabBinding 以 ArmyId 选择 Army Prefab。
+完整 Gameplay 闭环还依赖 Army 模块的 `PF_Army_000`、三种 Monster、两种 Gate、`PF_Prop_Weapon`、`PF_Bullet` 和 Gameplay UI/TouchDragArea；这些 Prefab 不由 LevelConfig 引用。GameplaySceneEntry 使用序列化 ArmyPrefabBinding 以 ArmyId 选择 Army Prefab。
 
 ## 场景装配
 
@@ -109,7 +109,7 @@ GameplaySceneEntry 通过 Inspector 持有 LevelManager、SpawnManager、ArmyPre
 GameplayRoot [GameplaySceneEntry]
 ├── Road [RoadView；PF_Road_Default 实例]
 ├── ArmyContainer
-│   └── ArmyRoot [ArmyController；PF_Army_001 运行时实例；开始时世界原点]
+│   └── ArmyRoot [ArmyController；PF_Army_000 运行时实例；开始时世界原点]
 ├── LevelSystems
 │   ├── LevelManager
 │   └── SpawnManager
@@ -146,8 +146,8 @@ Input 使用独立同步阶段：LevelManager 在每个 Playing 帧通过 `ITime
 
 ```text
 GameplaySceneEntry 注入 LevelConfigSnapshot、LevelId、LevelRunId 和接口
-→ 读取 TbArmy.Id=1 与固定 TbWeapon 快照
-→ 从序列化 ArmyPrefabBinding 取得 ArmyId=1 Prefab，在 ArmyContainer 下实例化并校验槽位数组
+→ 读取 TbArmy.Id=0 与固定 TbWeapon 快照
+→ 从序列化 ArmyPrefabBinding 取得 ArmyId=0 Prefab，在 ArmyContainer 下实例化并校验槽位数组
 → LevelManager 校验会话参数与固定引用
 → 从 roadBounds 构建 RoadLayoutSnapshot，RoadView 应用视觉
 → 集中校验本局配置、Manager Prefab、Collider、Layer、Input 和全部必需 Inspector 引用
@@ -208,7 +208,7 @@ else if SpawnManager.AreAllEnemySpawnsDispatched(LevelRunId)
 
 Victory 是立即截断点：不检查 Gate/Prop 时间轴是否派发完毕，也不等待活动 Gate/Prop 接触或离场。SpawnManager 停止未来 Gate/Prop 生成，ObstacleManager 在 StopRun 中归还活动道路对象；这些未生成或未结算内容不发放补偿效果。
 
-GameStateService 保留本次已校验 `LevelConfigSnapshot` 的结果数据；Victory 的 `UnlockedLevelIds` 由它防御性复制并发布，不加入 LevelCompletion。
+GameStateService 保留本次已校验 `LevelConfigSnapshot` 的结果数据；Victory 的 `UnlockedLevelIds` 由它防御性复制并发布，不加入 LevelCompletion。空列表合法；原始列表中的重复 ID 和自引用已在配置初始化时致命拒绝，目录缺失 ID 已警告并过滤，LevelManager 不重复校验。
 
 ## 配置验证
 
@@ -229,7 +229,8 @@ Enemy/Prop 的所有 configId 存在于对应 Luban 表
 Additive Gate 使用有效 InitialValue，且 ElementType=None、MaxHp=0
 Element Gate 使用 Fire/Ice/Lightning 和 MaxHp>0，且 InitialValue=0
 存在元素门时 elementDurationSecondsPerDamage 有限且 >0；不存在时为 0
-unlockedLevelIds 符合目录引用规则
+unlockedLevelIds 允许为空；重复 ID 或当前 levelId 自引用为 InvalidLevelConfig
+unlockedLevelIds 中当前目录不存在的未来关卡 ID 记录 Debug.LogWarning 后过滤，其余有效 ID 保持原顺序
 ```
 
 场景资源引用、ArmyId 到 Prefab 的唯一绑定、Army 槽位数组、Manager 规范 Prefab、Collider、Layer 和发射点由 GameplaySceneEntry 在报告 Ready 前验证，不属于 LevelConfig 数值校验。
@@ -239,7 +240,7 @@ unlockedLevelIds 符合目录引用规则
 - RoadLayoutSnapshot 的宽高与四条边界只由 roadBounds 派生，永远互相一致。
 - 道路没有玩法 Collider 时，Army 限位、归一化生成、接近和离场仍正常。
 - ArmyRoot 每个新会话从 `(0,0,0)` 开始并保持 y=0，激活槽位合并 AABB 不越过左右边界。
-- ArmyId=1 的配置或 Prefab 绑定缺失、重复、Prefab 根类型错误或槽位数组无效时 Preparing 失败且不发布 Ready。
+- ArmyId=0 的配置或 Prefab 绑定缺失、重复、Prefab 根类型错误或槽位数组无效时 Preparing 失败且不发布 Ready。
 - `LevelRunStarted` 只让匹配会话进入 Playing；重复、过期或参数不匹配的事件无副作用。
 - `spawnTime == 0` 的条目在首帧移动前只生成一次。
 - 每帧阶段顺序与 ADR-033 一致，Manager 独立 Update 不执行核心玩法结算。
@@ -251,14 +252,15 @@ unlockedLevelIds 符合目录引用规则
 - Victory 即使仍有未来或活动 Gate/Prop 也立即完成；这些对象停止生成或被清理，不产生接触、击破或补偿效果。
 - 新 LevelRunId 不继承上局时间、游标、实例、输入、回调或终局状态。
 - 配置表或关卡数据错误在加载应用场景前退出；Gameplay 会话参数或绑定校验失败时输出可定位错误、不得调用 Manager StartRun 且不发布 AppSceneReady(Gameplay)；意外启动异常只清理已经启动的模块，不尝试降级继续运行。
+- `unlockedLevelIds` 为空时正常初始化；重复 ID 或自引用致命退出；目录缺失 ID 逐项警告并从快照和 Victory 结果中过滤，且不阻止进入 MainMenu。
 
 ## 已知问题与进入代码前仍需解决
 
 - Layer Collision Matrix 已由 ADR-037 定案为默认关闭自动物理关系；工程实现时仍需在目标 Unity 版本验证显式 Cast/Overlap 按 ContactFilter2D/LayerMask 返回指定目标。
-- `DES-045`：`unlockedLevelIds` 的重复、自引用和目录缺失 ID 校验规则仍未确认。
 
 ## 变更记录
 
 | 日期 | 变更 | 记录人 |
 |---|---|---|
+| 2026-09-20 | 按 ADR-044 定案 unlockedLevelIds 的空列表、重复、自引用、目录缺失警告与运行时过滤规则 | Codex |
 | 2026-09-19 | 补齐帧阶段所有权、数值道路边界、脚本与资源规划、场景装配、初始化/清理顺序、配置校验和剩余问题 | Codex |

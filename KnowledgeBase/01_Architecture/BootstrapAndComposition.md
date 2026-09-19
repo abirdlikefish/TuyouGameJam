@@ -74,7 +74,7 @@ Start
 ## 失败与幂等
 
 - 如果发现已有有效 `GlobalRoot`，新入口不得再创建第二套服务；重复入口应停止自身初始化。
-- Luban 表、LevelCatalog、LevelConfig 或其已确认引用无效时，ConfigService 按 ADR-041 只记录首个可定位错误并立即终止应用；不得保持一个可继续操作的错误页面或重试循环。
+- Luban 表、LevelCatalog、LevelConfig 或其必需引用无效时，ConfigService 按 ADR-041 只记录首个可定位错误并立即终止应用；不得保持一个可继续操作的错误页面或重试循环。ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只使用 `Debug.LogWarning` 并从快照中过滤，不属于初始化失败。
 - 必需 Inspector 引用、场景标识、Build Settings 或场景装配资源无效时，启动失败并阻止对应 Ready；这类装配错误不由 Gameplay Manager 使用默认值补齐。
 - 初始化失败时直接使用 `Debug.LogError` 输出稳定来源、字段或对象路径和原因；不得调用 `NotifyInitializationReady`，不得加载任何应用场景，也不得使用缺省配置、自动补组件、降级或重试继续运行。
 - 重复成功通知由 GameStateService 幂等拒绝，不能重复请求 MainMenuScene 或创建 MainMenu 定时器。
@@ -100,7 +100,7 @@ Start
 - Gameplay 重开不会创建重复服务，也不会遗留对已卸载场景对象的引用。
 - 冷启动只绑定一个 `PersistentPoolRoot`；Gameplay 重开以相同具体类型和 Prefab 取得已有类型池，不创建第二个类型池或空闲 Root。
 - MVP 启动层级中不存在 AudioRoot、SaveService 或 DebugService。
-- 服务初始化与清理顺序可通过 EditMode 测试或测试替代实现复现。
+- 服务初始化与清理顺序必须可通过测试替代实现复现；当前按结构化日志和手工用例验证，正式程序集阶段再补 EditMode 自动测试。
 - GameStateService 可以注入假的 Config、Scene、Time 和 EventBus 实现进行纯流程测试，不依赖静态全局状态。
 - 任一必需配置非法时，日志包含可定位来源且应用立即退出；任一必需绑定非法时不会进入对应 Ready。两者都不要求额外错误 UI、恢复流程或默认值。
 

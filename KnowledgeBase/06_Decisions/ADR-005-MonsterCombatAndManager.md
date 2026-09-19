@@ -2,7 +2,9 @@
 
 ## 状态
 
-Accepted（`AttackType` 配置方式由 ADR-020 收窄；敌人根脚本与 Prefab 划分由 ADR-031 修订；攻击距离、TargetSensor 移除和 Army 重合边界由 ADR-037 修订）
+Accepted（`AttackType` 配置方式由 ADR-020 收窄；敌人根脚本与 Prefab 划分由 ADR-031 修订；攻击距离、TargetSensor 移除和 Army 重合边界由 ADR-037 修订；命中帧校验与重选目标时机由 ADR-046 修订）
+
+> ADR-046 明确：普通敌人起攻后不因目标移出 `AttackStartRange` 取消命中，只在结算时校验目标槽位仍有效；攻击完成后的下一次 `TickMovement` 才重新验证或选择目标。`ApplySlotDamage` 保持 `void`，调用方不依赖伤害返回值。
 
 ## 日期
 
@@ -20,7 +22,7 @@ Accepted（`AttackType` 配置方式由 ADR-020 收窄；敌人根脚本与 Pref
 - `AttackType` 保留为运行时概念，但不作为 `TbEnemy` 字段：`Normal` 派生为 `SingleTarget`，`Elite` 和 `Boss` 派生为 `Area`。Boss 首版没有额外阶段或特殊技能。
 - 敌人先向下移动至关卡配置的道路接近线，再向最近的有效士兵槽位移动。只按怪物与槽位目标位置的 XY 距离判断攻击起始范围；进入范围后停止移动，不再继续向道路底部移动。
 - 敌人的最近目标由 ArmyController 提供。目标只包括 `RepresentedCount > 0` 的士兵槽位，距离相同时按 `SlotIndex` 从小到大选择。
-- 单体攻击锁定一个槽位。判定帧前敌人死亡或目标槽位变为空时，取消当前攻击并重新选择目标、重新开始攻击动画。
+- 单体攻击锁定一个槽位。判定帧前敌人死亡或目标槽位变为空时，本次伤害请求作废；不在攻击动画中途重启攻击，动画结束后的下一次 `TickMovement` 再重新验证或选择目标。目标仍有效但已移出 `AttackStartRange` 时，本次命中继续结算。
 - 范围攻击使用 Prefab 前方的 `AttackCollider`。碰撞体只在攻击判定帧执行一次显式重叠查询，对范围内每个有效槽位造成一次相同的 `AttackPower`。
 - 攻击判定、子弹命中和敌人之间的实体碰撞使用独立碰撞体和 Layer 规则，避免同一事件重复结算。
 - ADR-037 已移除 `TargetSensor`，并明确 Enemy `BodyCollider` 与 Army `SlotCollider` 不承担移动阻挡；Army 与敌人允许重合，重合状态仍按单体锁定或范围 `AttackCollider` 正常攻击。

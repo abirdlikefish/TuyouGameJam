@@ -4,10 +4,10 @@
 
 - ID：`MOD-ARMY`
 - 层级：Gameplay
-- 状态：`InDesign`
+- 状态：`ContractReady`
 - 依赖：EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager
 - 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
-- MVP `ArmyId` 固定为 `1`，同时读取 `TbArmy.Id = 1` 并选择序列化 `ArmyPrefabBinding.ArmyId = 1` 的 Prefab。
+- MVP `ArmyId` 固定为 `0`，同时读取首行 `TbArmy.Id = 0` 并选择序列化 `ArmyPrefabBinding.ArmyId = 0` 的 Prefab。
 
 ## 职责
 
@@ -22,7 +22,7 @@
 
 ## 配置输入
 
-- MVP 初始人数固定为 `1`；通过 `IArmyConfigProvider.GetArmyConfig(1)` 必得 ConfigService 已校验并复制的总人数上限、单兵生命值和横向移动速度不可变快照。
+- MVP 初始人数固定为 `1`；通过 `IArmyConfigProvider.GetArmyConfig(0)` 必得 ConfigService 已校验并复制的总人数上限、单兵生命值和横向移动速度不可变快照。
 - `TbArmy` 不保存槽位容量、武器或元素。`WeaponId` 是本局运行时唯一武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`；每局从 `0` 开始，并通过 `IWeaponConfigProvider.GetWeaponConfig(WeaponId)` 必得发射间隔和基础子弹 ID。ArmyController 不持有 Luban 生成行，也不处理配置缺失恢复。
 - 当前不建立 `TbElement`。火、冰、雷三种剩余持续时间每局从 `0` 开始，由元素门按类型增加。
 - GameplaySceneEntry 通过序列化 `ArmyPrefabBinding` 选择 Army Prefab；ArmyController 通过序列化 `ArmySlotView[] slots` 持有槽位，不通过 Luban 资源键或运行时搜索取得。
@@ -57,6 +57,8 @@ ArmyElementStateSnapshot GetElementStateSnapshot();
 
 `SetHorizontalInput(float)` 由继承的 `IHorizontalInputReceiver` 提供。Input Adapter 只取得该最小接收接口，不取得上述其他 Army 命令与查询能力。
 
+`ApplySlotDamage` 保持 `void`。Monster、Gate 和 Prop 在调用前必须通过 `TryGetSlotTarget` 重新确认槽位仍有效；无效或空槽位不提交伤害。方法同步完成权威 HP、人数和事件更新，实际扣除与人数损失只由 Army 的 `SoldierHit`、人数及阵型事件表达。攻击者不读取伤害返回值推进状态。
+
 LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时与每槽位射击冷却，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。槽位首次激活等待完整 `FireInterval`，实际换到不同武器时全部激活槽位按新间隔重置，每槽位每逻辑帧最多发射一颗且不追赶补发。
 
 ## Prefab 与场景装配
@@ -64,16 +66,16 @@ LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`Sto
 ```text
 GameplayRoot [GameplaySceneEntry；序列化 ArmyPrefabBinding[]]
 └── ArmyContainer
-    └── ArmyRoot [ArmyController；运行时实例化 PF_Army_001]
+    └── ArmyRoot [ArmyController；运行时实例化 PF_Army_000]
         └── Slots
             ├── Slot_00 [ArmySlotView]
             │   ├── SoldierVisual
-            │   ├── SlotCollider [Collider2D；ArmySlot Layer]
+            │   ├── SlotCollider [Collider2D；ArmySlot Layer；ArmySlotHitProxy]
             │   └── FirePoint
             └── ...
 ```
 
-Gameplay Preparing 先取得 Army 与 Weapon 配置快照，再查找唯一 `ArmyId = 1` Prefab，实例化到 ArmyContainer，校验 `slots` 非空、无空项、无重复引用且每项绑定完整，然后才向 Level、Input、Enemy 和 Obstacle 注入 IArmyController。Prefab 不进入对象池；清理时销毁本局实例。
+Gameplay Preparing 先取得 Army 与 Weapon 配置快照，再查找唯一 `ArmyId = 0` Prefab，实例化到 ArmyContainer，校验 `slots` 非空、无空项、无重复引用且每项绑定完整，然后才向 Level、Input、Enemy 和 Obstacle 注入 IArmyController。Prefab 不进入对象池；清理时销毁本局实例。
 
 ### 序列化字段契约
 
@@ -100,18 +102,19 @@ public sealed class ArmyPrefabBinding
 // ArmySlotView（每个 Slot_xx 节点一个）
 [SerializeField] private GameObject soldierVisual;
 [SerializeField] private Collider2D slotCollider;
+[SerializeField] private ArmySlotHitProxy slotHitProxy;
 [SerializeField] private Transform firePoint;
 ```
 
-`ArmyPrefabBinding.armyId` 必须大于 `0` 且在数组中唯一，`prefab` 必须非空并以 `ArmyController` 为根组件。`armyContainer` 必须是 GameplaySceneEntry 场景层级中固定的 `ArmyContainer`。`slots` 的数组顺序定义稳定 `SlotIndex`，不可在运行时重新扫描或排序。所有字段缺失均视为 Preparing 失败，不通过 `Find`、`GetComponent`、`GetComponentsInChildren` 或 `AddComponent` 静默补齐。
+`ArmyPrefabBinding.armyId` 必须大于等于 `0` 且在数组中唯一，`prefab` 必须非空并以 `ArmyController` 为根组件；MVP 必须存在唯一 `ArmyId = 0` 的绑定。`armyContainer` 必须是 GameplaySceneEntry 场景层级中固定的 `ArmyContainer`。`slots` 的数组顺序定义稳定 `SlotIndex`，不可在运行时重新扫描或排序。`ArmySlotHitProxy` 必须与 SlotCollider 位于同一 GameObject 并显式绑定当前 ArmySlotView，Army 初始化时向代理写入固定 ArmyId 和数组下标。所有字段缺失均视为 Preparing 失败，不通过 `Find`、`GetComponentInParent`、`GetComponentsInChildren` 或 `AddComponent` 静默补齐。
 
 ## 测试标准
 
 - 初始人数固定为 1，初始 WeaponId 为 0，三元素剩余时间均为 0；人数不能低于 0，`ArmyCountLimit = 0` 时不设上限，大于 0 时人数不能超过该上限。
 - 非负门取得 `ArmyAdditionResult`，其中请求增员、受上限约束后的实际增员和结算后总人数可分别验证。
-- `TbArmy.Id = 1`、三个固定武器配置或 ArmyId=1 Prefab 任一缺失时不得进入 Gameplay Ready。
+- `TbArmy.Id = 0`、三个固定武器配置或 ArmyId=0 Prefab 任一缺失时不得进入 Gameplay Ready。
 - 槽位容量准确等于序列化槽位数组长度，不读取或维护第二份 `MaxDeployedSoldiers`。
-- 初始分配和没有受击缺口时的新增分配采用整数平均、余数按槽位顺序分配。
+- 初始分配采用整数平均、余数按槽位顺序分配；运行时每增加一人都选择 `RepresentedCount` 最少、再按 SlotIndex 最小的槽位，空槽位自然优先重新启用，不保存 `NeedsRefill`。
 - 槽位受击只减少当前槽位人数，不主动将其他槽位人数重新平均。
 - 新增人数优先补充人数较少或受击后为空的槽位。
 - 每个激活槽位有独立碰撞体和子弹生成点；空槽位禁用二者。
@@ -122,6 +125,7 @@ public sealed class ArmyPrefabBinding
 - 负数门按 `Abs(GateValue) × HpPerSoldier` 产生伤害，优先由当前 HP 最少、同 HP 时 SlotIndex 最小的槽位承担；请求减员和实际损失人数分别记录。
 - 元素门失败时，每个接触槽位受到相同伤害；成功时只给对应 ElementType 增加一次持续时间，同类型累加且不覆盖其他元素。
 - 当前 MVP 的武器箱成功击破时只切换一次 WeaponId；元素持续时间保持不变，道具接触失败后不得触发任何击破效果。
+- `AddArmy(0)` 不改变 Army 状态或发布人数/阵型变化事件；重复获得当前 WeaponId 不发布 `ArmyWeaponChanged` 且不重置射击冷却，但 Prop 仍可完成自身的成功击破事实。
 - 本局初始激活槽位和运行中新激活槽位均等待一个完整 FireInterval；实际换武器后全部激活槽位重置为新间隔，重复当前 WeaponId 不重置。
 - 单个逻辑帧内每个激活槽位最多生成一颗子弹；大帧间隔不补发历史跨过的射击次数。
 - Army 先扣减本帧元素计时再发射；元素门在接触阶段新增的元素从下一逻辑帧子弹开始生效，飞行中的子弹元素掩码保持不变。
@@ -129,6 +133,8 @@ public sealed class ArmyPrefabBinding
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
 - `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × gameplayDeltaTime`，该 delta 由 LevelManager 在帧开始读取并传入，同一次更新不得再读取或叠加其他时间域。当前拖拽先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。键盘/手柄输入延后。
 - ArmyRoot 每局准确重置到世界原点，移动期间 y 保持为 0；道路没有 Collider 时仍能用激活槽位合并 AABB 完成左右限位。
+
+- 人数、槽位聚合 HP 和元素持续时间使用宽中间类型计算；超过公开存储类型时饱和到最大有限值，不得整数回绕、变负、NaN 或无穷。
 
 ## 相关设计
 

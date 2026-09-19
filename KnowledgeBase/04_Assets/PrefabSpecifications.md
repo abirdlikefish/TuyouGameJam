@@ -32,17 +32,18 @@ GameplayRoot [GameplaySceneEntry]
 ## Army
 
 ```text
-PF_Army_001 [ArmyController]
+PF_Army_000 [ArmyController]
 └── Slots
     ├── Slot_00 [ArmySlotView]
     │   ├── SoldierVisual [SpriteRenderer 或占位视觉]
-    │   ├── SlotCollider [Collider2D；ArmySlot Layer]
+    │   ├── SlotCollider [Collider2D；ArmySlot Layer；ArmySlotHitProxy]
     │   └── FirePoint [Transform]
     └── Slot_XX ...
 ```
 
 - ArmyController 显式绑定有序 `ArmySlotView[] slots`。
-- ArmySlotView 显式绑定 `soldierVisual`、`slotCollider`、`firePoint`。
+- ArmySlotView 显式绑定 `soldierVisual`、`slotCollider`、`slotHitProxy`、`firePoint`。
+- `ArmySlotHitProxy` 与 SlotCollider 位于同一 GameObject，并显式绑定当前 ArmySlotView；Army 初始化时注入固定 ArmyId 与数组下标 SlotIndex。
 - 数组顺序就是稳定 SlotIndex；不得运行时扫描或排序。
 
 ## Bullet
@@ -62,20 +63,20 @@ PF_Bullet [Bullet]
 ```text
 PF_Monster_Normal [NormalMonster；Animator]
 ├── Visual [SpriteRenderer]
-└── BodyCollider [Collider2D；EnemyBody Layer]
+└── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 
 PF_Monster_Elite [EliteMonster；Animator]
 ├── Visual [SpriteRenderer]
-├── BodyCollider [Collider2D；EnemyBody Layer]
+├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 
 PF_Monster_Boss [BossMonster；Animator]
 ├── Visual [SpriteRenderer]
-├── BodyCollider [Collider2D；EnemyBody Layer]
+├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 ```
 
-- 三个根 GameObject 都同时挂载具体 Monster 根脚本和 Animator，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`。
+- 三个根 GameObject 都同时挂载具体 Monster 根脚本和 Animator，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
 - Elite/Boss 另外绑定 `attackCollider`；Normal 不绑定 AttackCollider。
 - 三种 Prefab 均不创建 TargetSensor。
 - `blockingGap` 只来自当前规范 Prefab，不进入 Luban 或 LevelConfig。
@@ -88,17 +89,17 @@ PF_Monster_Boss [BossMonster；Animator]
 ```text
 PF_Gate_Additive [AdditiveGate]
 ├── Visual [SpriteRenderer 或占位底图]
-├── BodyCollider [Collider2D；Gate Layer]
+├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 
 PF_Gate_Element [ElementGate]
 ├── Visual [SpriteRenderer 或占位底图]
-├── BodyCollider [Collider2D；Gate Layer]
+├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 ```
 
-- AdditiveGate 显式绑定 `bodyCollider`、`stateText` 和非负有限 `moveSpeed`。
-- ElementGate 显式绑定 `bodyCollider`、`stateText`、非负有限 `moveSpeed` 和正整数 `contactDamage`。
+- AdditiveGate 显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText` 和非负有限 `moveSpeed`。
+- ElementGate 显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、非负有限 `moveSpeed` 和正整数 `contactDamage`。
 - Additive 的 StateText 显示当前 GateValue。
 - Element 的 StateText 至少显示 ElementType、`CurrentHp/MaxHp` 和 PostDepletionDamage；排版与最终文案不属于玩法契约。
 - TMP_Text 只显示根组件已经结算的状态，不持有或修改玩法数值。
@@ -108,11 +109,11 @@ PF_Gate_Element [ElementGate]
 ```text
 PF_Prop_Weapon [WeaponProp]
 ├── Visual [SpriteRenderer 或占位视觉]
-├── BodyCollider [Collider2D；Prop Layer]
+├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
 └── DebugText [TMP_Text；可选占位表现]
 ```
 
-- WeaponProp 显式绑定 `bodyCollider` 和视觉引用。
+- WeaponProp 显式绑定 `bodyCollider`、同节点 `BulletHitProxy` 和视觉引用。
 - 首轮可以使用 DebugText 显示 WeaponId，或使用 Inspector 绑定的简单占位 Sprite；二者都不参与效果选择。
 - MaxHp、ContactDamage、MoveSpeed 和 WeaponId 从 Prop 配置快照注入。
 
@@ -139,7 +140,7 @@ PF_UI_TouchDragArea [RectTransform；Image；TouchDragInput]
 
 ## 首轮校验结果
 
-- 任一必需根脚本、引用、Collider、Layer 或数值非法时直接输出错误并停止 Gameplay Ready。
+- 任一必需根脚本、引用、Collider、身份代理、Layer 或数值非法时直接输出错误并停止 Gameplay Ready。`BulletHitProxy`/`ArmySlotHitProxy` 必须与对应 Collider 位于同一节点并显式绑定目标，不使用父级搜索补齐。
 - 不要求正式 Sprite、正式序列帧、VFX、HUD 或音频资源才能验证玩法；允许使用占位视觉和占位 Animator Controller，但三种 Monster 的 Animator、Controller、非循环 Attack/Death Clip 及其 `OnAttackFrame()` / `OnAttackAnimationFinished()` / `OnDeathAnimationFinished()` 事件必须完整绑定。
 - 对象池 Prefab 必须保持一个具体根类型对应一个规范 Prefab。
 - 首轮通过合理的速度、Collider 尺寸和关卡编排避免离散阶段模型中的高速穿透，不额外实现相对运动扫掠或子步进。

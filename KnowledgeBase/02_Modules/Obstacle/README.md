@@ -3,10 +3,10 @@
 ## 模块信息
 
 - ID：`MOD-OBSTACLE`
-- 层级：Gameplay / Infrastructure
-- 状态：`InDesign`
+- 层级：Gameplay
+- 状态：`ContractReady`
 - 依赖：IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level
-- 决策：`../../06_Decisions/ADR-008-ObstacleManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
+- 决策：`../../06_Decisions/ADR-008-ObstacleManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
 ## 目标
 
@@ -20,7 +20,7 @@
 - 登记、查询和注销活动 Gate/Prop。
 - 提供按对象类型、运行时实例 ID 和道路位置的只读快照查询。
 - 接收对象成功回收或下方离场请求，幂等注销、清理并主动失活后归还对应类型池；类型池再执行防御性失活。
-- 发布对象生成、回收和离场事实事件。
+- 发布对象生成、回收和离场事实事件；`ObstacleRecycled` 使用稳定的 `ObstacleRecycleReason` 区分接触完成、击破、下方离场和 StopRun 清理。
 - 实现 `TickMovement`、`ResolveContacts` 和 `FlushPendingRecycles`；使用 LevelManager 传入的 Gate 时间域 delta，并只按 ADR-033 的阶段顺序执行，不使用独立 Update 推进核心玩法。
 - `ResolveContacts` 只在本帧移动应用并完成一次 Physics2D 同步后，对各 Gate/Prop 的终点姿态执行 `OverlapCollider`；不执行移动路径 Cast。
 - 以实例根 GameObject 中心判定离场：`position.y <= RoadLayoutSnapshot.DespawnY` 即登记回收，不按 Collider/Renderer 边缘修正。
@@ -52,6 +52,8 @@ bool TryGetObject(int runtimeInstanceId, out RoadObjectSnapshot snapshot);
 
 快照至少包含运行时实例 ID、生成项索引、可空配置 ID、对象类别、世界位置、是否仍在道路上和当前交互状态。Gate 的配置 ID 必须为 `null`，Prop 的配置 ID 为 `TbProp.Id`；调用方不得取得管理器内部可变集合。
 
+每次查询返回防御性复制的只读快照列表，不直接包装或暴露 Manager 内部活动 List。`RuntimeInstanceId`、`SpawnEntryIndex` 和 Prop ConfigId 均为非负整数，`0` 合法；Gate 缺少 ConfigId 必须用 `null` 表达，不能用 `0` 伪装。
+
 统一快照状态按 ADR-021 映射为 `MovingDown`、`ContactPending`、`ContactSucceeded`、`ContactFailed`、`ExitedUncontacted`、`Broken`、`Recycled`；Gate/Prop 自身仍维护专用接触状态。
 
 ## 测试标准
@@ -60,8 +62,10 @@ bool TryGetObject(int runtimeInstanceId, out RoadObjectSnapshot snapshot);
 - 注册、查询、注销和对象池回收保持一致。
 - 成功回收、失败后离场和未接触离场都只注销一次。
 - Gate/Prop 终点 Overlap 和根中心 DespawnY 判定使用相同的本帧最终 Transform；离场对象不得再进行后续接触结算。
+- 接触查询通过 SlotCollider 同节点的 `ArmySlotHitProxy` 取得 ArmyId 与 SlotIndex；先按 SlotIndex 去重并重新确认槽位有效，再调用 `ApplySlotDamage`。缺失代理不使用父级搜索兜底。
 - 查询结果不包含已注销或已归还对象。
 - Manager 不改变 Gate/Prop 的数值规则和 Army 状态。
 - 三种具体池化根类型各自只绑定一个规范 Prefab；同类型不同 Prefab 注册失败。
 - Gate/Prop 不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身。
 - Preparing、Completed 或过期 LevelRunId 的阶段调用不移动、接触或回收当前会话之外的对象。
+- Failed 元素门和 Prop 后续受击时 HP 最低锁在 `1`，不会因伤害进入击破/成功回收；它们只在 DespawnY 离场或 StopRun 时回收。

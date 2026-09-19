@@ -1,6 +1,6 @@
 # 项目概述
 
-> 当前为文档优先阶段。以下 MVP 规则已按 ADR-009、ADR-023 等决策收敛为首个可实现基线，但仍不代表已经存在对应的 Unity 实现。
+> 当前已进入按 `ImplementationPlan.md` 分批生成代码的工程实现阶段。以下 MVP 规则已按 ADR-009、ADR-023、ADR-046 等决策收敛为实现基线；路线图未勾选的条目仍不代表已经存在或验证了对应 Unity 实现。
 
 ## 项目定位
 
@@ -21,14 +21,14 @@
 - HP 归零但尚未接触的元素门仍是合法子弹目标；命中它的子弹正常消耗，全部伤害继续累计到 `PostDepletionDamage`。
 - Army 接触 HP 已清空的元素门时结算成功：增加的持续时间为 `PostDepletionDamage × LevelConfig.elementDurationSecondsPerDamage`。当前不设置持续时间上限；同类型持续时间累加，另外两种元素和当前武器保持不变。若额外伤害为 `0`，接触仍成功，但不调用持续时间增加命令，也不发布持续时间变化事件。
 - Army 接触时仍有 HP，则接触失败：对本次接触到的每个有效槽位造成相同的配置伤害，然后继续向下移动。
-- 失败状态会永久锁定元素奖励。此后即使继续受到子弹攻击，也不能再累计可兑换的 `PostDepletionDamage`，更不能再次取得元素；后续命中只可用于受击表现或生命周期处理。
+- 失败状态会永久锁定元素奖励。此后仍可被子弹命中并消费子弹，但 HP 最低锁在 `1`，不能归零，也不能再累计可兑换的 `PostDepletionDamage` 或取得元素；对象继续移动至离场。
 
 ### 道具
 
 - 道具拥有运行时 HP。处于待接触状态时被子弹击破，会立即触发一次配置的击破效果并进入回收流程。
 - 当前 MVP 的具体道具是弹弓箱、弓箭箱和法杖箱；它们的击破效果是把 Army 的当前 WeaponId 替换为 `0 = Slingshot`、`1 = Bow`、`2 = Staff` 中的对应配置，同时保留三种元素剩余时间。
 - Prop 的概念不限定为武器箱。后续可以增加其他击破效果，但效果目录、单个道具是否允许组合效果、目标与叠加规则仍需单独定案，不属于当前 MVP 的已确认契约。
-- 道具未被击破就接触 Army 时，对每个接触槽位造成相同伤害并进入失败状态。失败后再被击破也不发放任何击破效果。
+- 道具未被击破就接触 Army 时，对每个接触槽位造成相同伤害并进入失败状态。失败后仍可被子弹命中，但 HP 最低锁在 `1`，不会被击破、发放效果或因伤害回收，只继续移动至离场。
 
 两类门和道具都只消费一次接触结果；多个槽位或多帧碰撞不能重复结算。详细状态机见 [Gate 模块](../02_Modules/Gate/README.md)、[Prop 模块](../02_Modules/Prop/README.md)、[ADR-006](../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md)、[ADR-022](../06_Decisions/ADR-022-PropBreakEffectBoundary.md) 和 [ADR-038](../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md)。
 
@@ -57,7 +57,7 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 
 ## MVP 基线
 
-- 首版只使用一个关卡和一个 `LevelConfig` ScriptableObject；`unlockedLevelIds` 仅记录通关后应解锁的关卡 ID，当前不实现下一关跳转。
+- 首版只使用一个关卡和一个 `LevelConfig` ScriptableObject；`unlockedLevelIds` 仅记录通关后应解锁的关卡 ID，当前不实现下一关跳转。空列表合法；重复 ID 或自引用是致命配置错误，当前目录中尚不存在的未来关卡 ID 只记录 `Debug.LogWarning` 并从运行时快照中过滤。
 - Gameplay 当前只实现指定 UI 区域内的相对横向拖动；设备触屏与 Editor 左键共用 UGUI Pointer 路径，键盘/手柄延后。拖拽只消费相邻采样点的水平差，手指或鼠标停止移动时输入立即归零；原始归一化滑动速度先限制到 `[-1,1]`，再乘 `PF_UI_TouchDragArea` Inspector 中默认值为 `1` 的灵敏度系数。
 - 道路使用 LevelConfig 中唯一的世界坐标 `roadBounds`，启动时复制到不可变 LevelConfigSnapshot，宽高与四边由它派生；道路不设置玩法 Collider。ArmyRoot 每局从世界原点开始，共用出生横线 `spawnY` 由关卡道路配置提供。
 - 每条敌人、Gate、Prop 生成项都配置 `[0, 1]` 范围内的 `spawnPosition`：`0` 对应道路最左边，`1` 对应道路最右边，中间值线性映射为世界坐标 `x`。
@@ -79,12 +79,12 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 门和道具在移动并同步后只对终点姿态执行一次 Overlap 接触查询，不做接触 Cast；未接触时允许直接从道路下方离场。
 - 怪物不通过到达道路底部扣除军队人数；首版按 ADR-005 在接近线后向 Army 接近并攻击。
 - 所有参与命中、接触、受击或阻挡的玩法对象（包括子弹）使用 Inspector 绑定的 `Collider2D`；LevelManager 集中读取各时间域 delta，并按移动、子弹、道路接触、敌人攻击、回收和终局的顺序同步驱动对应 Manager。子弹与敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap。
-- 存活敌人的身体 Collider 互相阻挡。前方敌人较慢或静止时，后方敌人在安全距离排队等待；首版不实现侧向绕行。
+- 存活敌人的身体 Collider 使用上一同步姿态执行 Cast 阻挡。前方敌人较慢或静止时，后方敌人尽量按安全间距排队；该离散规则在 MVP 参数下减少穿透和重叠，但不保证同帧移动后的绝对不重叠，首版不实现事后分离或侧向绕行。
 - 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
 - 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
 - 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
 - 首轮表现只要求占位 Sprite 和 Gate 单个调试文本；Gameplay Canvas 只保留拖拽输入所需组件，不实现 HUD。正式 Gate 表现、HUD、动画和 VFX 后续迭代。
-- Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
+- Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；ADR-044 明确允许的 `unlockedLevelIds` 目录缺失 ID 是唯一例外，只警告并过滤。Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
 
 ## 非目标
 

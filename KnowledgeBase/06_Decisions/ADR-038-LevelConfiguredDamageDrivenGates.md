@@ -4,6 +4,8 @@
 
 Accepted
 
+> ADR-046 修订 Failed 元素门的后续受击：失败后仍可命中并消费子弹，但 HP 最低锁在 `1`，不再允许失败后被打到 `0`；Pending 状态的 HP 归零与额外伤害累计规则不变。
+
 ## 日期
 
 2026-09-19
@@ -75,7 +77,7 @@ calculatedDuration = PostDepletionDamage * elementDurationSecondsPerDamage
 ### 接触失败后的锁定
 
 - 元素门接触时 `CurrentHp > 0` 仍标记失败，对每个已去重接触槽位应用 Prefab 配置的相同 `ContactDamage`，随后继续向下移动。
-- 一旦进入 `Failed`，元素奖励永久锁定。后续子弹可以按表现和生命周期规则继续命中并消耗，但不得增加可兑换的 `PostDepletionDamage`，即使随后把 HP 打空也不得调用 `AddElementDuration`。
+- 一旦进入 `Failed`，元素奖励永久锁定。后续子弹可以继续命中并消耗，但按 `CurrentHp = Max(1, CurrentHp - Damage)` 锁血，不得增加可兑换的 `PostDepletionDamage`，也不得调用 `AddElementDuration` 或因伤害回收。
 - 未接触直接离场不发放元素奖励。
 
 ### 子弹目标语义
@@ -120,7 +122,7 @@ calculatedDuration = PostDepletionDamage * elementDurationSecondsPerDamage
 - 元素门 `MaxHp = 10` 依次受到 `6`、`6`、`5` 点伤害后，`CurrentHp = 0`、`PostDepletionDamage = 7`。
 - HP 为零的 Pending 元素门继续消费子弹并累计完整伤害；同一子弹实例不重复累计。
 - 成功接触时使用 `PostDepletionDamage × elementDurationSecondsPerDamage`；额外伤害为零时成功但不调用 `AddElementDuration`。
-- 接触失败后后续伤害不增加可兑换额外伤害，HP 清空也不发放元素奖励。
+- 接触失败后后续伤害不增加可兑换额外伤害，HP 最低锁在 `1`，不会发放元素奖励或因伤害回收。
 - 增删 UI/VFX 监听者不改变伤害累计、持续时间计算、Army 状态或回收结果。
 
 ## 关联文档

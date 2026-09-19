@@ -1,5 +1,7 @@
 # 集成测试清单
 
+> 当前不创建 `.asmdef` 或 EditMode/PlayMode 自动测试代码。本清单是验收规格，当前通过 Unity 编译、结构化日志、Inspector 观察和可复现手工步骤执行；只有实际验证通过的条目才能勾选。正式程序集阶段再把高价值规则和场景流程迁移为自动化测试，详见 [测试与验证策略](TestingStrategy.md) 和 [ADR-045](../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md)。
+
 ## 应用流程
 
 - [ ] BootstrapScene 常驻；MainMenuScene、LevelSelectScene、GameplayScene 都在 Build Settings 中，并按固定根名称各有且只有一个对应 SceneEntry。
@@ -57,7 +59,7 @@
 - [ ] 元素门最后一发清空 HP 时只把超过剩余 HP 的伤害计为额外伤害；HP 为 0 且仍待接触时继续接受并消费子弹，后续全部伤害累计为可兑换额外伤害。
 - [ ] 元素门成功接触时只给对应 ElementType 增加一次 `PostDepletionDamage × elementDurationSecondsPerDamage` 的持续时间，同类型累加且不覆盖其他元素；额外伤害为 0 时成功但不调用 Army 持续时间命令。
 - [ ] 元素门未清空时，对每个接触槽位造成相同伤害并继续向下离场。
-- [ ] 元素门接触失败后永久锁定奖励；继续受击可以消费子弹和播放表现，但不再累计可兑换伤害，也不能在随后清空 HP 后获得元素。
+- [ ] 元素门接触失败后永久锁定奖励；继续受击可以消费子弹和播放表现，但 HP 最低锁在 `1`，不再累计可兑换伤害、不能归零或获得元素。
 - [ ] 门只对 Army 进行一次接触判定；未接触门可以直接从道路下方离场。
 - [ ] Gate/Prop 先通过 `IArmyController` 完成状态变更再发布事实事件；增删 UI 或 VFX 监听者不会改变结算结果。
 - [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。
@@ -86,7 +88,7 @@
 - [ ] 同一 AttackSequenceId 的重复关键帧事件只登记一次；事件前目标失效、事件后但结算前死亡、StopRun 或回池都会使待结算请求无效。
 - [ ] AnimationEvent 在当帧 ResolveAttacks 之后触发时，请求安全保留到下一次 ResolveAttacks，且不会因为跨帧而重复结算。
 - [ ] Gate/Prop 在移动并同步 Transform 后只以终点姿态执行一次 `OverlapCollider`；不执行接触 Cast/扫掠，接触状态和运行时 ID 保证一次性结算。
-- [ ] 三种敌人 Prefab 各自提供有限且非负的 `blockingGap`；存活敌人的 BodyCollider 不重叠，前方敌人较慢或静止时，后方敌人按自身 Prefab 间距等待且不会推动前方敌人。
+- [ ] 三种敌人 Prefab 各自提供有限且非负的 `blockingGap`；BodyCollider Cast 只查询上一同步姿态，后方敌人在命中前方敌人时截断位移。在 MVP 参数下验证明显穿透和重叠风险可接受，但不要求同帧移动后的绝对不重叠或事后分离。
 - [ ] Monster 移动不查询 `ArmySlot`，Army 横向移动不查询 `EnemyBody`；士兵与敌人部分或完全重合时不发生推挤、接触伤害或位移修正。
 - [ ] 士兵与敌人重合且目标仍有效时，普通敌人可以对锁定槽位结算伤害，精英/Boss 可以通过 `AttackCollider` 正常命中范围内槽位。
 - [ ] 敌人进入 Dead 后退出受击和阻挡查询；死亡动画不会阻塞后方敌人。
@@ -102,7 +104,7 @@
 - [ ] 军队人数为 0 时进入 GameOver。
 - [ ] 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后进入 Victory。
 - [ ] Victory 不等待 Gate/Prop 时间轴或活动实例完成；未来 Gate/Prop 停止生成，活动对象在 StopRun 中回收，且不会补发接触、击破或奖励效果。
-- [ ] Victory 携带当前关卡 ID 和配置中的 `unlockedLevelIds`。
+- [ ] Victory 携带当前关卡 ID 和 ConfigService 已按 ADR-044 过滤的 `unlockedLevelIds`，不包含当前目录缺失 ID。
 - [ ] Victory 的 `unlockedLevelIds` 只作为本局结果传递，不创建或修改本地存档。
 - [ ] Army 归零后进入 GameOver。
 - [ ] 同一帧最后一只敌人死亡且 Army 归零时进入 GameOver。
@@ -127,19 +129,24 @@
 - [ ] 初始化阶段可以加载 `LevelCatalog`、Luban `cfg.Tables` 和资源注册表，不依赖 Gameplay 场景。
 - [ ] `LevelCatalog` 中每个引用的 `LevelConfig.levelId` 唯一，第一关默认解锁且存在有效引用。
 - [ ] LevelSelect 选定 `LevelId` 后，ConfigService 返回已校验的 `LevelConfigSnapshot`；SceneService 不重复查询配置，并将同一关卡 ID、快照和新的 `LevelRunId` 传入 Gameplay。
-- [ ] ConfigService 启动时完整校验目录内全部 LevelConfig、五类表的主键/枚举/数值和当前跨表引用，并复制为关卡快照及五类数值快照字典；运行中修改资产不能改变当前快照。
+- [ ] ConfigService 启动时完整校验目录内全部 LevelConfig、五类表的主键/枚举/数值和当前跨表引用，并复制为关卡快照及五类数值快照字典；`unlockedLevelIds` 按 ADR-044 先校验重复和自引用，再警告并过滤目录缺失 ID；运行中修改资产不能改变当前快照。
 - [ ] `IConfigService` 只包含查询，不暴露 `Initialize`、LevelConfig 资产或 `cfg.Tables`；Composition 直接初始化 Foundation 的具体 ConfigService，Contracts/Foundation 不引用 Gameplay。
 - [ ] Luban 生成代码编入 `Game.ConfigGenerated`；它不引用领域层，生成类型只被 Foundation 配置实现和 Composition 装配使用，Contracts/Gameplay/Presentation 的接口不出现 `cfg.*`。
-- [ ] Army、Weapon、Bullet、Enemy、Prop Provider 只在 Ready 后接受已校验 ID；相同 ID 重复查询返回相同值语义的快照，不暴露 Luban 生成行或可变集合。
-- [ ] 任一 Luban 表、LevelCatalog、LevelConfig 或已确认引用错误时只输出首个包含 `ConfigErrorCode`、稳定来源、字段或条目索引和原因的 `Debug.LogError`，ConfigService 进入 Failed，Player 退出、Editor 停止 Play Mode；不发布配置恢复事件、不重试、不继续加载 MainMenu。
+- [ ] Army、Weapon、Bullet、Enemy、Prop Provider 只在 Ready 后接受已校验 ID；所有表 ID 非负且允许 `0`，相同 ID 重复查询返回相同值语义的快照，不暴露 Luban 生成行或可变集合。
+- [ ] 任一 Luban 表、LevelCatalog、LevelConfig 或必需引用错误时只输出首个包含 `ConfigErrorCode`、稳定来源、字段或条目索引和原因的 `Debug.LogError`，ConfigService 进入 Failed，Player 退出、Editor 停止 Play Mode；不发布配置恢复事件、不重试、不继续加载 MainMenu。ADR-044 的 `unlockedLevelIds` 目录缺失 ID 是唯一非致命引用例外。
+- [ ] `unlockedLevelIds` 为空时初始化成功，快照和 Victory 结果均为空。
+- [ ] `unlockedLevelIds` 包含重复 ID 时，无论该 ID 是否存在于目录，都报告首个重复条目的 `InvalidLevelConfig` 并终止应用；不自动去重。
+- [ ] `unlockedLevelIds` 包含当前 `levelId` 时报告自引用的 `InvalidLevelConfig` 并终止应用；不把自引用解释为保持当前关卡解锁。
+- [ ] 目录为 `[1,2,3]`、关卡 1 的 `unlockedLevelIds=[2,99,3]` 时，对缺失 ID `99` 只记录一次包含稳定 Source 和条目索引的 `Debug.LogWarning`，ConfigService 仍进入 Ready，快照和 Victory 保持原顺序 `[2,3]`。
+- [ ] 把此前缺失的 ID 加入 LevelCatalog 后，下次初始化不再警告，并按原位置进入 `LevelConfigSnapshot.UnlockedLevelIds`。
 - [ ] Gameplay Manager 不为缺失配置编写第二套 `TryGet`、默认值、日志或 StopRun 恢复分支；非 Ready 查询或未登记 ID 直接暴露为程序不变量异常。
 - [ ] `LevelConfig` 引用的敌人和 Prop 配置 ID 全部存在；Gate 生成项不含 ConfigId，并按类型正确填写 InitialValue，或 ElementType 与 MaxHp；EnemyManager 的三个敌人规范 Prefab、ObstacleManager 的 Gate/Prop 规范 Prefab、BulletManager 的子弹规范 Prefab、阵型槽位和发射点绑定完整。
 - [ ] `enemySpawns` 为空时报告 `InvalidLevelConfig` 并退出应用；`gateSpawns` 或 `propSpawns` 为空仍可正常完成配置初始化。
 - [ ] 当前不存在 `TbGate` 或 Gate 配置 Provider；包含元素门时 `elementDurationSecondsPerDamage` 有限且大于 0，不包含元素门时为 0；`TbProp` 的生命值、伤害及武器引用符合配置契约。
-- [ ] `TbArmy.Id=1` 和固定 `TbWeapon.Id=0/1/2` 均存在，`TbWeapon.BulletId` 引用有效；当前不建立 TbElement，缺失必需行或引用时启动失败。
+- [ ] `TbArmy`、`TbWeapon`、`TbEnemy`、`TbProp`、`TbBullet` 的首行均为 `Id=0`，固定 `TbWeapon.Id=0/1/2` 均存在且 `TbWeapon.BulletId` 引用有效；当前不建立 TbElement，缺失必需首行、固定行或引用时启动失败。
 - [ ] `TbArmy.ArmyCountLimit = 0` 时不限制人数，大于 0 时正确应用上限；初始人数始终为固定值 1。
 - [ ] `TbArmy.MoveSpeed` 是 Army 横向基础速度；实际位移按 `horizontalInput × MoveSpeed × 有效玩法 delta` 计算，触屏系数通过输入倍率影响最终速度但不改写配置。
-- [ ] GameplaySceneEntry 的序列化 ArmyPrefabBinding 包含唯一 ArmyId=1；Prefab 根为 ArmyController，槽位数组非空、无空项或重复引用，SlotCapacity 准确等于数组长度。
+- [ ] GameplaySceneEntry 的序列化 ArmyPrefabBinding 包含唯一 ArmyId=0；Prefab 根为 ArmyController，槽位数组非空、无空项或重复引用，SlotCapacity 准确等于数组长度。
 - [ ] MVP Luban 表不要求 `PrefabKey`、`FormationKey`、`SoldierPrefabKey`、`PropType`、`AttackType`、代表人数缩放字段或 `CollisionBehavior`。
 - [ ] 缺少必需的 Unity Prefab、Collider2D、阵型槽位或发射点绑定时阻止进入 Gameplay，并报告稳定来源。
 - [ ] `NormalMonster`、`EliteMonster`、`BossMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
@@ -178,7 +185,7 @@
 ## 确定性与基础设施语义
 
 - [ ] MVP 所有时间域和对象局部倍率均为 `1`，未启用运行时倍率调整。
-- [ ] 所有包含 Army 身份的事件使用 `ArmyId = 1`。
+- [ ] 所有包含 Army 身份的事件使用 `ArmyId = 0`。
 - [ ] LevelManager 是同一帧阶段顺序的唯一协调者，按生成、移动阻挡、子弹、Gate/Prop、敌人攻击、回收、终局判断的顺序同步调用；Manager/池对象独立 Update 不推进核心玩法。
 - [ ] LevelManager 在帧开始读取 Gameplay、Bullet、Gate、Monster delta 并分别传入对应阶段；具体池对象不直接访问 TimeService。
 - [ ] Physics2D Auto Sync Transforms 关闭时，每个 Playing 帧在全部移动后、首次显式查询前由 LevelManager 准确调用一次 SyncTransforms，其他 Manager 不重复调用。

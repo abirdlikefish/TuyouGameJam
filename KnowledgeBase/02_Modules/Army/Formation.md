@@ -11,14 +11,14 @@ ArmyController 通过 Inspector 序列化 `ArmySlotView[] slots`。数组下标�
 - `RepresentedCount`：当前槽位代表的士兵数量。
 - `CurrentHp`、`MaxHp`：整数槽位聚合生命值。
 - 独立 `SlotCollider`（Collider2D）受击碰撞体。
+- 与 SlotCollider 同节点、显式绑定当前 ArmySlotView 的 `ArmySlotHitProxy`。
 - 一个子弹生成点。
-- `NeedsRefill`：是否存在受击后未补齐的人数缺口。
 
 `RepresentedCount == 0` 时保留槽位位置和索引，但禁用士兵表现、碰撞体和发射点，等待后续新增人数补充。
 
 ## 人数分配
 
-初始创建时，或没有受击缺口时需要创建新的上场槽位，使用整数平均分配：
+初始创建时使用整数平均分配：
 
 ```text
 active = Min(ArmyCount, SlotCapacity)
@@ -28,12 +28,7 @@ remainder = ArmyCount % active
 Slot[i].RepresentedCount = base + (i < remainder ? 1 : 0)
 ```
 
-人数增加时按以下顺序逐人分配：
-
-1. 先选择 `RepresentedCount` 最少的受击缺口/空槽位。
-2. 人数相同时选择 `SlotIndex` 较小的槽位。
-3. 没有受击缺口且总人数小于槽位容量时，按槽位顺序启用未使用槽位。
-4. 所有槽位都已启用后，继续补充当前人数最少的槽位。
+运行时人数增加时逐人分配。每次都从全部槽位选择 `RepresentedCount` 最少者，相同时选择 `SlotIndex` 较小者；空槽位人数为 `0`，因此会自然优先重新启用。Army 不保存 `NeedsRefill`，也不需要推断受击前的目标人数。
 
 受击不会触发其他槽位向少人数槽位的转移。任何分配后都必须满足：
 
@@ -43,7 +38,7 @@ Sum(Slot[i].RepresentedCount) == ArmyCount
 
 ## 聚合生命值与受击
 
-`TbArmy.Id = 1` 的不可变配置快照提供整数 `HpPerSoldier`。槽位最大生命值为：
+`TbArmy.Id = 0` 的不可变配置快照提供整数 `HpPerSoldier`。槽位最大生命值为：
 
 ```text
 MaxHp = RepresentedCount × HpPerSoldier
@@ -55,7 +50,7 @@ MaxHp = RepresentedCount × HpPerSoldier
 RepresentedCount = CurrentHp <= 0 ? 0 : Ceil(CurrentHp / HpPerSoldier)
 ```
 
-人数减少后重新计算 `MaxHp`，但不把其他槽位的人数迁移过来。槽位人数变为 0 时标记 `NeedsRefill`。受击导致的代表人数减少量同步从 `ArmyCount` 扣除，并发布人数和阵型变化事件。
+人数减少后重新计算 `MaxHp`，但不把其他槽位的人数迁移过来。槽位人数变为 0 时禁用表现、Collider 和发射资格，后续增员按最少人数规则自然重新启用。受击导致的代表人数减少量同步从 `ArmyCount` 扣除，并发布人数和阵型变化事件。
 
 ## 负数门请求减员
 
@@ -110,5 +105,6 @@ ArmyRoot 作为唯一移动对象。移动边界使用当前激活槽位碰撞�
 
 - `slots.Length > 0`，不存在空项或重复引用。
 - 每个 ArmySlotView 必须绑定 SoldierVisual、SlotCollider 和 FirePoint。
+- 每个 SlotCollider 节点必须绑定 `ArmySlotHitProxy`，代理显式引用对应 ArmySlotView；初始化时注入 ArmyId 和数组下标 SlotIndex。
 - SlotCollider 使用 ArmySlot Layer；空槽位只禁用表现、Collider 和发射资格，SlotIndex 与局部位置保持不变。
 - Prefab 在 ArmyRoot 位于世界原点时的最大激活槽位合并宽度必须能放入道路宽度，否则 Gameplay Preparing 失败。

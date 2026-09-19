@@ -4,6 +4,8 @@
 
 Accepted
 
+> ADR-046 将所有表 ID 统一为从 `0` 开始，因而把本文的固定 `ArmyId` 与 `TbArmy.Id` 从 `1` 修订为 `0`；Prefab、槽位、装备、元素与减员规则不变。
+
 > ADR-038 已覆盖本文中“元素门直接配置固定 `ElementDuration`”及 `TbGate` 元素字段的部分。Army 的三元素独立计时、`AddElementDuration` 正值输入、同类型累加和当前不设玩法上限仍然有效。
 
 ## 日期
@@ -18,17 +20,17 @@ Accepted
 
 ### Army 配置与身份
 
-- MVP 固定 `ArmyId = 1`，同时表示读取 `TbArmy.Id = 1` 和选择序列化绑定中 `ArmyId = 1` 的 Army Prefab。
+- MVP 固定 `ArmyId = 0`，同时表示读取首行 `TbArmy.Id = 0` 和选择序列化绑定中 `ArmyId = 0` 的 Army Prefab。
 - `TbArmy` 只保存 `Id`、`ArmyCountLimit`、`HpPerSoldier`、`MoveSpeed`。
 - `ArmyCountLimit` 是逻辑总人数上限，不是显示槽位上限；`0` 表示不设上限，大于 `0` 时必须至少为初始人数 `1`。
 - `MaxDeployedSoldiers`、`WeaponId`、`ElementId` 从 `TbArmy` 删除。
 - ConfigService 在初始化时把 Luban 行复制为不可变 `ArmyConfigSnapshot` 和 `WeaponConfigSnapshot`，并通过 `IArmyConfigProvider`、`IWeaponConfigProvider` 提供类型化只读查询。Gameplay 模块不得直接访问静态 Luban Tables 或保存生成表的可变行对象。
-- 初始化时缺少 `TbArmy.Id = 1`、武器固定行或 `TbWeapon.BulletId` 引用时配置加载失败，不使用默认行兜底。
+- 初始化时缺少 `TbArmy.Id = 0`、武器固定行或 `TbWeapon.BulletId` 引用时配置加载失败，不使用默认行兜底。
 
 ### Army Prefab 与槽位容量
 
 - `GameplaySceneEntry` 使用可序列化的 `ArmyPrefabBinding` 列表维护 `ArmyId -> ArmyController Prefab`；Unity 默认不序列化普通 Dictionary，因此运行时只在验证后构建只读查找表。
-- MVP 必须存在且只存在一个 `ArmyId = 1` 的有效绑定。Prefab 为空、ID 重复、根节点缺少 `ArmyController` 或槽位绑定无效时，Gameplay Preparing 失败并且不得发布 Ready。
+- MVP 必须存在且只存在一个 `ArmyId = 0` 的有效绑定。Prefab 为空、ID 重复、根节点缺少 `ArmyController` 或槽位绑定无效时，Gameplay Preparing 失败并且不得发布 Ready。
 - GameplayScene 中使用固定 `ArmyContainer`；Entry 在其下实例化选中的 Army Prefab。Army 不进入 PoolService，每局场景只创建一个实例并在清理时销毁。
 - ArmyController 通过序列化 `ArmySlotView[] slots` 持有固定槽位引用，不使用运行时 `Find`、`GetComponentsInChildren` 或 `AddComponent` 作为缺失引用兜底。
 - `SlotCapacity = slots.Length`，它是最大可见士兵数的唯一来源。`GetSlotCapacity()` 返回该派生值；逻辑 `ArmyCount` 可以大于槽位容量。
@@ -76,7 +78,7 @@ Accepted
 
 ## 验收标准
 
-- `ArmyId = 1` 能同时取得 `TbArmy.Id = 1` 的不可变快照和唯一的序列化 Army Prefab；任一缺失都阻止 Gameplay Ready。
+- `ArmyId = 0` 能同时取得 `TbArmy.Id = 0` 的不可变快照和唯一的序列化 Army Prefab；任一缺失都阻止 Gameplay Ready。
 - 两个不同 Army Prefab 可以通过不同槽位数组长度得到不同 `SlotCapacity`，无需修改 Luban。
 - 每局初始武器为弹弓，三种元素持续时间均为 `0`。
 - 火、冰、雷可以任意组合同时有效；重复获得同元素累加持续时间。

@@ -7,7 +7,7 @@
 - 场景对象需要同时表达容器和行为时，使用“领域 `Root` + 职责组件”的形式，例如 `ArmyRoot [ArmyController]`、`MonsterRoot [EnemyManager]`、`ObstacleRoot [ObstacleManager]`。
 - 私有字段使用 camelCase，序列化字段使用明确名称。
 - 事件以 `On` 开头的 C# 事件或以过去式命名的事件消息保持一致。
-- Prefab 使用功能前缀：`PF_Road_Default`、`PF_Army_001`、`PF_Gate_Additive`、`PF_Gate_Element`、`PF_Monster_Normal`、`PF_Bullet`、`PF_UI_TouchDragArea`。Army Prefab 的三位数字对应 ArmyId；MVP 固定使用 `PF_Army_001`。Gameplay 拖拽区域固定使用 `PF_UI_TouchDragArea`。
+- Prefab 使用功能前缀：`PF_Road_Default`、`PF_Army_000`、`PF_Gate_Additive`、`PF_Gate_Element`、`PF_Monster_Normal`、`PF_Bullet`、`PF_UI_TouchDragArea`。Army Prefab 的三位数字对应 ArmyId；MVP 固定使用 `PF_Army_000`。Gameplay 拖拽区域固定使用 `PF_UI_TouchDragArea`。
 - 配置使用 `CFG_` 前缀，材质使用 `MAT_`，特效使用 `VFX_`。
 - 枚举值使用 PascalCase，例如 `Gameplay`、`GameOver`。
 - 敌人 Prefab 的碰撞体使用稳定职责名称：`BodyCollider`、`AttackCollider`；MVP 不使用 `TargetSensor`。

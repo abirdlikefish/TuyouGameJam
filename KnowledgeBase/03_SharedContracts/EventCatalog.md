@@ -8,10 +8,10 @@
 | `AppSceneUnloaded` | SceneService | GameStateService、UI | `AppSceneId`、`LevelId`、`LevelRunId`；旧场景 Entry 已清理且异步卸载完成 |
 | `AppSceneLoadFailed` | SceneService | GameStateService、UI | 目标 `AppSceneId`、`LevelId`、`LevelRunId`、`SceneLoadErrorCode`；失败场景已清理 |
 | `AppSceneUnloadFailed` | SceneService | GameStateService、UI | 当前 `AppSceneId`、`LevelId`、`LevelRunId`、`SceneUnloadErrorCode`；目标场景未继续加载 |
-| `ArmyCountChanged` | ArmyController | UI、ArmyVisual | `LevelRunId`、新人数、变化量、变化原因 |
+| `ArmyCountChanged` | ArmyController | UI、ArmyVisual | `LevelRunId`、新人数、变化量、`ArmyCountChangeReason` |
 | `ArmyFormationChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、总人数、激活槽位数、槽位代表人数和 HP 快照 |
-| `SoldierHit` | ArmyController | UI、VFX | `LevelRunId`、`ArmyId`、槽位 ID、伤害、实际损失人数 |
-| `ArmyReachedZero` | ArmyController | UI | `LevelRunId`、原因；LevelManager 在帧末同步查询 ArmyCount，不由该事件即时终局 |
+| `SoldierHit` | ArmyController | UI、VFX | `LevelRunId`、`ArmyId`、槽位 ID、请求伤害、实际扣除 HP、实际损失人数 |
+| `ArmyReachedZero` | ArmyController | UI | `LevelRunId`、`ArmyReachedZeroReason`；LevelManager 在帧末同步查询 ArmyCount，不由该事件即时终局 |
 | `ArmyWeaponChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、旧 Weapon ID、新 Weapon ID、来源运行时实例 ID |
 | `ArmyElementDurationChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、`ElementType`、旧剩余时间、本次增加时间、新剩余时间、来源运行时实例 ID |
 | `ArmyElementExpired` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、刚从有效变为 `0` 的 `ElementType`；同一次有效期只发布一次 |
@@ -21,22 +21,24 @@
 | `GateContactResolved` | Gate | UI、VFX | `LevelRunId`、运行时门实例 ID、`ArmyId`、门类型、是否成功；加法门携带请求/实际增员或 `ArmyRemovalResult`；元素门携带 `ElementType`、`PostDepletionDamage`、换算系数、计算持续时间、可选的 `ElementDurationChangeResult`、奖励是否锁定；另含是否继续移动 |
 | `GateExitedRoad` | ObstacleManager | — | `LevelRunId`、运行时门实例 ID、是否接触过 Army |
 | `PropSpawned` | ObstacleManager | UI、VFX | `LevelRunId`、运行时道具实例 ID、配置 ID、WeaponId、位置 |
-| `PropBroken` | Prop | UI、VFX | 当前 MVP：`LevelRunId`、运行时道具实例 ID、WeaponId、命中上下文、接触状态、是否已发放武器替换效果；未来效果载荷需按 ADR-022 另行定案 |
-| `PropContactDamage` | Prop | UI、VFX | `LevelRunId`、运行时道具实例 ID、`ArmyId`、接触槽位索引、已应用伤害 |
+| `PropBroken` | Prop | UI、VFX | 当前 MVP：`LevelRunId`、运行时道具实例 ID、WeaponId、命中上下文、接触状态、是否已发放武器替换效果；只由 Pending 状态 HP 归零发布，Failed 后锁血不发布；未来效果载荷需按 ADR-022 另行定案 |
+| `PropContactDamage` | Prop | UI、VFX | `LevelRunId`、运行时道具实例 ID、`ArmyId`、接触槽位索引、已提交的 `ContactDamage`；实际 HP 与人数损失见 `SoldierHit` |
 | `PropExitedRoad` | ObstacleManager | — | `LevelRunId`、运行时道具实例 ID、是否接触过 Army |
-| `ObstacleRecycled` | ObstacleManager | —（当前无必需监听者） | `LevelRunId`、运行时实例 ID、对象类别、回收原因 |
-| `MonsterSpawned` | EnemyManager | LevelManager、UI | `LevelRunId`、运行时敌人实例 ID、敌人配置 ID、敌人类型、`SpawnPosition`、初始世界坐标 |
+| `ObstacleRecycled` | ObstacleManager | —（当前无必需监听者） | `LevelRunId`、运行时实例 ID、对象类别、`ObstacleRecycleReason` |
+| `MonsterSpawned` | EnemyManager | LevelManager、UI | `LevelRunId`、运行时敌人实例 ID、`SpawnEntryIndex`、敌人配置 ID、敌人类型、`SpawnPosition`、初始世界坐标 |
 | `MonsterDamaged` | Monster | UI、VFX | `LevelRunId`、运行时敌人实例 ID、`BulletDamageContext`、剩余生命值、是否致命 |
-| `MonsterAttackLanded` | Monster | VFX | `LevelRunId`、运行时敌人实例 ID、攻击类型、命中槽位索引、每槽位伤害 |
+| `MonsterAttackLanded` | EnemyManager | VFX | `LevelRunId`、运行时敌人实例 ID、攻击类型、命中槽位索引、已提交的 `AttackPower`；范围攻击对每个有效槽位各发布一条，实际 HP 与人数损失见 `SoldierHit` |
 | `MonsterKilled` | EnemyManager | VFX | `LevelRunId`、运行时敌人实例 ID、造成击杀的 `BulletDamageContext`；Monster 先通过必执行回调报告死亡，EnemyManager 完成死亡去重和存活计数后发布；LevelManager 在帧末同步查询 AliveEnemyCount |
-| `Victory` | GameStateService | UI | `LevelId`、`LevelRunId`、`unlockedLevelIds`（仅本局结果数据）；场景卸载前发布 |
-| `GameOver` | GameStateService | UI | `LevelId`、`LevelRunId`、失败原因；场景卸载前发布 |
+| `Victory` | GameStateService | UI | `LevelId`、`LevelRunId`、ConfigService 已按 ADR-044 过滤的 `unlockedLevelIds`（仅本局结果数据）；场景卸载前发布 |
+| `GameOver` | GameStateService | UI | `LevelId`、`LevelRunId`、`GameOverReason`；场景卸载前发布 |
 
 ## 事件约束
 
 - 事件只描述已经发生的事实，不通过事件请求另一个模块执行私有逻辑。
 - Gate/Prop 必须先通过 `IArmyController` 完成玩法状态变更，再发布接触、击破或伤害事件；ArmyController 不是这些事实事件的玩法监听者。
 - 元素门额外伤害为 0 时不调用 `AddElementDuration`，因此不发布 `ArmyElementDurationChanged`；`GateContactResolved` 仍必须报告成功和计算持续时间 0。元素门失败后若仍保留受击表现，可以继续发布 `ElementGateDamageChanged`，但载荷必须表明奖励已锁定且累计可兑换伤害未增加。
+- `ApplySlotDamage` 不返回 Army 私有结算结果。Monster、Gate、Prop 只在提交伤害前重新确认槽位有效，并在提交后发布各自的攻击/接触事实；实际扣除 HP 和人数损失只由 Army 的 `SoldierHit`、人数与阵型事件报告。
+- Failed 元素门和 Prop 后续受击时 HP 最低锁在 `1`。元素门可以继续发布奖励已锁定的 `ElementGateDamageChanged`；Prop 不发布 `PropBroken`，两者都不因后续伤害回收。
 - 监听者在销毁时必须取消订阅。
 - 事件参数版本变化需要在 `06_Decisions` 记录。
 - 所有 Gameplay 生成请求、会话结果以及可能跨场景或延迟处理的事件必须携带 `LevelRunId`，或由统一的会话事件封装携带；接收者不得处理过期会话消息。
@@ -48,9 +50,9 @@
 - Monster 生命值归零后先通过 EnemyManager 的必执行回调完成死亡去重和 `AliveEnemyCount` 更新，再由 EnemyManager 发布 `MonsterKilled`；监听者不承担敌人注销、计数或回收。
 - `OnDeathAnimationFinished()` 是 Monster Prefab 上的本地 AnimationEvent 方法，不是 EventBus 事件。它只登记延后回收，不能再次发布 `MonsterKilled` 或改变死亡计数。
 - `ArmyReachedZero` 和 `MonsterKilled` 不驱动 LevelManager 即时终局；LevelManager 在 ADR-033 的攻击和回收阶段之后统一查询权威状态，保证同帧失败优先级。
-- MVP 所有包含 Army 身份的事件使用固定 `ArmyId = 1`；多 Army 扩展前必须更新契约。
+- MVP 所有包含 Army 身份的事件使用固定 `ArmyId = 0`；多 Army 扩展前必须更新契约。
 - 元素剩余时间不通过 EventBus 每帧广播；只在成功增加持续时间和从有效变为过期时发布事实。子弹、受击和击杀事实使用发射瞬间不可变的 `ElementMask`。
-- 配置或必需资源校验失败不通过 EventBus 建立恢复流程。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 输出首个稳定错误并立即退出应用；Prefab、Collider、Layer 或 Inspector 装配错误由 GlobalBootstrap 或 GameplaySceneEntry 输出错误并阻止对应 Ready。
+- 配置或必需资源校验失败不通过 EventBus 建立恢复流程。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 输出首个稳定错误并立即退出应用；ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只通过 `Debug.LogWarning` 报告并过滤，不发布事件。Prefab、Collider、Layer 或 Inspector 装配错误由 GlobalBootstrap 或 GameplaySceneEntry 输出错误并阻止对应 Ready。
 - MVP 完全无声音且不初始化 DebugService；事件目录不把 Audio 或通用调试服务列为当前监听者。未来表现模块仍可在不改变核心结果的前提下订阅既有事实事件。
 - 暂停、减速和局部时停延后，当前事件目录不定义 `GamePaused` 或 `GameResumed`。
 

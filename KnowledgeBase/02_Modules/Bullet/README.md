@@ -4,9 +4,9 @@
 
 - ID：`MOD-BULLET`
 - 层级：Gameplay
-- 状态：`Planned`
+- 状态：`ContractReady`
 - 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
 ## 职责
 
@@ -29,8 +29,8 @@
 
 - 子弹命中后立即回收。
 - 子弹根 GameObject 中心的世界坐标满足 `position.y > RoadLayoutSnapshot.TopBoundary`（`roadBounds.yMax`）时回收；不使用 Renderer、Collider 或摄像机视口边缘。
-- 命中候选必须实现 `IBulletHittable` 且 `CanReceiveBulletHit = true`。Enemy/Prop 可以同时实现 `IDamageable`，加法门只实现子弹命中契约；BulletManager 不要求所有合法目标都有 HP。
-- HP 已归零但仍处于 `Pending` 的元素门保持 `CanReceiveBulletHit = true`，命中后子弹照常消费，伤害交由 Gate 累计为可兑换额外伤害。元素门接触失败后是否继续保留命中表现由 Gate 生命周期决定，但命中不得再累计可兑换伤害。
+- 命中 Collider 节点必须存在已在 Preparing 验证的同节点 `BulletHitProxy`；代理显式绑定实现 `IBulletHittable` 的 Enemy/Gate/Prop 根组件，并提供对象类别和 RuntimeInstanceId。候选还必须满足 `CanReceiveBulletHit = true`；BulletManager 不通过父级搜索或 HP 推断目标。
+- HP 已归零但仍处于 `Pending` 的元素门保持 `CanReceiveBulletHit = true`，命中后子弹照常消费，伤害交由 Gate 累计为可兑换额外伤害。Failed 元素门和 Prop 仍保持可命中，子弹照常消费，但目标 HP 最低锁在 `1`，不再产生奖励、击破或伤害回收。
 - 移动使用 LevelManager 在帧开始读取并传入的 Bullet 时间域 delta；Bullet 和 BulletManager 不自行再次读取 TimeService。
 - 不依赖 `OnTriggerEnter2D` 或 `OnCollisionEnter2D` 作为命中唯一入口；查询使用 Bullet Layer 到 Enemy/Gate/Prop 受击 Layer 的明确过滤。
 - 首轮只对 Bullet 自身从上一逻辑位置到期望位置执行扫掠，不计算与本帧同时移动目标的相对运动，也不做子步进。通过 MVP 配置的合理速度、Collider 尺寸和目标帧率避免穿透，不承诺任意高速或严重掉帧场景。
@@ -71,6 +71,7 @@ Bullet 根组件显式绑定 `bodyCollider` 和视觉引用。首轮所有 Bulle
 - 子弹 Collider Cast 覆盖 Bullet 自身在一个逻辑帧内从上一位置到期望位置的位移；在 MVP 约定速度、Collider 尺寸和测试帧率范围内可以稳定命中目标。首轮不验收双方高速相对运动或严重掉帧下的绝对不穿透。
 - 子弹与怪物、Gate 或 Prop 的受击碰撞体碰撞时只生成一次伤害上下文并回收；攻击碰撞体不作为子弹目标。
 - 同一个 `BulletInstanceId` 不会因多个目标子碰撞体重复结算。
+- 同一 Cast 结果先通过 BulletHitProxy 按 RuntimeInstanceId 去重，再按距离、Enemy > Gate > Prop、RuntimeInstanceId 的稳定优先级选择首个有效目标。
 - `Bullet` 具体类型只绑定一个规范 Prefab 和类型池；类型池返回未激活实例，BulletManager 设置发射父节点、Transform 和快照并登记后才激活。
 - 子弹只请求生成所有者结束实例，不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还；命中或离屏后清理状态、主动失活，再由类型池防御性失活并回收。
 - LevelManager 只在子弹阶段调用一次 `TickMovementAndHits`；Preparing、Completed 和过期 LevelRunId 不移动或命中。

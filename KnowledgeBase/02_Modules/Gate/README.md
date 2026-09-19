@@ -4,9 +4,9 @@
 
 - ID：`MOD-GATE`
 - 层级：Gameplay
-- 状态：`InDesign`
+- 状态：`ContractReady`
 - 依赖：EventBus、Army、Bullet、ObstacleManager、Level
-- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
+- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
 ## 职责
 
@@ -54,7 +54,7 @@ else:
 - `PostDepletionDamage == 0` 时接触仍标记成功，但计算持续时间为 `0`，不调用只接受正持续时间的 `AddElementDuration`，也不发布 `ArmyElementDurationChanged`。
 - HP 未清空时接触失败，对每一个接触到的 Army 槽位造成相同的接触伤害。
 - 失败后继续向下移动并离场，不再次进行成功判定。
-- 接触失败后，后续子弹即使将 HP 打空，也不再增加可兑换的 `PostDepletionDamage` 或发放元素奖励；后续命中只用于受击或销毁表现。
+- 接触失败后奖励永久锁定。后续子弹仍正常命中、消费并产生受击表现，但 HP 按 `Max(1, CurrentHp - Damage)` 锁在至少 `1`，不会归零，也不再增加可兑换的 `PostDepletionDamage` 或发放元素奖励；对象只继续向下移动至离场或由 StopRun 清理。
 
 ## 接触状态
 
@@ -84,27 +84,28 @@ Pending
 文档确认后的最小实现结构如下；当前尚未创建这些工程文件：
 
 ```text
-Assets/Scripts/Game/Gate/
+Assets/Scripts/Game/Gameplay/Gate/
 ├── AdditiveGate.cs        无 HP 的伤害驱动数字门；处理数字命中与正负接触
-├── ElementGate.cs         处理 HP、额外伤害、持续时间换算与失败锁定
-└── GateTypes.cs           GateType、GateContactState 等 Gate 领域类型（仅在尚无共享定义时创建）
+└── ElementGate.cs         处理 HP、额外伤害、持续时间换算与失败锁定
 
 Assets/Prefabs/Gate/
 ├── PF_Gate_Additive.prefab   根组件 AdditiveGate
 └── PF_Gate_Element.prefab    根组件 ElementGate
 ```
 
+`GateType`、`GateContactState` 等稳定枚举直接使用 Contracts 中的共享定义，不在 Gate 模块重复创建本地类型文件。
+
 首轮 Prefab 使用最小占位层级：
 
 ```text
 PF_Gate_Additive [AdditiveGate]
 ├── Visual [SpriteRenderer 或占位底图]
-├── BodyCollider [Collider2D；Gate Layer]
+├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 
 PF_Gate_Element [ElementGate]
 ├── Visual [SpriteRenderer 或占位底图]
-├── BodyCollider [Collider2D；Gate Layer]
+├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 ```
 
@@ -114,10 +115,10 @@ PF_Gate_Element [ElementGate]
 
 | 根组件 | Inspector 序列化 | 每次生成注入/重置 |
 |---|---|---|
-| `AdditiveGate` | `BodyCollider`、`MoveSpeed`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
-| `ElementGate` | `BodyCollider`、`MoveSpeed`、`ContactDamage`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType`、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
+| `AdditiveGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
+| `ElementGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`ContactDamage`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType`、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
 
-Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数；LevelConfig 也不保存两类门的统一速度和元素门统一接触伤害。必需引用缺失、速度非有限/小于 0、元素门接触伤害小于等于 0 时，Gameplay 不得进入 Ready，不能运行时静默补组件或使用默认值。
+Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数；LevelConfig 也不保存两类门的统一速度和元素门统一接触伤害。`InitialValue` 不得为 `int.MinValue`；GateValue 正向累加超过 `int` 范围时饱和到 `int.MaxValue`。必需引用或同节点 BulletHitProxy 缺失、速度非有限/小于 0、元素门接触伤害小于等于 0 时，Gameplay 不得进入 Ready，不能运行时静默补组件或使用默认值。
 
 表现组件只读取根组件已经结算出的快照或事实事件，不反向修改门值、HP、额外伤害或奖励锁定状态。若后续发现两类门有稳定且足够多的共同生命周期代码，可再提取内部基类；当前文档不要求为了复用少量字段预先建立通用 Gate 框架。
 
@@ -142,9 +143,9 @@ Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数�
 - Army 状态变更完成后才发布一次 `GateContactResolved`；增删其他事件监听者不会改变结算结果。
 - 元素门 `MaxHp = 10` 依次受到 `6`、`6`、`5` 点伤害后，`CurrentHp = 0` 且 `PostDepletionDamage = 7`；HP 为零后仍可被命中并消费子弹。
 - 元素门在接触前 HP 清空并接触 Army 时，按 `PostDepletionDamage × elementDurationSecondsPerDamage` 计算一次持续时间；额外伤害为零时成功但不调用 `AddElementDuration`。
-- 元素门接触失败后不再累计可兑换额外伤害，后续 HP 被打空时也不增加任何元素持续时间。
+- 元素门接触失败后不再累计可兑换额外伤害；后续命中正常消费子弹，但 HP 最低锁在 `1`，不会被打空，也不增加任何元素持续时间或触发伤害回收。
 - 元素门未清空时，对每个接触槽位造成相同伤害，之后继续移动离场。
-- 元素门接触失败后被后续子弹击破时不增加 Army 的元素持续时间或可兑换额外伤害。
+- 元素门接触失败后继续受击时 HP 最低锁在 `1`，不增加 Army 的元素持续时间或可兑换额外伤害，也不因伤害回收。
 - 未接触的门离场时不产生接触成功或失败事件。
 - Gate 根 GameObject 中心满足 `position.y <= RoadLayoutSnapshot.DespawnY` 时离场；不使用 Collider 或 Renderer 下边缘。
 - 接触只使用移动终点的 `OverlapCollider` 结果；MVP 不验收路径中穿过但终点未重叠的接触。

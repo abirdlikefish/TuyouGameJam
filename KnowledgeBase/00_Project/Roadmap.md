@@ -1,8 +1,12 @@
 # 开发路线图
 
-> 本文复选框只表示工程实现和相应验证已经完成，不表示 ADR 是否已接受或设计是否已收敛。当前仍处于文档优先阶段，尚未获得工程实现授权，因此所有工程条目保持未勾选。设计成熟度以模块状态表和 `DesignBacklog.md` 为准，见 ADR-015。
+> 本文复选框只表示工程实现和相应验证已经完成，不表示 ADR 是否已接受或设计是否已收敛。用户已授权 AI 按 `ImplementationPlan.md` 分批创建代码与目录；Scene、Prefab、表格、配置资产实例和 ProjectSettings 默认仍由用户手工完成。设计成熟度以模块状态表和 `DesignBacklog.md` 为准，见 ADR-015、ADR-047。
 
 > 当前 MVP 明确不考虑得分、声音、AudioService、SaveService、DebugService、本地进度存档、设置持久化、暂停、减速和局部时停；阶段 4 中相关条目仅表示未来扩展（Deferred），不属于当前验收范围。
+
+## 实施顺序
+
+工程按 `Contracts → EventBus/Time/Pool → Config → 可并行 Gameplay 模块 → Spawn/Level → Application/Composition → 用户资源装配 → 集成验收` 推进。每批先通过 Unity 编译和范围检查再进入下一批；详细目录、并行所有权、人工检查点和交付格式见 [MVP 代码生成实施计划](ImplementationPlan.md)。
 
 ## 阶段 1：核心闭环
 
@@ -18,7 +22,7 @@
 - [ ] ObstacleManager 登记、查询和回收道路上的门与道具
 - [ ] 怪物生成、接近军队、攻击、死亡与胜负判断
 - [ ] 所有玩法碰撞对象配置 Collider2D 与职责 Layer；子弹/敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap
-- [ ] 存活敌人身体不重叠，后方敌人被较慢或静止的前方敌人阻挡并排队
+- [ ] 敌人 BodyCollider 基于上一同步姿态 Cast；在 MVP 速度、尺寸和帧率下减少穿透并形成排队，不验收同帧绝对不重叠
 - [ ] 唯一数值 `roadBounds`、无道路玩法 Collider、Army 世界原点、出生/接近/离场线和归一化横向出生位置
 - [ ] LevelManager 同步驱动生成、移动、子弹、道路接触、敌人攻击、回收和终局的固定帧阶段
 - [ ] 使用占位 Sprite、Gate 单个 TMP 调试文本和拖拽输入 UI 验证玩法；首轮不建设 HUD 或最终表现
@@ -52,4 +56,5 @@
 
 ## MVP 后工程化要求
 
-- Deferred：在公共契约和脚本目录稳定后，按 ADR-026 将 Contracts、Foundation、Gameplay、Presentation 和 Composition 划分为粗粒度程序集，并验证单向引用、依赖倒置、Unity 序列化引用与完整游玩闭环。当前不创建 `.asmdef`。
+- Deferred：在公共契约和脚本目录稳定后，按 ADR-026 将 Contracts、Foundation、Gameplay、Presentation 和 Composition 划分为粗粒度程序集，并验证单向引用、依赖倒置、Unity 序列化引用与完整游玩闭环。当前不创建任何 `.asmdef`，包括测试程序集。
+- Deferred：正式程序集落地时创建 EditMode 测试程序集，并按收益决定 PlayMode 测试程序集；优先自动化 Army、Gate/Prop、Spawn、终局优先级、EventBus、Pool 和 Config 的确定性规则。当前先执行测试清单、编译检查和完整手工游玩闭环，见 ADR-045。

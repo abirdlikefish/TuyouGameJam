@@ -4,7 +4,7 @@
 
 Accepted
 
-> 后续修订：ADR-041 将 Luban 表、LevelCatalog 和 LevelConfig 数据错误收敛为 ConfigService 单点报错后立即退出应用。本 ADR 的“记录错误并阻止 Ready”继续适用于 Prefab、Collider、Layer、Inspector 引用及其他场景装配错误。
+> 后续修订：ADR-041 将 Luban 表、LevelCatalog 和 LevelConfig 数据错误收敛为 ConfigService 单点报错后立即退出应用。本 ADR 的“记录错误并阻止 Ready”继续适用于 Prefab、Collider、Layer、Inspector 引用及其他场景装配错误。ADR-046 明确敌人阻挡只查询上一同步姿态并接受少量同帧重叠风险。
 
 ## 日期
 

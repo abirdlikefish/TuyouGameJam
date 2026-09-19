@@ -4,8 +4,8 @@
 
 - 设计状态：`Accepted`
 - 工程状态：`Deferred`
-- 当前不创建 `.asmdef`，不移动脚本，不改变场景、Prefab 或序列化引用。
-- 待进入 Unity 工程实现且公共契约稳定后，再按本文创建程序集并进行编译验证。
+- 当前不创建任何 `.asmdef`，包括运行时、Luban 生成代码、Editor、EditMode 和 PlayMode 测试程序集；不移动脚本，不改变场景、Prefab 或序列化引用。
+- 当前先按目标边界组织目录和命名空间，使用 Unity 默认程序集完成 MVP 代码生成与首轮集成。待正式程序集工程化获单独授权后，再按本文一次性创建运行时与测试程序集并验证引用。
 
 ## 目标
 
@@ -45,7 +45,7 @@ Game.Contracts 可被各层引用，但不引用各层具体实现。
 
 `IConfigService` 是查询接口，不包含 `LevelCatalog`、`cfg.Tables`、`IResourceRegistry` 等具体初始化参数。最外层 `Game.Composition` 可以引用 Foundation 实现和 `Game.ConfigGenerated`，并在启动时直接调用具体 `ConfigService.Initialize(...)`，随后只向消费者分发 `IConfigService` 或更小的类型化 Provider。由此避免 Contracts/Foundation 为取得 `LevelConfig` 而反向引用 Gameplay，也避免 Luban 生成类型泄漏到 Contracts 或 Gameplay。
 
-建议文件归属：
+正式程序集阶段的建议文件归属：
 
 ```text
 Assets/Scripts/Game/Contracts/Configuration/LevelConfigSnapshot.cs
@@ -57,7 +57,7 @@ Assets/Scripts/Game/Foundation/Configuration/ConfigService.cs
 Assets/Scripts/Game/Gameplay/Level/LevelManager.cs
 ```
 
-`Assets/Generated/Game.ConfigGenerated.asmdef` 是生成输出目录的稳定程序集边界，不修改其中自动生成的 `.cs`。若 Luban 生成流程会清空整个目录，则应把 asmdef 纳入生成源或生成脚本复制步骤，不能在每次生成后手工修补。
+未来的 `Assets/Generated/Game.ConfigGenerated.asmdef` 是生成输出目录的稳定程序集边界；当前阶段不创建它，也始终不修改其中自动生成的 `.cs`。正式实施时若 Luban 生成流程会清空整个目录，应把 asmdef 纳入生成源或生成脚本复制步骤，不能在每次生成后手工修补。
 
 ## 通信方式
 
@@ -79,6 +79,8 @@ Assets/Scripts/Game/Gameplay/Level/LevelManager.cs
 1. 用户明确授权 Unity 工程实现。
 2. 核心脚本目录和公共契约已稳定，可以一次性确定粗粒度程序集边界。
 3. 可以同时验证编译、EditMode 测试、启动场景、Inspector 引用和 Prefab/场景脚本引用。
+
+当前 MVP 在上述条件满足前不创建局部运行时或测试 `.asmdef`。测试清单先通过编译、结构化日志、Inspector 和可复现手工步骤执行；纯规则保持可测试结构，正式程序集实施时再创建测试程序集并迁移高价值 EditMode/PlayMode 用例，见 ADR-045。
 
 不按 Army、Gate、Prop、Monster 等单个玩法模块拆分独立程序集，除非后续出现可独立复用、独立发布或需要长期并行编译的真实需求。
 
@@ -103,3 +105,4 @@ Assets/Scripts/Game/Gameplay/Level/LevelManager.cs
 - [ADR-025：场景层级与运行时职责命名](../06_Decisions/ADR-025-SceneHierarchyAndRuntimeRoleNaming.md)
 - [ADR-026：程序集边界与跨层通信](../06_Decisions/ADR-026-AssemblyBoundariesAndCommunication.md)
 - [ADR-042：以 LevelConfigSnapshot 闭合程序集依赖](../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md)
+- [ADR-045：自动化测试延后至正式程序集阶段](../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md)

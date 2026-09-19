@@ -3,10 +3,10 @@
 ## 模块信息
 
 - ID：`MOD-SPAWN`
-- 层级：Gameplay / Infrastructure
-- 状态：`Planned`
+- 层级：Gameplay
+- 状态：`ContractReady`
 - 依赖：LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager
-- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`
+- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
 ## 职责
 
@@ -27,7 +27,7 @@ spawnTime     本局开始后的相对秒数
 spawnPosition 道路从左到右的归一化位置，范围为 [0,1]
 ```
 
-Enemy/Prop 条目另有对应 `TbEnemy`/`TbProp` 的 `configId`。Gate 条目没有配置 ID，直接保存 `GateType`、Additive 的 `InitialValue`，或 Element 的 `ElementType + MaxHp`；SpawnManager 同时把 LevelConfig 顶层的 `elementDurationSecondsPerDamage` 复制到 `GateSpawnRequest`。请求携带对应列表的 `SpawnEntryIndex`，用于本局来源诊断，不作为稳定配置 ID。
+Enemy/Prop 条目另有对应 `TbEnemy`/`TbProp` 的非负 `configId`，且 `0` 合法。Gate 条目没有配置 ID，直接保存 `GateType`、Additive 的 `InitialValue`，或 Element 的 `ElementType + MaxHp`；SpawnManager 同时把 LevelConfig 顶层的 `elementDurationSecondsPerDamage` 复制到 `GateSpawnRequest`。Enemy、Gate、Prop 三类请求都携带对应列表的 `SpawnEntryIndex`，用于本局来源诊断，不作为稳定配置 ID。
 
 SpawnManager 使用注入的 RoadLayoutSnapshot 和已校验的 `spawnPosition` 计算 `WorldX = Lerp(LeftBoundary, RightBoundary, spawnPosition)`，并令 `WorldY = SpawnY`。坐标以对象中心点为准，不读取 Collider、Renderer 或 Prefab 尺寸。该值只决定初始位置，不约束生成后的路径；敌人生成后先由 Monster 沿道路向下移动，到达接近线后再向最近 Army 槽位移动。
 

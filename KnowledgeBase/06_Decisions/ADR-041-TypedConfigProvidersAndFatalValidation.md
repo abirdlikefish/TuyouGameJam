@@ -4,6 +4,8 @@
 
 Accepted
 
+> 后续修订：ADR-044 将 `LevelConfig.unlockedLevelIds` 指向当前 LevelCatalog 中不存在的未来关卡定义为非致命例外；ConfigService 使用 `Debug.LogWarning` 后从运行时快照中过滤。重复 ID、自引用和其他配置错误仍按本 ADR Fail-Fast。
+
 ## 日期
 
 2026-09-20
@@ -75,7 +77,7 @@ ConfigService 初始化时验证完整 `LevelCatalog`、目录内全部 `LevelCo
 
 - 五类 Provider 和五类快照字段与 `ConfigurationTables.md` 一致。
 - ConfigService Ready 后，相同 ID 重复查询返回相同值语义的不可变快照。
-- 任一非法数值、重复 ID、缺失固定行或跨表/关卡引用缺失都会只记录首个可定位错误并终止应用。
+- 任一非法数值、重复 ID、缺失固定行或必需的跨表/关卡引用缺失都会只记录首个可定位错误并终止应用；仅 ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 使用警告并过滤。
 - 配置错误不会进入 MainMenu 或 Gameplay，也不会创建默认配置、发布恢复事件或由 Manager 再记录同一错误。
 - 移除所有静态 Tables 访问后，Army、Bullet、Monster、Prop 仍可只通过注入的最小 Provider 初始化运行时对象。
 

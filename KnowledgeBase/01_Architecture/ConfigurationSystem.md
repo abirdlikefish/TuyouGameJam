@@ -67,7 +67,9 @@ Assets/StreamingAssets/Luban
 
 启动阶段由 Composition 直接调用具体 `ConfigService.Initialize(LevelCatalog, Tables, ResourceRegistry)`；该初始化入口不放入公共 `IConfigService`。ConfigService 完整校验后，把每个 `LevelConfig` 资产防御性复制为不可变 `LevelConfigSnapshot`。进入 LevelSelect 后，应用层按 `LevelId` 查询对应快照；SceneService、GameplaySceneEntry、Level 和 Spawn 只传递或消费快照，不持有 `ScriptableObject` 资产。
 
-ConfigService 在启动初始化中完成唯一一次配置转换：校验目录内全部 LevelConfig、`TbArmy`、`TbWeapon`、`TbBullet`、`TbEnemy`、`TbProp` 的主键、枚举、数值和当前跨表引用，然后分别复制为 `LevelConfigSnapshot`、`ArmyConfigSnapshot`、`WeaponConfigSnapshot`、`BulletConfigSnapshot`、`EnemyConfigSnapshot`、`PropConfigSnapshot` 的只读字典。Composition 只向消费者注入最小查询面：ArmyController 取得 Army/Weapon Provider，BulletManager 取得 Bullet Provider，EnemyManager 取得 Enemy Provider，ObstacleManager 取得 Prop Provider。场景装配验证 `ArmyId = 1` 的序列化 Prefab 绑定和槽位数组，各 Manager 验证规范 Prefab 后再向全局 PoolService 请求类型池。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables、保存 Luban 生成行或访问静态 `LubanTables.Instance`。
+ConfigService 在启动初始化中完成唯一一次配置转换：校验目录内全部 LevelConfig、`TbArmy`、`TbWeapon`、`TbBullet`、`TbEnemy`、`TbProp` 的主键、枚举、数值和当前跨表引用，然后分别复制为 `LevelConfigSnapshot`、`ArmyConfigSnapshot`、`WeaponConfigSnapshot`、`BulletConfigSnapshot`、`EnemyConfigSnapshot`、`PropConfigSnapshot` 的只读字典。Composition 只向消费者注入最小查询面：ArmyController 取得 Army/Weapon Provider，BulletManager 取得 Bullet Provider，EnemyManager 取得 Enemy Provider，ObstacleManager 取得 Prop Provider。场景装配验证 `ArmyId = 0` 的序列化 Prefab 绑定和槽位数组，各 Manager 验证规范 Prefab 后再向全局 PoolService 请求类型池。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables、保存 Luban 生成行或访问静态 `LubanTables.Instance`。
+
+`LevelConfig.unlockedLevelIds` 在复制快照前执行专用校验。空列表合法；ConfigService 先在原始列表上检查重复 ID 和当前 `levelId` 自引用，任一命中都以 `ConfigErrorCode.InvalidLevelConfig` 致命退出。之后按原始顺序检查目录存在性：当前 LevelCatalog 中不存在的未来关卡 ID 使用 `Debug.LogWarning` 输出稳定 Source、条目索引和缺失 ID，并从 `LevelConfigSnapshot.UnlockedLevelIds` 中过滤；该警告不改变 Ready 状态。GameStateService 和其他运行时消费者只读取过滤后的不可变快照。
 
 类型化 Provider 使用必得查询而不是 `TryGet + 默认值`。初始化成功已经保证所有关卡和跨表引用可解析；非 Ready 查询或未知 ID 属于程序不变量被破坏，直接抛出异常，不由 Gameplay Manager 捕获并恢复。
 
@@ -109,14 +111,14 @@ LevelManager → Initialize(levelConfigSnapshot, levelRunId)
 
 - Luban ID 是跨配置引用的稳定键，不能使用会随排序变化的行号。
 - MVP Luban 表不保存 `PrefabKey`；池化规范 Prefab 由对应 Manager 的 Inspector 引用绑定，Sprite、Animator、阵型槽位和发射点由 Unity Inspector 或 Unity 资源注册表绑定。MVP 完全无声音，不要求 AudioClip 绑定。
-- MVP 固定 ArmyId=1；ConfigService 必须提供 `TbArmy.Id=1` 的只读快照，GameplaySceneEntry 必须提供同 ID 的唯一 Army Prefab。槽位容量由 Prefab 的序列化槽位数组长度派生。
+- MVP 固定 ArmyId=0；ConfigService 必须提供首行 `TbArmy.Id=0` 的只读快照，GameplaySceneEntry 必须提供同 ID 的唯一 Army Prefab。槽位容量由 Prefab 的序列化槽位数组长度派生。
 - 当前武器、火/冰/雷剩余时间属于 Army 本局状态；`TbArmy` 不保存 WeaponId 或元素，当前也不建立 `TbElement`。
 - Unity 资源注册表如使用字符串键，键只属于 Unity 资源侧，不构成 Luban 表字段。
 - LevelConfig 只描述本关卡如何编排，不复制敌人、军队和门的数值。
 - LevelConfig、LevelCatalog 和生成条目资产结构属于 Foundation 配置实现；Contracts 与 Gameplay 只接收不可变 LevelConfigSnapshot，不暴露 ScriptableObject 或 Luban 生成类型。
 - LevelConfig 不重复保存道路宽高和四边；这些值由唯一 `roadBounds` 派生。道路不通过 Collider 提供玩法边界。
 - Luban 表只描述可复用的数据，不承担场景对象的生命周期。
-- 配置错误采用 ADR-041 的单点 Fail-Fast：ConfigService 在启动初始化中遇到第一个 Luban 表、LevelCatalog、LevelConfig 或已确认引用错误时，通过 `Debug.LogError` 报告 `ConfigErrorCode`、稳定来源、字段或条目索引和原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode。
+- 配置错误采用 ADR-041 的单点 Fail-Fast：ConfigService 在启动初始化中遇到第一个 Luban 表、LevelCatalog、LevelConfig 或必需引用错误时，通过 `Debug.LogError` 报告 `ConfigErrorCode`、稳定来源、字段或条目索引和原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode。唯一例外是 ADR-044 的 `unlockedLevelIds` 目录缺失 ID，它使用 `Debug.LogWarning` 并过滤，不视为配置失败。
 - 配置失败不发布项目事件、不聚合第二套错误结果、不重试；GlobalBootstrap 不调用 `NotifyInitializationReady`，Gameplay Manager 不重复记录或恢复同一错误。
 - Prefab、Collider、Layer 和 Inspector 绑定继续由场景装配校验并阻止 Ready，不与配置表致命校验混为一套恢复框架。
 

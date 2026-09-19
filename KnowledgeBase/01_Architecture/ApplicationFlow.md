@@ -51,6 +51,7 @@ Assets/Scripts/Game/
         ├── LevelSelectSceneEntry.cs
         └── GameplaySceneEntry.cs
 
+未来正式程序集阶段：
 Assets/Tests/
 ├── EditMode/Application/
 │   ├── GameStateServiceTests.cs
@@ -59,12 +60,12 @@ Assets/Tests/
     └── ApplicationFlowPlayModeTests.cs
 ```
 
-当前不创建 `.asmdef`。实现时每个新增脚本和场景都必须包含 Unity 对应 `.meta`。
+当前不创建任何 `.asmdef`、测试程序集或自动测试代码。首轮按结构化日志和 `05_Testing` 清单手工验证；正式程序集阶段再创建上述测试。实现时每个新增脚本和场景都必须包含 Unity 对应 `.meta`。
 
 ## 服务依赖
 
 - `GameStateService` 通过 `IConfigService` 校验选关，通过 `ITimeService` 创建 RealTime 流程定时器，通过 `ISceneService` 发出类型化切换命令，并通过 `IEventBus` 发布应用状态和结果事实。
-- GameStateService 在创建 Gameplay 会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；Victory 的 `UnlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。
+- GameStateService 在创建 Gameplay 会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；Victory 的 `UnlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。该集合已由 ConfigService 按 ADR-044 过滤当前目录中不存在的未来关卡 ID，应用流程不回读原始 LevelConfig，也不重复警告或过滤。
 - `SceneService` 依赖 `IEventBus` 和 Unity 场景适配能力；它持有当前场景、待切换目标和内部操作状态，不读取配置目录，不决定下一状态。
 - `GameStateService` 订阅 `AppSceneReady`、`AppSceneUnloaded`、`AppSceneLoadFailed`、`AppSceneUnloadFailed`，并校验 `AppSceneId`、`LevelId`、`LevelRunId` 和内部 pending target；Unloaded 只用于确认旧场景事实，不直接推进稳定状态。
 - `LevelManager` 只依赖 `IGameStateService` 提交终局。`GameplaySceneEntry` 向 LevelManager 注入已校验的 `LevelConfigSnapshot`、`LevelId`、`LevelRunId` 和最小服务接口。
@@ -165,7 +166,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 
 ## 失败、重复与过期处理
 
-- Luban 表、LevelCatalog 或 LevelConfig 数据初始化失败时，ConfigService 按 ADR-041 记录首个错误并立即退出应用，不得请求 MainMenuScene。其他 Bootstrap/场景装配失败不得伪装初始化成功。
+- Luban 表、LevelCatalog 或 LevelConfig 数据初始化失败时，ConfigService 按 ADR-041 记录首个错误并立即退出应用，不得请求 MainMenuScene。ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只警告并过滤，不进入失败流程。其他 Bootstrap/场景装配失败不得伪装初始化成功。
 - 重复的初始化通知、切换请求、定时器回调和终局提交必须幂等，不能创建第二个会话或重复结果。
 - MainMenuScene 加载失败时保持 `Initializing`；LevelSelectScene 加载失败时不进入 `LevelSelect`，也不启动选关定时器。二者都不自动无限重试。
 - GameplayScene 加载失败时不得发布 `LevelRunStarted`；GameStateService 清除待启动会话并请求恢复 LevelSelectScene，只有 `AppSceneReady(LevelSelect)` 后才进入 `LevelSelect`。
@@ -178,7 +179,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 
 场景骨架阶段允许各入口和服务使用结构化 `Debug.Log` 记录请求、Entry 初始化、Ready、Entry 清理、Unloaded 和 `AppFlowChanged`。Gameplay 日志必须包含 `LevelId` 与 `LevelRunId`。日志只用于观察，不能作为流程信号，也不因此引入 DebugService。
 
-一次场景加载必须恰好产生一次 Entry 初始化和一次 Ready；一次卸载必须恰好产生一次 Entry 清理和一次 Unloaded。完整验收仍以 EditMode/PlayMode 测试为准。
+一次场景加载必须恰好产生一次 Entry 初始化和一次 Ready；一次卸载必须恰好产生一次 Entry 清理和一次 Unloaded。当前以结构化日志和完整手工流程验收；正式程序集阶段再补 EditMode/PlayMode 回归测试，见 ADR-045。
 
 ## 公共契约与验收
 
@@ -187,3 +188,4 @@ LevelManager 完成当前会话并停止玩法逻辑
 - 场景层级：`SceneStructure.md`
 - 验收清单：`../05_Testing/IntegrationTests.md` 的“应用流程”部分
 - 决策依据：`../06_Decisions/ADR-019-ApplicationFlowContract.md`、`../06_Decisions/ADR-027-MvpGlobalServiceScope.md`、`../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`
+- 当前测试策略：`../05_Testing/TestingStrategy.md`、`../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md`

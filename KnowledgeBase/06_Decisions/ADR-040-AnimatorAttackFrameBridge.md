@@ -6,6 +6,8 @@ Accepted
 
 > ADR-043 补充本决策：AttackCooldown 从攻击开始计算并在动画期间递减；动画结束且冷却已到时，只能在下一次 `EnemyManager.TickMovement` 重新验证后起攻。死亡动画末帧回收事件也由 ADR-043 定义。
 
+> ADR-046 补充命中帧语义：普通敌人起攻后，只要锁定槽位仍有效，就不因其移出 `AttackStartRange` 取消本次命中；`ApplySlotDamage` 保持 `void`。`MonsterAttackLanded` 由 EnemyManager 在实际提交伤害后发布，范围攻击每个有效槽位一条。
+
 ## 日期
 
 2026-09-19

@@ -89,6 +89,84 @@ public readonly struct PropConfigSnapshot
     public float MoveSpeed { get; }
 }
 
+public enum EnemyType
+{
+    Normal = 0,
+    Elite = 1,
+    Boss = 2
+}
+
+public enum AttackType
+{
+    SingleTarget = 0,
+    Area = 1
+}
+
+public enum GateType
+{
+    Additive = 0,
+    Element = 1
+}
+
+public enum ObstacleKind
+{
+    Gate = 0,
+    Prop = 1
+}
+
+public enum ObstacleState
+{
+    MovingDown = 0,
+    ContactPending = 1,
+    ContactSucceeded = 2,
+    ContactFailed = 3,
+    ExitedUncontacted = 4,
+    Broken = 5,
+    Recycled = 6
+}
+
+public enum GateContactState
+{
+    Pending = 0,
+    Succeeded = 1,
+    Failed = 2,
+    ExitedUncontacted = 3
+}
+
+public enum PropContactState
+{
+    Pending = 0,
+    Succeeded = 1,
+    Failed = 2,
+    ExitedUncontacted = 3
+}
+
+public enum ArmyCountChangeReason
+{
+    Addition = 0,
+    Damage = 1,
+    RemovalRequest = 2
+}
+
+public enum ArmyReachedZeroReason
+{
+    Damage = 0,
+    RemovalRequest = 1
+}
+
+public enum GameOverReason
+{
+    ArmyReachedZero = 0
+}
+
+public enum ObstacleRecycleReason
+{
+    ContactResolved = 0,
+    Broken = 1,
+    ExitedRoad = 2,
+    StopRun = 3
+}
+
 public interface IResourceRegistry
 {
     bool TryGet<T>(string key, out T asset) where T : UnityEngine.Object;
@@ -162,7 +240,9 @@ public readonly struct PropSpawnEntrySnapshot
 }
 ```
 
-`GlobalBootstrap` 通过 Inspector 提供 `LevelCatalog` 和资源注册表，并创建唯一的 Luban `cfg.Tables` 实例，再直接调用 Foundation 中具体 `ConfigService.Initialize(...)`；初始化方法不属于 `IConfigService` 查询契约。ConfigService 在初始化时一次性验证完整目录、目录内全部 LevelConfig、五类表的数值/主键/枚举及当前跨表引用，然后把资产和表数据复制为不可变快照字典。表或目录错误按 ADR-041 只记录首个明确错误并立即终止应用，不进入 MainMenu，不提供默认配置、恢复事件或重试。
+`GlobalBootstrap` 通过 Inspector 提供 `LevelCatalog` 和资源注册表，并创建唯一的 Luban `cfg.Tables` 实例，再直接调用 Foundation 中具体 `ConfigService.Initialize(...)`；初始化方法不属于 `IConfigService` 查询契约。ConfigService 在初始化时一次性验证完整目录、目录内全部 LevelConfig、五类表的数值/主键/枚举及当前跨表引用，然后把资产和表数据复制为不可变快照字典。表或目录错误按 ADR-041 只记录首个明确错误并立即终止应用，不进入 MainMenu，不提供默认配置、恢复事件或重试；ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只记录 `Debug.LogWarning` 并从快照中过滤。
+
+`LevelId`、五类 Luban 表主键和外键均为非负整数，`0` 是合法 ID；每张 Luban 表的首行 `Id = 0`，除明确固定的 ID 外不要求后续编号连续。不得使用 `0` 表示缺失配置；不存在的可选引用必须使用可空值或明确的条件字段表达。活动 Gameplay 的 `LevelRunId` 仍必须大于 `0`，`0` 只表示没有活动会话；MVP 唯一 Army 使用 `ArmyId = TbArmy.Id = 0`。
 
 五类 `GetXxxConfig` 只允许在 `Ready` 后对已通过引用校验的 ID 调用；非 Ready 查询或未知 ID 表示程序不变量被破坏，直接抛出异常，Gameplay Manager 不重复捕获并降级。`TryGetLevelConfig` 只保留给应用层验证外部关卡选择请求。Composition 分别注入最小 Provider：ArmyController 取得 Army/Weapon，BulletManager 取得 Bullet，EnemyManager 取得 Enemy，ObstacleManager 取得 Prop；它们都不需要完整 `IConfigService`。
 
@@ -181,7 +261,7 @@ public interface IGameStateService
 
 `GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
-`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制 `UnlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
+`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
 ```csharp
 public interface ISceneService
@@ -291,7 +371,7 @@ public interface IGameplayInputController : IGameplayInputGate
 
 相对拖拽使用 ADR-028 与 ADR-036 的语义：`TouchDragInput` 累计相邻 Pointer 采样点在 `TouchDragArea` 局部空间中的水平差，按区域宽度和传入的 `unscaledDeltaTime` 换算为归一化滑动速度，先 Clamp 到 `[-1,1]`，再乘 UI Prefab Inspector 中默认值为 `1` 的 `horizontalMultiplier`。没有新 Drag 差值、Pointer 结束、输入被禁用或 Gameplay 离开 `Playing` 时必须提交 `0`，不得保留上一帧值。Army 的实际横向位移使用 `horizontalInput × TbArmy.MoveSpeed × 有效玩法 delta`。当前不读取键盘、手柄或旧 Input Manager 的 `Horizontal` 轴。
 
-MVP 只有一个 Army，固定 `ArmyId = 1` 同时选择 `TbArmy.Id = 1` 和序列化 `ArmyPrefabBinding.ArmyId = 1`；所有需要 Army 身份的事件和去重上下文使用该值，不增加运行时 Army ID 分配接口。最大可见士兵数由所选 Prefab 的序列化 `ArmySlotView[]` 长度派生，不能从 Luban 读取第二份容量。
+MVP 只有一个 Army，固定 `ArmyId = 0` 同时选择 `TbArmy.Id = 0` 和序列化 `ArmyPrefabBinding.ArmyId = 0`；所有需要 Army 身份的事件和去重上下文使用该值，不增加运行时 Army ID 分配接口。最大可见士兵数由所选 Prefab 的序列化 `ArmySlotView[]` 长度派生，不能从 Luban 读取第二份容量。
 
 Gate 和 Prop 使用 `IArmyController` 的方法同步提交玩法状态变更：非负加法门调用 `AddArmy`，负数加法门把绝对值作为正的请求减员人数调用 `RemoveArmy`；成功元素门仅在计算持续时间大于 `0` 时调用 `AddElementDuration`，计算结果为 `0` 时仍成功但不提交空命令；失败元素门和道具调用 `ApplySlotDamage`，当前武器箱调用 `ApplyWeaponPickup`。调用方完成本地去重和状态转换后执行命令，再发布对应事实事件；ArmyController 不通过订阅这些事件重复执行命令。
 
@@ -330,6 +410,8 @@ public readonly struct ArmyElementStateSnapshot
 ```
 
 `AddArmy(amount)` 接受大于等于 `0` 的请求增员人数，按 `ArmyCountLimit` 截断后返回请求值、实际增加量和剩余总人数；`ArmyCountLimit = 0` 表示没有配置上限。`RemoveArmy(amount)` 只接受正的请求减员人数。Army 使用 `long` 计算 `amount × HpPerSoldier` 伤害预算，按 `CurrentHp` 升序、再按 `SlotIndex` 升序让激活槽位承担，并把未耗尽伤害继续传给下一个槽位。请求减员和实际人数损失可能不同，返回结果必须报告两者。`ElementType.None` 只作为不使用元素字段时的配置空值；`AddElementDuration` 必须拒绝 `None`，并只接受有限且大于 `0` 的持续时间，同类型重复获得时累加。
+
+`ApplySlotDamage` 保持 `void`，不返回 `SlotDamageResult`。调用方必须先用 `TryGetSlotTarget` 确认槽位仍有效，再同步提交正伤害；无效或空槽位不提交。Army 在方法返回前完成权威 HP、人数和事实事件更新。攻击者不读取实际损失推进自己的状态，Monster 在攻击动画结束后的下一次 `TickMovement` 重新验证或选择目标。
 
 ## 子弹命中与可受伤接口
 
@@ -392,6 +474,8 @@ public readonly struct RoadObjectSnapshot
 `RoadObjectSnapshot.State` 的统一映射见 ADR-021：正常移动为 `MovingDown`，检测到接触候选但尚未结算为 `ContactPending`，专用接触结果映射到 `ContactSucceeded`、`ContactFailed` 或 `ExitedUncontacted`；道具击破但尚未回收时为 `Broken`。`Recycled` 仅用于回收事实或注销前瞬时状态，已注销对象不得出现在活动查询结果中。
 
 槽位碰撞适配需要额外携带 `ArmyId` 和 `SlotIndex`，由 Army 负责把伤害转换为槽位人数和聚合生命值变化。
+
+Physics2D 查询使用显式身份代理解析 Collider：Enemy、Gate、Prop 的受击 Collider 节点必须绑定 `BulletHitProxy`，Army 的 SlotCollider 节点必须绑定 `ArmySlotHitProxy`。代理与 Collider 位于同一 GameObject，并通过 Inspector 显式绑定根玩法对象或 `ArmySlotView`；Gameplay Preparing 在运行前验证绑定。查询只读取命中节点上的代理，不使用 `GetComponentInParent`、`Find` 或缺失引用兜底。同一查询按代理提供的 RuntimeInstanceId 或 SlotIndex 去重。
 
 ```csharp
 public readonly struct ArmyFormationSnapshot
@@ -558,6 +642,7 @@ SpawnManager 是三个时间轴游标的唯一所有者；LevelManager 只能调
 public readonly struct EnemySpawnRequest
 {
     public int LevelRunId { get; }
+    public int SpawnEntryIndex { get; }
     public int ConfigId { get; }
     public float SpawnPosition { get; }
     public Vector2 WorldPosition { get; }
@@ -586,7 +671,7 @@ public readonly struct PropSpawnRequest
 }
 ```
 
-`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`PropSpawnRequest.ConfigId` 继续引用 `TbProp.Id`。`SpawnEntryIndex` 是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。
+`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`EnemySpawnRequest.ConfigId` 与 `PropSpawnRequest.ConfigId` 分别引用 `TbEnemy.Id`、`TbProp.Id`。三类请求的 `SpawnEntryIndex` 都是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。
 
 ## BulletManager 接口
 
@@ -694,7 +779,7 @@ Unity 资源注册表键仍可用于非池身份的配置与表现资源绑定�
 
 ## 场景失败事件数据
 
-配置与必需资源校验失败不定义项目事件载荷。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 使用 `Debug.LogError` 输出一次 `ConfigErrorCode`、稳定来源和具体原因，将状态置为 `Failed` 并立即终止应用。Prefab、Collider、Layer 或 Inspector 装配错误由对应入口记录并阻止 GameplaySceneEntry Ready。两类失败都不得使用缺省值继续运行。
+配置与必需资源校验失败不定义项目事件载荷。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 使用 `Debug.LogError` 输出一次 `ConfigErrorCode`、稳定来源和具体原因，将状态置为 `Failed` 并立即终止应用。ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 不属于失败：ConfigService 对每个缺失条目调用一次 `Debug.LogWarning`，从快照中过滤后继续初始化。Prefab、Collider、Layer 或 Inspector 装配错误由对应入口记录并阻止 GameplaySceneEntry Ready。任何路径都不得使用缺省值伪造缺失配置。
 
 ```csharp
 public enum SceneLoadErrorCode

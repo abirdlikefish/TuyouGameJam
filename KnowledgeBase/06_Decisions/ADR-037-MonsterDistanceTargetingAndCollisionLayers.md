@@ -4,6 +4,8 @@
 
 Accepted
 
+> ADR-046 补充敌人间阻挡：BodyCollider Cast 只查询上一轮 `Physics2D.SyncTransforms` 后的姿态，在 MVP 参数下尽量减少穿透和重叠，但不保证同帧绝对不重叠，也不执行事后分离。
+
 ## 日期
 
 2026-09-19
@@ -30,7 +32,7 @@ MVP 的 Army 会整体横向移动，敌人在到达接近线后追踪最近有�
 - Army 横向移动只受道路数值边界和激活槽位合并 AABB 约束，不对 `EnemyBody` 执行 Cast，也不因敌人位置截断输入位移。
 - Army 槽位与敌人身体允许部分或完全重合。重合不产生接触伤害、推挤、自动攻击或额外事件。
 - 不处理 Army 与 Enemy 在同一帧相向快速移动的问题；当前帧阶段和唯一一次 `Physics2D.SyncTransforms` 顺序保持不变。
-- 敌人之间仍使用 `EnemyBody` Cast 保持安全间距，后方敌人不穿过存活的前方敌人。
+- 敌人之间仍使用 `EnemyBody` Cast 尝试保持安全间距；查询只看到上一同步姿态，因此后方敌人在 MVP 参数下尽量不穿过存活的前方敌人，但不存在同帧绝对不重叠保证。
 
 ### Gameplay Layer 与查询关系
 

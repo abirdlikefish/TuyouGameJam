@@ -1,5 +1,7 @@
 # 门与道具规则测试
 
+> 当前不创建自动测试程序集或测试代码。本清单先作为 Gate、Prop 与 ObstacleManager 的手工和集成验收规格；实际验证通过后才能勾选。未来自动化优先级见 [测试与验证策略](TestingStrategy.md)。
+
 ## Gate 规则
 
 - [ ] 加法门没有 HP；每次有效子弹命中只按 `BulletDamageContext.Damage` 增加一次门值，并正常消费子弹。
@@ -14,7 +16,7 @@
 - [ ] HP 已为 0 且仍处于 Pending 的元素门继续是合法子弹目标；后续命中消费子弹，并把全部实际伤害累计到 `PostDepletionDamage`。
 - [ ] 元素门成功接触时只按 `PostDepletionDamage × elementDurationSecondsPerDamage` 计算一次持续时间；同类型累加且当前不设上限。
 - [ ] `PostDepletionDamage == 0` 时接触仍成功，但不调用 `AddElementDuration`，也不发布 `ArmyElementDurationChanged`。
-- [ ] 元素门接触失败后奖励永久锁定；后续命中不增加可兑换的 `PostDepletionDamage`，即使 HP 被打空也不增加任何元素持续时间。
+- [ ] 元素门接触失败后奖励永久锁定；后续命中正常消费子弹但 HP 最低锁在 `1`，不增加可兑换的 `PostDepletionDamage`、不归零且不增加任何元素持续时间。
 - [ ] 元素门 HP 未清空时，每个接触槽位受到相同伤害。
 - [ ] 元素门失败后继续向下移动并在离开道路后注销；负数加法门沿用普通加法门接触后流程回收。
 - [ ] 未接触离场不发布成功或失败接触事件。
@@ -28,9 +30,9 @@
 - [ ] 同一道具不会因多帧碰撞重复伤害同一 Army。
 - [ ] Prop 移动后只用终点 `OverlapCollider` 查询 ArmySlot，不执行接触 Cast；路径穿过但终点未重叠时不结算。
 - [ ] 未击破且未接触的道具离场不触发击破效果、不造成接触伤害。
-- [ ] 道具接触失败后，后续子弹击破不会发放任何击破效果；当前 MVP 验证武器不变。
+- [ ] 道具接触失败后，后续子弹正常命中但 HP 最低锁在 `1`，不发布 PropBroken、不发放击破效果或因伤害回收；当前 MVP 验证武器不变并最终只从 DespawnY 离场。
 - [ ] 道具先通过 `IArmyController` 应用武器或槽位伤害，再发布一次事实事件；监听者数量和订阅顺序不影响 Army 状态。
-- [ ] 元素门接触失败后，后续子弹击破不会发放元素奖励。
+- [ ] 元素门接触失败后，后续子弹不能把 HP 降到 `0`，不会发放元素奖励或因伤害回收。
 
 ## ObstacleManager 生命周期
 

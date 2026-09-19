@@ -4,9 +4,9 @@
 
 - ID：`MOD-MONSTER`
 - 层级：Gameplay
-- 状态：`InDesign`
+- 状态：`ContractReady`
 - 依赖：Bullet、Army、Level、EventBus、IEnemyConfigProvider、PoolService
-- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
+- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
 ## 职责
 
@@ -47,7 +47,7 @@ MovingDown
   -> Dead
 ```
 
-- `MovingDown`：向道路接近线移动；以怪物根 GameObject 中心 `position.y` 与 `EnemyApproachY` 比较，不使用 BodyCollider 或 Renderer 边缘。
+- `MovingDown`：向道路接近线移动；以怪物根 GameObject 中心 `position.y` 与 `EnemyApproachY` 比较，不使用 BodyCollider 或 Renderer 边缘。本帧若会越过接近线，则截断到该线，下一次 TickMovement 才开始向 Army 槽位接近，不消费剩余位移。
 - 归一化横向出生位置只决定初始中心点；进入 `ApproachingTarget` 后不保留出生位置约束。
 - `ApproachingTarget`：从 ArmyController 获取最近的有效士兵槽位并向其当前位置移动；不使用 `TargetSensor`，当 XY 距离平方小于等于 `AttackStartRange²` 时进入攻击。
 - `Blocked`：保持当前敌人规范 Prefab 的 `blockingGap` 并等待；首版不从侧面绕行。阻挡解除后恢复原移动状态。
@@ -60,11 +60,11 @@ MovingDown
 
 ### 单体攻击
 
-普通敌人锁定一个槽位。非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记当前攻击序号；EnemyManager 在 `ResolveAttacks` 重新验证敌人和目标后，通过 ArmyController 的 `ApplySlotDamage(slotIndex, AttackPower)` 造成一次伤害。关键帧前任一方失效都会取消本次伤害。
+普通敌人锁定一个槽位。非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记当前攻击序号；EnemyManager 在 `ResolveAttacks` 重新验证会话、敌人、攻击序号和目标槽位仍有效后，通过 ArmyController 的 `ApplySlotDamage(slotIndex, AttackPower)` 提交一次伤害。攻击开始后不因目标随后移出 `AttackStartRange` 取消本次单体命中；关键帧前任一方失效才取消。本次动画结束后的下一次 TickMovement 再重新验证或选择目标。
 
 ### 范围攻击
 
-精英和 Boss 的 Prefab 前方绑定 `AttackCollider`。该 Collider 可以保持启用作为显式查询形状，但自动 Layer Collision Matrix 关闭，平时不会触发玩法回调。非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记当前攻击序号；EnemyManager 只在 `ResolveAttacks` 消费有效请求时对 AttackCollider 执行一次显式重叠查询，并对所有有效槽位各结算一次相同的 `AttackPower`。同一次攻击使用攻击序号和 `SlotIndex` 去重，随后结束本次查询。
+精英和 Boss 的 Prefab 前方绑定 `AttackCollider`。该 Collider 可以保持启用作为显式查询形状，但自动 Layer Collision Matrix 关闭，平时不会触发玩法回调。非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记当前攻击序号；EnemyManager 只在 `ResolveAttacks` 消费有效请求时对 AttackCollider 执行一次显式重叠查询，通过 SlotCollider 同节点的 `ArmySlotHitProxy` 解析并按 SlotIndex 去重，对每个仍有效槽位分别提交一次相同的 `AttackPower`，并各发布一条 `MonsterAttackLanded`。
 
 ### 攻击与动画
 
@@ -87,20 +87,20 @@ HP 归零后立即进入 `Dead`、退出受击与阻挡查询，由 EnemyManager
 ```text
 PF_Monster_Normal [NormalMonster；Animator]
 ├── Visual [SpriteRenderer]
-└── BodyCollider [Collider2D；EnemyBody Layer]
+└── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 
 PF_Monster_Elite [EliteMonster；Animator]
 ├── Visual [SpriteRenderer]
-├── BodyCollider [Collider2D；EnemyBody Layer]
+├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 
 PF_Monster_Boss [BossMonster；Animator]
 ├── Visual [SpriteRenderer]
-├── BodyCollider [Collider2D；EnemyBody Layer]
+├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 ```
 
-三个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；Elite/Boss 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。三种非循环 Attack Clip 都必须包含恰好一个 `OnAttackFrame()` AnimationEvent 和末帧一个 `OnAttackAnimationFinished()` AnimationEvent；三种非循环 Death Clip 的末帧都必须包含一个 `OnDeathAnimationFinished()`。首轮允许使用占位 Sprite 和简单序列帧，但缺少 Animator、Controller、Attack/Death Clip 或事件绑定时不得进入 Gameplay Ready。完整最小绑定见 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040 和 ADR-043。
+三个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Elite/Boss 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。三种非循环 Attack Clip 都必须包含恰好一个 `OnAttackFrame()` AnimationEvent 和末帧一个 `OnAttackAnimationFinished()` AnimationEvent；三种非循环 Death Clip 的末帧都必须包含一个 `OnDeathAnimationFinished()`。首轮允许使用占位 Sprite 和简单序列帧，但缺少代理、Animator、Controller、Attack/Death Clip 或事件绑定时不得进入 Gameplay Ready。完整最小绑定见 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043 和 ADR-046。
 
 ## EnemyManager
 
@@ -115,6 +115,7 @@ PF_Monster_Boss [BossMonster；Animator]
 - 接收 `OnDeathAnimationFinished()` 登记的本地回收请求，并仅在 `FlushPendingRecycles` 阶段注销、失活和归还对象池；StopRun 可直接清理而不等待动画。
 - 对重复死亡、重复注册和重复回收进行幂等保护。
 - 接受 Monster 的必执行死亡回调，在完成死亡去重并更新 `AliveEnemyCount` 后发布 `MonsterKilled`；事件监听者不参与必需的计数、注销或回收。
+- 在 ResolveAttacks 实际向有效槽位提交伤害后作为 `MonsterAttackLanded` 的唯一发布者；范围攻击每个有效槽位各发布一条，事件中的伤害是配置 `AttackPower`，实际 HP 与人数损失由 Army 事实事件表达。
 - 实现 `TickMovement`、`ResolveAttacks` 和 `FlushPendingRecycles`；只由 LevelManager 按 ADR-033 的阶段顺序调用，不使用独立 Update 推进核心玩法。
 
 `AliveEnemyCount == 0` 只表示当前已生成敌人全部死亡；Level 还必须确认 `enemySpawns` 已全部处理，才允许判定关卡胜利。死亡动画尚未结束的敌人不再计入存活数量。
@@ -151,7 +152,7 @@ PF_Monster_Boss [BossMonster；Animator]
 - AttackCooldown 从攻击开始时刻计算并在动画期间继续递减；若动画结束时已到期，下一次 TickMovement 满足存活、目标有效且在范围内即可开始下一次攻击。
 - 三种非循环 Death Clip 末帧各调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期事件不重复注销、计数或发布 MonsterKilled，StopRun 不等待该事件。
 - AnimationEvent 发生后但 ResolveAttacks 前死亡、StopRun 或回池时，请求作废；事件在当帧 ResolveAttacks 之后发生时允许顺延到下一逻辑帧结算。
-- 所有敌人 Prefab 都提供职责明确的 `BodyCollider` 和有限非负的 `blockingGap`；存活敌人不重叠，后方敌人遇到较慢或静止的前方敌人时按自身 Prefab 间距等待。
+- 所有敌人 Prefab 都提供职责明确的 `BodyCollider`、同节点 `BulletHitProxy` 和有限非负的 `blockingGap`。BodyCollider Cast 只查询上一轮 Physics2D 同步姿态；后方敌人在命中前方敌人时截断本帧位移，但 MVP 不保证多个敌人同帧移动后的绝对不重叠，也不执行事后分离。
 - 三类敌人 Prefab 均不包含 `TargetSensor`；Normal 不要求攻击 Collider，Elite/Boss 的 `AttackCollider` 只查询 `ArmySlot`。
 - Army 横向移动不查询或阻挡 `EnemyBody`，Monster 移动也不以 `ArmySlot` 截断；允许士兵与敌人重合，重合时单体锁定伤害和范围查询仍按原规则结算。
 - MVP 不实现局部时停；敌人进入 `Dead` 后立即退出受击和阻挡查询。未来启用局部时停时另行确认其碰撞行为。

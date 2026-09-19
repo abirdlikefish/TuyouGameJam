@@ -4,6 +4,8 @@
 
 Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
+> ADR-046 将所有表 ID 统一为从 `0` 开始，因而把 MVP 唯一 Army 的 `ArmyId` 从 `1` 修订为 `0`；本 ADR 的其他确定性与绑定规则不变。
+
 > ADR-027 已进一步移除当前 `ITimeService` 中的倍率与暂停接口；本 ADR 的固定倍率结论继续有效。
 
 > ADR-029 已进一步补充 EventBus 的精确类型匹配、嵌套发布、Token 身份、异常报告、载荷类型和订阅生命周期；本 ADR 的同步快照分发基础语义继续有效。
@@ -22,8 +24,8 @@ Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
 ### Army 身份
 
-- MVP 只有一个 Army，`ArmyId` 固定为 `1`。
-- 不引入 Army ID 分配器；所有包含 Army 身份的事件和去重上下文使用 `ArmyId = 1`。
+- MVP 只有一个 Army，`ArmyId` 固定为首行 ID `0`。
+- 不引入 Army ID 分配器；所有包含 Army 身份的事件和去重上下文使用 `ArmyId = 0`。
 - 将来支持多个 Army 时，必须新增或更新 ADR，不能把固定值直接扩展为隐式分配。
 
 ### MVP 时间范围

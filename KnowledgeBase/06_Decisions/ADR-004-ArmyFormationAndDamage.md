@@ -4,7 +4,7 @@
 
 Accepted（槽位容量来源与负数门减员顺序由 ADR-035 修订）
 
-> ADR-035 已删除 `TbArmy.MaxDeployedSoldiers`，槽位容量改由 Army Prefab 的序列化槽位数组长度派生；负数门不再直接设置总人数，而是由 Army 按最低当前 HP 顺序分配等价伤害。本 ADR 的聚合生命值、槽位受击不主动迁移和人数守恒结论继续有效。
+> ADR-035 已删除 `TbArmy.MaxDeployedSoldiers`，槽位容量改由 Army Prefab 的序列化槽位数组长度派生；负数门不再直接设置总人数，而是由 Army 按最低当前 HP 顺序分配等价伤害。ADR-046 进一步统一运行时增员为每次选择 `RepresentedCount` 最少、再按 `SlotIndex` 最小的槽位，不保存 `NeedsRefill`。本 ADR 的聚合生命值、槽位受击不主动迁移和人数守恒结论继续有效。
 
 ## 日期
 
@@ -24,7 +24,7 @@ Accepted（槽位容量来源与负数门减员顺序由 ADR-035 修订）
 - 槽位最大生命值按 `MaxHp = RepresentedCount × HpPerSoldier` 计算。新增人数带来等量健康生命值。
 - 槽位受击先扣除聚合生命值；受击后的代表人数为 `Ceil(CurrentHp / HpPerSoldier)`，生命值为 0 时槽位人数为 0。槽位人数因受击减少时，不向其他槽位转移人数。
 - 槽位受击导致的代表人数减少量同步从 `ArmyCount` 扣除；始终保持 `ArmyCount == Sum(Slot.RepresentedCount)`。
-- 人数增加时，先按 `RepresentedCount` 从少到多、槽位索引从小到大补充已有或空置槽位；没有受击缺口且总人数仍小于最大上场人数时，再按顺序启用未使用槽位；超过最大槽位后继续补充当前人数最少的槽位。
+- 人数增加时逐人处理；每次从全部槽位选择 `RepresentedCount` 最少者，相同时选择 `SlotIndex` 最小者。空槽位因此自然优先重新启用，超过槽位数量后继续保持人数最少优先；不保存或推断额外的受击缺口状态。
 - 槽位为 0 人时保留其槽位索引和局部位置，禁用表现、碰撞体和发射；后续获得人数时优先重新启用该槽位。
 - ArmyRoot 负责整体移动；槽位碰撞体是唯一的士兵受击目标。ArmyRoot 不作为可受伤目标。
 - Gate 与多个槽位重叠时，Army 以 `ArmyId + RuntimeInstanceId` 去重，保证一个门效果只应用一次。

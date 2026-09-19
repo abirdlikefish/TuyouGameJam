@@ -3,7 +3,7 @@
 | 字段 | 类型 | 含义 | 约束 |
 |---|---|---|---|
 | `ArmyCount` | `int` | 当前军队逻辑总人数 | `value >= 0`，如配置总人数上限则不得超过 `ArmyCountLimit` |
-| `ArmyId` | `int` | Army 配置、Prefab 与运行时共同身份 | MVP 固定为 `1`，同时选择 `TbArmy.Id = 1` 和序列化 Prefab 绑定；多 Army 需另行定案 |
+| `ArmyId` | `int` | Army 配置、Prefab 与运行时共同身份 | MVP 固定为 `0`，同时选择首行 `TbArmy.Id = 0` 和序列化 Prefab 绑定；多 Army 需另行定案 |
 | `ArmyCountLimit` | `int` | 逻辑总人数上限 | `0` 表示不设上限；启用时大于 0 |
 | `SlotCapacity` | `int` | Army Prefab 可见槽位容量 | 等于序列化 `ArmySlotView[]` 长度且大于 0，不属于 Luban 字段 |
 | `ActiveSlotCount` | `int` | 当前启用的上场槽位数量 | `0 <= value <= SlotCapacity` |
@@ -13,12 +13,12 @@
 | `SlotCurrentHp` | `int` | 槽位当前聚合生命值 | `0 <= value <= SlotMaxHp` |
 | `SlotMaxHp` | `int` | 槽位最大聚合生命值 | `RepresentedCount × HpPerSoldier` |
 | `WeaponId` | `int` | Army 当前武器配置 ID | 本局运行时状态；`0 = Slingshot`、`1 = Bow`、`2 = Staff`，必须引用 `TbWeapon` |
-| `ConfigId` | `int` | 读取 Luban 的对象所引用的配置表 ID | Enemy 引用 `TbEnemy`，Prop 引用 `TbProp`；Gate 不使用 ConfigId，也不读表 |
-| `SpawnEntryIndex` | `int` | 生成项在所属 LevelConfig 时间轴列表中的稳定索引 | 大于等于 0；用于 Gate/Prop 诊断和事件关联，不是配置表主键，也不能代替 RuntimeInstanceId |
-| `RuntimeInstanceId` | `int` | 道路对象或敌人本次生成的运行时实例 ID | 在对应 Manager 的活动实例中唯一；不能使用配置 ID 代替 |
+| `ConfigId` | `int` | 读取 Luban 的对象所引用的配置表 ID | 非负，`0` 合法；Enemy 引用 `TbEnemy`，Prop 引用 `TbProp`；Gate 不使用 ConfigId，也不读表 |
+| `SpawnEntryIndex` | `int` | 生成项在所属 LevelConfig 时间轴列表中的稳定索引 | 大于等于 0；用于 Enemy/Gate/Prop 诊断和事件关联，不是配置表主键，也不能代替 RuntimeInstanceId |
+| `RuntimeInstanceId` | `int` | 道路对象或敌人本次生成的运行时实例 ID | 非负；在对应 Manager 的活动实例中唯一，不能使用配置 ID 代替 |
 | `WorldPosition` | `Vector2` | 运行时对象当前世界坐标 | 由对象运行时状态提供，不回写配置 |
 | `IsOnRoad` | `bool` | 道路对象是否仍处于道路活动范围内 | 离场或回收后为 `false` |
-| `LevelId` | `int` | 当前关卡的稳定 ID | 运行时必须对应当前 `LevelConfigSnapshot` |
+| `LevelId` | `int` | 当前关卡的稳定 ID | 非负且 `0` 合法；运行时必须对应当前 `LevelConfigSnapshot` |
 | `LevelRunId` | `int` | 一次 Gameplay 会话的稳定运行 ID | 每次进入 Gameplay 递增；过期事件不得作用于新会话 |
 | `ConfigLoadState` | `enum` | 配置服务加载状态 | `Uninitialized`、`Loading`、`Ready`、`Failed` |
 | `ConfigErrorCode` | `enum` | 配置或资源加载失败原因 | 目录为空、ID 重复、关卡不存在、引用缺失、关卡配置无效、表加载失败、资源缺失 |
@@ -35,7 +35,7 @@
 | `EnemySpawnEntrySnapshot` | `readonly struct` | 敌人生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`ConfigId` |
 | `GateSpawnEntrySnapshot` | `readonly struct` | Gate 生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`GateType`、`InitialValue`、`ElementType`、`MaxHp` |
 | `PropSpawnEntrySnapshot` | `readonly struct` | Prop 生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`ConfigId` |
-| `UnlockedLevelIds` | `List<int>` | 当前关卡通关后记录的解锁关卡 ID | 首版只记录，不执行下一关跳转 |
+| `UnlockedLevelIds` | `List<int>` / 运行时 `IReadOnlyList<int>` | 当前关卡通关后记录的解锁关卡 ID | 首版只记录，不执行下一关跳转；空列表合法，运行时快照只保留 LevelCatalog 中存在且非重复、非自引用的 ID，并保持原顺序 |
 | `AppFlowState` | `enum` | 应用级流程状态；`GameplayLoading` 仅为内部过渡，不是用户可见页面 | `Initializing`、`MainMenu`、`LevelSelect`、`GameplayLoading`、`Gameplay` |
 | `LevelRunState` | `enum` | 单局游玩状态 | `Preparing`、`Playing`、`Completed` |
 | `LevelResult` | `enum` | 单局结束结果 | `Victory`、`GameOver` |
@@ -54,14 +54,14 @@
 | `ObstacleState` | `enum` | 道路对象当前生命周期/交互状态 | `MovingDown`、`ContactPending`、`ContactSucceeded`、`ContactFailed`、`ExitedUncontacted`、`Broken`、`Recycled` |
 | `GateType` | `enum` | 门的规则类型 | `Additive`、`Element` |
 | `GateContactState` | `enum` | 门与 Army 的接触结果状态 | `Pending`、`Succeeded`、`Failed`、`ExitedUncontacted` |
-| `GateHp` | `int` | 元素门当前生命值 | `0 <= value <= GateMaxHp`；加法门不使用 |
+| `GateHp` | `int` | 元素门当前生命值 | Pending 时 `0 <= value <= GateMaxHp`；Failed 后锁定为 `1 <= value <= GateMaxHp`；加法门不使用 |
 | `GateMaxHp` | `int` | 元素门最大生命值 | 大于 0；加法门不使用 |
 | `GateContactDamage` | `int` | 元素门失败接触时对每个槽位造成的伤害 | 大于 0；加法门不使用 |
 | `PostDepletionDamage` | `long` | 元素门 HP 归零后、成功接触前累计的可兑换额外伤害 | 初始为 0；只在 `Pending` 且奖励未锁定时增加，使用 `long` 防止多次命中累计溢出 |
 | `ElementDurationSecondsPerDamage` | `float` | 本关所有元素门把可兑换额外伤害换算为持续时间的统一系数 | LevelConfig 资产字段并复制到快照；存在元素门时有限且大于 0，否则应为 0 |
 | `CalculatedElementDuration` | `float` | 元素门成功接触时计算出的本次持续时间 | `PostDepletionDamage × ElementDurationSecondsPerDamage`；必须有限且大于等于 0，当前不设上限 |
 | `PropContactState` | `enum` | 道具与 Army 的接触结果状态 | `Pending`、`Succeeded`、`Failed`、`ExitedUncontacted` |
-| `PropHp` | `int` | 道具当前生命值 | `0 <= value <= PropMaxHp` |
+| `PropHp` | `int` | 道具当前生命值 | Pending 时 `0 <= value <= PropMaxHp`；Failed 后锁定为 `1 <= value <= PropMaxHp` |
 | `PropMaxHp` | `int` | 道具最大生命值 | 大于 0 |
 | `PropContactDamage` | `int` | 道具未击破接触时对每个槽位造成的伤害 | 大于 0 |
 | `ElementType` | `enum` | 元素效果类型 | `None = 0` 只用于未使用配置字段；可获得元素为 `Fire = 1`、`Ice = 2`、`Lightning = 3` |
@@ -72,14 +72,14 @@
 | `ActualArmyCountLoss` | `int` | 一次减员伤害实际造成的人数损失 | 由各槽位受伤后代表人数差值求和，可能不同于 RequestedRemoval |
 | `RequestedAddition` | `int` | 非负门提交给 Army 的请求增员人数 | `GateValue`，大于等于 0 |
 | `ActualAddition` | `int` | 应用总人数上限后的实际增员人数 | `0 <= value <= RequestedAddition` |
-| `GateValue` | `int` | 加法门当前数字 | 可为任意整数；非负值增员，负数值转换为请求减员伤害 |
+| `GateValue` | `int` | 加法门当前数字 | 初始值不得为 `int.MinValue`；非负值增员，负数值转换为请求减员伤害；正向累加超过范围时饱和到 `int.MaxValue`，不得回绕 |
 | `BulletDamage` | `int` | 子弹伤害 | 大于 0 |
-| `MoveSpeed` | `float` | 物体移动速度 | 不小于 0 |
+| `MoveSpeed` | `float` | 物体移动速度 | 有限且不小于 0，单位为世界单位/秒 |
 | `EnemyType` | `enum` | 敌人类型 | `Normal`、`Elite`、`Boss` |
 | `AttackType` | `enum` | 敌人运行时攻击类型 | 由 `EnemyType` 派生：`Normal` 为 `SingleTarget`，`Elite`/`Boss` 为 `Area`；不单独配置 |
 | `AttackPower` | `int` | 敌人每次攻击造成的槽位伤害 | 大于 0 |
 | `AttackStartRange` | `float` | 怪物与锁定槽位目标位置的 XY 欧氏距离小于等于该值时停止接近并开始攻击 | 有限且大于等于 0；距离为 0 的 Army/Enemy 重合状态同样允许攻击 |
-| `AttackCooldown` | `float` | 两次攻击开始之间的冷却时间 | 大于等于 0 |
+| `AttackCooldown` | `float` | 两次攻击开始之间的冷却时间 | 有限且大于等于 0，单位为秒 |
 | `BulletId` | `int` | 造成伤害的子弹配置 ID | 必须引用 `TbBullet` |
 | `BulletInstanceId` | `int` | 本次生成的具体子弹实例 ID | 活动子弹中唯一；用于碰撞去重 |
 | `LevelElapsedTime` | `float` | 本局开始后的关卡运行时间 | `value >= 0`；由 LevelManager 运行时维护 |
@@ -90,7 +90,7 @@
 
 ## 计算规则
 
-MVP 固定 `ArmyId = 1`，初始人数固定为 `1`，初始武器固定为 `WeaponId = 0`，火、冰、雷三种剩余持续时间都为 `0`；这些都不是 `TbArmy` 字段。
+MVP 固定 `ArmyId = 0`，初始人数固定为 `1`，初始武器固定为 `WeaponId = 0`，火、冰、雷三种剩余持续时间都为 `0`；这些都不是 `TbArmy` 字段。
 
 非负加法门：Army 增加 `GateValue`；`ArmyCountLimit > 0` 时把结果截断到该逻辑人数上限，`ArmyCountLimit = 0` 时不设上限。
 
@@ -110,6 +110,8 @@ PostDepletionDamage = PostDepletionDamage + ExtraDamage
 最后一发同时清空 HP 时，只有超过清空所需部分的 `ExtraDamage` 进入累计；HP 已为 0 且仍处于 `Pending` 时，本发全部伤害都属于 `ExtraDamage`，子弹照常消费。接触成功时计算 `CalculatedElementDuration = PostDepletionDamage × ElementDurationSecondsPerDamage`；结果为 0 时仍成功，但不调用 `AddElementDuration`。接触失败后奖励永久锁定，后续命中不得增加可兑换的 `PostDepletionDamage`。
 
 元素门和道具接触失败时，对每一个接触到的 Army 槽位应用配置的相同伤害；成功效果只应用一次。道具失败后锁定所有击破效果，不只锁定当前 MVP 的武器替换。
+
+元素门或 Prop 进入 `Failed` 后仍可接收有效子弹命中并播放受击表现，但 HP 使用 `Max(1, CurrentHp - Damage)` 锁在至少 `1`。Failed 元素门不再增加 `PostDepletionDamage`，Failed Prop 不发布 `PropBroken`；两者都不会因后续攻击回收，只继续移动到 `DespawnY` 或由 StopRun 清理。
 
 槽位受击：
 

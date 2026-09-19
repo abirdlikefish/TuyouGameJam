@@ -8,18 +8,22 @@
 
 “负责人”是当前文档主题的认领人，不等同于最终代码负责人；没有明确认领时保持空白。
 
+## 工程实现并行约定
+
+代码并行以 `../00_Project/ImplementationPlan.md` 为权威入口。Contracts、Foundation 和配置 Provider 编译稳定后，才允许 Army/Input、Bullet/Monster、Gate/Prop/Obstacle 三组按目录并行；Contracts、Foundation、Spawn、Level、Composition 和共享状态由单一集成窗口独占。模块窗口发现契约缺口时只报告，不直接修改共享类型或其他模块目录。
+
 ## 模块状态
 
 | 模块 | 状态 | 设计入口 | 主要依赖 |
 |---|---|---|---|
-| Army | InDesign | `Army/README.md` | EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager |
-| Gate | InDesign | `Gate/README.md` | EventBus、Army、Bullet、ObstacleManager、GateSpawnRequest；消费 LevelManager 传入的 Gate delta |
-| Prop | InDesign | `Prop/README.md` | EventBus、Army、Bullet、ObstacleManager、IPropConfigProvider；消费 LevelManager 传入的 Gate delta |
-| Obstacle | InDesign | `Obstacle/README.md` | IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level |
-| Monster | InDesign | `Monster/README.md` | Level、Bullet、Army、EventBus、IEnemyConfigProvider、PoolService |
-| Bullet | Planned | `Bullet/README.md` | Level、IBulletConfigProvider、PoolService、IBulletHittable |
-| Level | InDesign | `Level/README.md` | GameStateService、TimeService、Spawn、Monster、Army、BulletManager、ObstacleManager、InputGate、EventBus |
-| Spawn | Planned | `Spawn/README.md` | LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
+| Army | ContractReady | `Army/README.md` | EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager |
+| Gate | ContractReady | `Gate/README.md` | EventBus、Army、Bullet、ObstacleManager、GateSpawnRequest；消费 LevelManager 传入的 Gate delta |
+| Prop | ContractReady | `Prop/README.md` | EventBus、Army、Bullet、ObstacleManager、IPropConfigProvider；消费 LevelManager 传入的 Gate delta |
+| Obstacle | ContractReady | `Obstacle/README.md` | IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level |
+| Monster | ContractReady | `Monster/README.md` | Level、Bullet、Army、EventBus、IEnemyConfigProvider、PoolService |
+| Bullet | ContractReady | `Bullet/README.md` | Level、IBulletConfigProvider、PoolService、IBulletHittable |
+| Level | ContractReady | `Level/README.md` | GameStateService、TimeService、Spawn、Monster、Army、BulletManager、ObstacleManager、InputGate、EventBus |
+| Spawn | ContractReady | `Spawn/README.md` | LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
 | UI | HUD Deferred / Input UI ContractReady | `UI/README.md` | HUD 后续依赖 EventBus、GameStateService；首轮只实现 Input UI |
 | AudioVFX | Audio Deferred / VFX Planned | `AudioVFX/README.md` | VFX：EventBus、PoolService；Audio：后续另行设计 |
 | Input | ContractReady | `Input/README.md` | IHorizontalInputReceiver、UGUI EventSystem、Level；由 Gameplay 场景装配控制启停与逐帧 Tick |

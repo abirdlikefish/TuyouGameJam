@@ -9,7 +9,7 @@
 
 ## 首轮工程切片
 
-首轮只创建 Input 模块所需的 Gameplay Canvas、GraphicRaycaster、EventSystem 和 `PF_UI_TouchDragArea`。不创建 Army 人数、关卡计时、生成进度、胜负或重开 HUD；玩法状态先通过 Gate 调试文本、结构化日志、Inspector 和自动化测试验证。
+首轮只创建 Input 模块所需的 Gameplay Canvas、GraphicRaycaster、EventSystem 和 `PF_UI_TouchDragArea`。不创建 Army 人数、关卡计时、生成进度、胜负或重开 HUD；玩法状态先通过 Gate 调试文本、结构化日志、Inspector 和测试清单手工验证。自动化测试按 ADR-045 延后到正式程序集阶段。
 
 ## 后续 HUD 职责
 

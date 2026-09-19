@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 道路背景 | Sprite / `PF_Road_Default` Prefab | RoadView 根据 `roadBounds` 调整视觉；不配置玩法 Collider | Planned |
 | 军队 | Sprite / Animator | 屏幕底部单位 | Planned |
-| Army 规范 Prefab | Prefab | `PF_Army_001` 根挂 ArmyController，序列化槽位数组决定 SlotCapacity；GameplaySceneEntry 以 ArmyId=1 绑定 | Planned |
+| Army 规范 Prefab | Prefab | `PF_Army_000` 根挂 ArmyController，序列化槽位数组决定 SlotCapacity；GameplaySceneEntry 以 ArmyId=0 绑定 | Planned |
 | 加法门 | Sprite / `PF_Gate_Additive` Prefab | 根组件 `AdditiveGate`；首轮只用单个 TMP_Text 显示 GateValue，Inspector 配置所有加法门共用的移动速度 | Prototype Text |
 | 元素门 | Sprite / `PF_Gate_Element` Prefab | 根组件 `ElementGate`；首轮只用单个 TMP_Text 显示元素、HP 和额外伤害，Inspector 配置所有元素门共用的移动速度和接触伤害 | Prototype Text |
 | 弹弓箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |

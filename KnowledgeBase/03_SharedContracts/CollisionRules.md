@@ -9,6 +9,7 @@
 - 核心结算由显式 Cast/Overlap 查询触发，不依赖自动碰撞回调的执行顺序。
 - 查询统一使用无分配版本或复用结果缓存，并通过 Layer 和 `ContactFilter2D` 限定目标。
 - 同一次命中或接触即使返回多个子 Collider，也只能结算一次。
+- 受击 Collider 节点通过同 GameObject 上已验证的 `BulletHitProxy` 映射到 Enemy/Gate/Prop 根玩法对象；Army SlotCollider 节点通过 `ArmySlotHitProxy` 映射到 `ArmyId + SlotIndex`。运行时不向父级搜索缺失引用。
 - Level 不处于 `Playing` 时停止新的玩法查询与结算；重开前禁用或回收所有运行时碰撞对象。
 
 ## Collider 职责
@@ -59,8 +60,8 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 ## 敌人阻挡
 
 - 只有存活且已注册的 Monster `BodyCollider` 参与敌人间阻挡。
-- 敌人主动移动前沿期望位移 Cast；检测到前方敌人时，将位移截断到当前敌人规范 Prefab 根脚本序列化的 `blockingGap`。该值必须有限且非负，不进入 Luban 或 LevelConfig。
-- 前方敌人的速度较慢或为 0 时仍保持阻挡；后方敌人不得推动、穿透或与其重叠。
+- 敌人主动移动前沿期望位移 Cast；查询只看到上一轮 `Physics2D.SyncTransforms` 后的物理姿态。检测到前方敌人时，将位移按 Cast 距离和当前敌人规范 Prefab 根脚本序列化的 `blockingGap` 截断。该值必须有限且非负，不进入 Luban 或 LevelConfig。
+- 前方敌人的速度较慢或为 0 时仍可形成阻挡；该离散规则只在 MVP 约定速度、Collider 尺寸和帧率下减少穿透与重叠，不保证多个敌人同帧移动后的绝对不重叠，也不执行事后分离。
 - 两侧绕行不属于 MVP。当前没有可直接前进的安全位移时，后方敌人保持等待；阻挡解除后继续原移动状态。
 - 敌人进入 `Dead` 后立即禁用玩法 BodyCollider 或将其移出受击/阻挡查询 Layer。
 
@@ -77,7 +78,7 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 - Animator Attack Clip 的命中关键帧只登记当前 AttackSequenceId 的攻击请求；`AttackCollider` 只在 EnemyManager.ResolveAttacks 消费该请求时用于一次显式重叠查询。同一攻击以攻击序号和 `SlotIndex` 去重。Collider 可以保持启用作为查询形状，但自动碰撞矩阵关闭，不通过启停 Collider 决定攻击窗口。
 - Gate/Prop 在本帧位移已经应用且 `Physics2D.SyncTransforms()` 完成后，只以终点姿态执行一次 `BodyCollider.OverlapCollider`。不对移动路径执行 Cast、扫掠或子步进；合理速度、Collider 尺寸与目标帧率是 MVP 的防穿透约束。
 - Gate/Prop 只对当前查询命中的有效 Army 槽位结算。多个槽位接触同一对象时，整体成功效果只应用一次，逐槽伤害按槽位索引去重。
-- Gate/Prop 接触失败后可以继续保留用于子弹受击表现的 BodyCollider，但接触状态机必须拒绝后续成功奖励。元素门失败后即使继续命中并最终清空 HP，也不得累计新的可兑换伤害或发放元素持续时间。
+- Gate/Prop 接触失败后继续保留用于子弹受击表现的 BodyCollider，但接触状态机必须拒绝后续成功奖励。后续命中正常消费子弹，HP 按 `Max(1, CurrentHp - Damage)` 锁在至少 `1`：元素门不再累计可兑换伤害，Prop 不发布 `PropBroken`；两者只继续移动至离场或由 StopRun 清理。
 - MVP 不实现暂停或局部时停。未来启用后需要重新确认停止对象的 Collider2D 是否仍可被其他活动对象查询，以及暂停与受击判定的关系。
 
 ## Layer 约束
@@ -112,5 +113,7 @@ Layer 只负责过滤候选目标，不替代模块状态检查。道路左右�
 | Prop `BodyCollider` | `ArmySlot` | Prop 接触 |
 
 `EnemyBody` 与 `ArmySlot` 不建立移动查询或自动物理关系。`EnemyAttack` 与 `EnemyBody`、Gate 与 Prop、Enemy 与 Gate/Prop、ArmySlot 与 ArmySlot 等关系同样保持关闭。若后续启用 Kinematic Rigidbody2D 适配，必须保持上述查询方向和状态机仍为权威，并另行记录需要开启的最小矩阵对。
+
+`BulletHitProxy` 和 `ArmySlotHitProxy` 都是查询身份适配，不新增物理关系。Gameplay Preparing 必须验证代理位于对应 Collider 的同一节点、目标引用非空且职责 Layer 正确；查询命中后只读取该节点代理，并按 RuntimeInstanceId 或 SlotIndex 去重。
 
 工程实现时应使用项目目标 Unity 版本验证：当 Layer Collision Matrix 关闭对应 Layer 对时，带显式 `ContactFilter2D`/LayerMask 的 Cast 与 Overlap 仍按上表返回目标；若具体 API 受矩阵影响，则只开启该查询所需的最小 Layer 对，不开放自动玩法回调。设计定案见 ADR-037。
