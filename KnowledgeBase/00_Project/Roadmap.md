@@ -17,22 +17,23 @@
 - [ ] 门/道具接触 Army 并执行一次性结算
 - [ ] ObstacleManager 登记、查询和回收道路上的门与道具
 - [ ] 怪物生成、接近军队、攻击、死亡与胜负判断
-- [ ] 所有玩法碰撞对象配置 Collider2D、职责 Layer 和显式 Cast/Overlap 查询
+- [ ] 所有玩法碰撞对象配置 Collider2D 与职责 Layer；子弹/敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap
 - [ ] 存活敌人身体不重叠，后方敌人被较慢或静止的前方敌人阻挡并排队
 - [ ] 唯一数值 `roadBounds`、无道路玩法 Collider、Army 世界原点、出生/接近/离场线和归一化横向出生位置
 - [ ] LevelManager 同步驱动生成、移动、子弹、道路接触、敌人攻击、回收和终局的固定帧阶段
+- [ ] 使用占位 Sprite、Gate 单个 TMP 调试文本和拖拽输入 UI 验证玩法；首轮不建设 HUD 或最终表现
 
 ## 阶段 2：关卡化
 
 - [ ] 无波次的三类时间轴生成控制
-- [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID
+- [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID，ConfigService 校验后生成供 Gameplay 使用的不可变 `LevelConfigSnapshot`
 - [ ] Luban 配置角色/军队、敌人、Prop 和子弹属性；Gate 不读表，由 LevelConfig 生成项与对应 Prefab 提供配置
 - [ ] Luban 配置 Army 基础数值、固定 Weapon 0/1/2 和每名士兵生命值；当前不建立 TbElement，阵型槽位由 Army Prefab 序列化绑定
 - [ ] 当前临时流程：MainMenuScene 与 LevelSelectScene 各在 Entry Ready 后等待 1 秒；胜利/失败后清理 Gameplay 并切换回 LevelSelectScene，再开始当前关卡
 
 ## 阶段 3：表现和性能
 
-- [ ] UI 完整反馈
+- [ ] HUD、胜负面板与 UI 完整反馈
 - [ ] 粒子和命中特效
 - [ ] 在目标设备实测子弹、怪物和特效类型池，并按数据决定是否增加预热、容量上限或溢出策略
 - [ ] 多分辨率和移动设备验证

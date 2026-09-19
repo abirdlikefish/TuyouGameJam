@@ -8,6 +8,7 @@
 - [ ] 加法门负数接触结果为失败；Army 按 `Abs(GateValue) × HpPerSoldier` 生成伤害预算，优先由当前 HP 最少、同 HP 时 SlotIndex 最小的槽位承担。
 - [ ] 请求减员、实际伤害和实际人数损失分别记录；多个受伤单兵槽位可以使实际人数损失大于请求减员。
 - [ ] 同一门与同一 Army 多槽位、多帧碰撞只产生一次接触结果。
+- [ ] Gate 移动后只用终点 `OverlapCollider` 查询 ArmySlot，不执行接触 Cast；路径穿过但终点未重叠时不结算。
 - [ ] 门先通过 `IArmyController` 应用效果或槽位伤害，再发布一次事实事件；ArmyController 不订阅该事件重复结算。
 - [ ] 元素门每个生成项使用 LevelConfig 中各自的 `MaxHp` 和 `ElementType`；最后一发清空 HP 时只有超过剩余 HP 的部分进入 `PostDepletionDamage`。
 - [ ] HP 已为 0 且仍处于 Pending 的元素门继续是合法子弹目标；后续命中消费子弹，并把全部实际伤害累计到 `PostDepletionDamage`。
@@ -25,6 +26,7 @@
 - [ ] 道具在接触前 HP 清空时只触发一次配置的击破效果并发布一次击破事件；当前 MVP 的效果为武器更新。
 - [ ] 道具未击破接触时，每个接触槽位受到相同伤害。
 - [ ] 同一道具不会因多帧碰撞重复伤害同一 Army。
+- [ ] Prop 移动后只用终点 `OverlapCollider` 查询 ArmySlot，不执行接触 Cast；路径穿过但终点未重叠时不结算。
 - [ ] 未击破且未接触的道具离场不触发击破效果、不造成接触伤害。
 - [ ] 道具接触失败后，后续子弹击破不会发放任何击破效果；当前 MVP 验证武器不变。
 - [ ] 道具先通过 `IArmyController` 应用武器或槽位伤害，再发布一次事实事件；监听者数量和订阅顺序不影响 Army 状态。
@@ -35,6 +37,7 @@
 - [ ] 每个生成实例拥有唯一 `RuntimeInstanceId`。
 - [ ] 相同生成参数的多个 Gate 以及相同配置的多个 Prop 可以同时登记和查询。
 - [ ] 成功回收、失败后离场和未接触离场都只注销一次。
+- [ ] Gate/Prop 都以根 GameObject 中心 `y <= DespawnY` 判定离场，Collider/Renderer 尺寸不参与阈值计算。
 - [ ] 已注销对象不再出现在活动快照中。
 - [ ] 归还对象池前数字、HP、`PostDepletionDamage`、奖励锁定状态、接触状态和运行时 ID 已重置。
 - [ ] `AdditiveGate`、`ElementGate`、`WeaponProp` 类型池均返回未激活对象；ObstacleManager 完成 Transform、配置、ID、回调和登记后才激活。

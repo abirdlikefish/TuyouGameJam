@@ -5,8 +5,8 @@
 - ID：`MOD-BULLET`
 - 层级：Gameplay
 - 状态：`Planned`
-- 依赖：ConfigService、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`
+- 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
 
 ## 职责
 
@@ -19,7 +19,7 @@
 
 ## 配置输入
 
-- 从 Luban `TbBullet` 读取基础伤害和速度。
+- 通过 `IBulletConfigProvider.GetBulletConfig(BulletId)` 取得 ConfigService 已校验并复制的 `BulletConfigSnapshot`，包含基础伤害和速度；BulletManager 不持有 Luban 生成行。
 - 从 `TbWeapon` 获取发射间隔和基础子弹引用。当前不建立 `TbElement`；火、冰、雷只通过 Army 提交的 ElementMask 记录，具体效果延后设计。
 - MVP 子弹只有配置与表现资源差异，共用一个 `Bullet` 池化根脚本和一个规范 Prefab；BulletManager 通过 Inspector 绑定该 Prefab，并按 `BulletId` 注入数值与表现。命中首个有效目标后回收是固定规则，不配置资源键或碰撞行为。
 - Army 每个激活槽位提供一个发射点和代表人数；Bullet 不读取 Army 内部状态，只消费生成时的不可变快照。
@@ -28,11 +28,12 @@
 ## 规则
 
 - 子弹命中后立即回收。
-- 子弹离开屏幕时回收。
+- 子弹根 GameObject 中心的世界坐标满足 `position.y > RoadLayoutSnapshot.TopBoundary`（`roadBounds.yMax`）时回收；不使用 Renderer、Collider 或摄像机视口边缘。
 - 命中候选必须实现 `IBulletHittable` 且 `CanReceiveBulletHit = true`。Enemy/Prop 可以同时实现 `IDamageable`，加法门只实现子弹命中契约；BulletManager 不要求所有合法目标都有 HP。
 - HP 已归零但仍处于 `Pending` 的元素门保持 `CanReceiveBulletHit = true`，命中后子弹照常消费，伤害交由 Gate 累计为可兑换额外伤害。元素门接触失败后是否继续保留命中表现由 Gate 生命周期决定，但命中不得再累计可兑换伤害。
 - 移动使用 LevelManager 在帧开始读取并传入的 Bullet 时间域 delta；Bullet 和 BulletManager 不自行再次读取 TimeService。
 - 不依赖 `OnTriggerEnter2D` 或 `OnCollisionEnter2D` 作为命中唯一入口；查询使用 Bullet Layer 到 Enemy/Gate/Prop 受击 Layer 的明确过滤。
+- 首轮只对 Bullet 自身从上一逻辑位置到期望位置执行扫掠，不计算与本帧同时移动目标的相对运动，也不做子步进。通过 MVP 配置的合理速度、Collider 尺寸和目标帧率避免穿透，不承诺任意高速或严重掉帧场景。
 
 ## 运行时快照
 
@@ -42,9 +43,20 @@
 
 - BulletManager 通过 Inspector 序列化引用唯一的 `Bullet` 规范 Prefab，并以具体根类型向 PoolService 取得类型池；Luban 不保存 PrefabKey。
 - ArmyController 在发射瞬间提交 `BulletSpawnRequest`，其中包含 LevelRunId、来源 Army/槽位、BulletId、WeaponId、ActiveElements、世界位置和方向。BulletManager 不复制或查询 Army 当前装备状态。
-- BulletManager 通过注入的 IConfigService 按 BulletId 取得已校验的 `TbBullet` 基础伤害和速度，并与请求组合成本次不可变运行时快照。不得直接访问静态 Luban Tables。
+- BulletManager 通过注入的 `IBulletConfigProvider` 按 BulletId 必得 `BulletConfigSnapshot`，并与请求组合成本次不可变运行时快照。配置 ID 已在 ConfigService 启动时通过引用校验；BulletManager 不编写 `TryGet`、默认值或恢复分支，也不得直接访问静态 Luban Tables。
 - MVP ElementMask 只保存 Fire、Ice、Lightning 在发射瞬间是否有效，不修改 TbBullet 基础伤害。未来增加元素效果时，应由独立纯计算规则基于该不可变掩码生成结果。
 - BulletManager 实现 `StartRun`、`Spawn`、`TickMovementAndHits`、`FlushPendingRecycles` 和 `StopRun`；核心逻辑不使用独立 Update。
+
+## Prefab 与场景装配
+
+```text
+BulletRoot [BulletManager；序列化唯一 Bullet Prefab]
+└── PF_Bullet [Bullet；运行时池实例]
+    ├── Visual [SpriteRenderer 或占位视觉]
+    └── BodyCollider [Collider2D；Bullet Layer]
+```
+
+Bullet 根组件显式绑定 `bodyCollider` 和视觉引用。首轮所有 BulletId 共用该 Prefab，数值从 Bullet 配置快照注入；不要求 Animator、Trail、VFX 或不同 BulletId 的最终美术差异。必需引用或 Layer 非法时直接输出错误并阻止 Gameplay Ready。完整最小绑定见 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)。
 
 ## 测试标准
 
@@ -54,8 +66,9 @@
 - ElementMask 能表达 None 和三元素的全部组合；Army 后续元素获得或过期不修改飞行中的子弹。
 - 改变代表人数不会改变单次发射数量、伤害或速度；发射源数量只取决于激活槽位数。
 - 子弹命中目标后只结算一次伤害并回收。
+- 子弹中心等于 TopBoundary 时仍保留，严格大于 `roadBounds.yMax` 后回收；不同 Collider 或 Sprite 尺寸不改变阈值。
 - 加法门没有 HP 仍可合法消费子弹并按实际 `BulletDamageContext.Damage` 增加门值；零 HP、待接触的元素门也仍可合法消费子弹并累计额外伤害。
-- 子弹 Collider Cast 能覆盖整段移动位移，高速或掉帧时不穿透敌人、Gate 或 Prop。
+- 子弹 Collider Cast 覆盖 Bullet 自身在一个逻辑帧内从上一位置到期望位置的位移；在 MVP 约定速度、Collider 尺寸和测试帧率范围内可以稳定命中目标。首轮不验收双方高速相对运动或严重掉帧下的绝对不穿透。
 - 子弹与怪物、Gate 或 Prop 的受击碰撞体碰撞时只生成一次伤害上下文并回收；攻击碰撞体不作为子弹目标。
 - 同一个 `BulletInstanceId` 不会因多个目标子碰撞体重复结算。
 - `Bullet` 具体类型只绑定一个规范 Prefab 和类型池；类型池返回未激活实例，BulletManager 设置发射父节点、Transform 和快照并登记后才激活。

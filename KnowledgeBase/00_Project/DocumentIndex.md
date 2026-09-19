@@ -14,12 +14,13 @@
 4. `../01_Architecture/AssemblyBoundaries.md`：后续程序集划分、依赖倒置和跨层通信边界。
 5. `../01_Architecture/BootstrapAndComposition.md`：GlobalBootstrap 的装配、初始化、失败和清理边界。
 6. `../01_Architecture/ApplicationFlow.md`：GameStateService、SceneService、三个 SceneEntry、同步加载/异步卸载和应用流程。
-7. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 与 Luban 的边界和加载流程。
+7. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 资产、LevelConfigSnapshot、Luban 与程序集之间的边界和加载流程。
 8. `../01_Architecture/PoolSystem.md`：具体组件类型池、未激活借出、防御性失活和跨场景生命周期契约。
 9. `../02_Modules/README.md`：模块总表、并行认领和模块入口。
 10. 目标模块的 `README.md`：职责、输入、输出、测试标准和已知问题。
 11. `../03_SharedContracts`：接口、事件、配置表、字段、命名规则和 `CollisionRules.md`。
-12. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
+12. `../04_Assets/PrefabSpecifications.md`：首轮工程切片的最小场景层级、Prefab 结构、序列化引用和校验边界。
+13. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
 
 ## 按任务选择入口
 

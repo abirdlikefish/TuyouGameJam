@@ -21,7 +21,7 @@ LevelManager 负责本局运行时间和终局判断，SpawnManager 负责消费
 - SpawnManager 为三类列表分别按 `spawnTime` 非递减顺序消费；同一列表内相同时间按列表顺序处理。
 - 三类列表之间不定义额外的跨类型顺序；它们在同一帧各自消费到当前时间。未来如果跨类型顺序影响玩法，必须改为统一时间轴并新增决策。
 - 每次生成请求携带当前 `LevelRunId`、配置 ID、`[0,1]` 归一化横向出生位置和由 SpawnManager 解析的初始世界坐标；位置规则见 ADR-023。
-- SpawnManager 在 `StopRun` 后不再消费未来条目；每次新会话调用一次 `StartRun(LevelConfig, RoadLayoutSnapshot, LevelRunId)`，同时绑定本关配置与 LevelManager 派生的道路快照、切换会话并将三个游标归零。不再暴露语义重复的 `ResetRun`。
+- SpawnManager 在 `StopRun` 后不再消费未来条目；每次新会话调用一次 `StartRun(LevelConfigSnapshot, RoadLayoutSnapshot, LevelRunId)`，同时绑定本关不可变快照与 LevelManager 派生的道路快照、切换会话并将三个游标归零。不再暴露语义重复的 `ResetRun`。资产/快照边界由 ADR-042 修订。
 - `AreAllEnemySpawnsDispatched(LevelRunId)` 属于 SpawnManager 的查询；LevelManager 可以通过注入的 SpawnManager 查询该结果，但不拥有该状态。传入过期会话 ID 时必须拒绝查询或返回未完成。
 - SpawnManager 不维护敌人、Gate 或 Prop 的活动实例、生命值、接触规则和回收集合。
 - 子弹和特效的对象池入口属于 PoolService，不由 SpawnManager 代为提供。

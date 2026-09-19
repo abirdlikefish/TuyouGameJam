@@ -73,6 +73,8 @@ GameplayScene
 
 `GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 1` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到世界坐标 `(0,0,0)`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的唯一 `roadBounds` 提供视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收。
 
+首轮玩法验证不创建 Gameplay HUD、胜负面板或计时文本。Canvas 只承载 Input 模块的 TouchDragArea；Gate 自身使用世界空间单个 TMP 调试文本显示当前状态。完整最小绑定见 [PrefabSpecifications](../04_Assets/PrefabSpecifications.md)。
+
 LevelManager 是 Gameplay 逻辑帧阶段顺序的唯一协调者。Army、Enemy、Obstacle 和 Bullet Manager 仍拥有自己的规则和集合，但不通过独立 Update 推进核心移动、命中、接触或攻击；LevelManager 在 Playing 中按 ADR-033 使用同步阶段接口驱动它们。
 
 `InputAdapter` 是 Gameplay 场景组件，只在 `LevelManager.Playing` 期间启用并通过 `IHorizontalInputReceiver` 向当前 Army 发送横向输入倍率。当前只消费相对拖拽，设备触屏与 Editor 左键共用 UGUI Pointer 路径；键盘/手柄延后。它不跨场景保留，不依赖 TimeService，也不直接修改 ArmyRoot Transform。
@@ -81,7 +83,7 @@ LevelManager 是 Gameplay 逻辑帧阶段顺序的唯一协调者。Army、Enemy
 
 Gameplay Canvas 必须持有 GraphicRaycaster；GameplayScene 中恰好一个 EventSystem 使用 StandaloneInputModule。GameplayInputAdapter 通过 Inspector 引用 TouchDragInput 实例，并在场景装配时通过 `Initialize(IHorizontalInputReceiver)` 绑定本局 Army。LevelManager 每个 Playing 帧在 Army 移动与发射前显式调用 `TickInput(unscaledDeltaTime)`，不依赖 MonoBehaviour 的隐式同类 `Update` 顺序。
 
-`GameplaySceneEntry` 通过 Inspector 持有本场景 Manager、RoadView、Input Adapter、TouchDragInput、Gameplay Canvas、EventSystem、ArmyContainer、序列化 Army Prefab 绑定和固定 Root 引用；SceneService 的 Unity 适配器向它注入 `LevelConfig`、`LevelId`、`LevelRunId` 和所需最小服务。Entry 必须先取得 `TbArmy.Id = 1` 快照、解析唯一 `ArmyId = 1` Prefab、实例化并校验槽位绑定，再向 Input 注入最小 `IHorizontalInputReceiver`、向其他模块注入所需的 IArmyController。完成输入 Prefab/EventSystem 校验、Manager `StartRun`、订阅与 `LevelManager.Preparing` 后才允许发布 `AppSceneReady(Gameplay)`；Gameplay 对象随后等待 `LevelRunStarted` 才进入 `Playing`。
+`GameplaySceneEntry` 通过 Inspector 持有本场景 Manager、RoadView、Input Adapter、TouchDragInput、Gameplay Canvas、EventSystem、ArmyContainer、序列化 Army Prefab 绑定和固定 Root 引用；SceneService 的 Unity 适配器向它注入 `LevelConfigSnapshot`、`LevelId`、`LevelRunId` 和所需最小服务。Entry 必须先取得 `TbArmy.Id = 1` 快照、解析唯一 `ArmyId = 1` Prefab、实例化并校验槽位绑定，再向 Input 注入最小 `IHorizontalInputReceiver`、向其他模块注入所需的 IArmyController。所有配置、Prefab、Collider、Layer 和 Inspector 引用在调用 Manager `StartRun` 前集中校验；错误直接记录并停止 Ready。完成校验、Manager `StartRun`、输入初始化、订阅与 `LevelManager.Preparing` 后才允许发布 `AppSceneReady(Gameplay)`；Gameplay 对象随后等待 `LevelRunStarted` 才进入 `Playing`。
 
 军队固定在屏幕下方；怪物、Gate 和 Prop 从道路上方生成并通过自身移动向下推进。玩法 Prefab 的 `Collider2D` 由 Inspector 绑定并按职责配置 Layer；对象移动和碰撞结算不依赖 Dynamic Rigidbody2D 的自动回调。
 

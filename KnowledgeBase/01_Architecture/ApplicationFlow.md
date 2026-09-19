@@ -64,10 +64,10 @@ Assets/Tests/
 ## 服务依赖
 
 - `GameStateService` 通过 `IConfigService` 校验选关，通过 `ITimeService` 创建 RealTime 流程定时器，通过 `ISceneService` 发出类型化切换命令，并通过 `IEventBus` 发布应用状态和结果事实。
-- GameStateService 在创建 Gameplay 会话时保留本次已校验 LevelConfig 的只读结果数据；Victory 的 `unlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。
+- GameStateService 在创建 Gameplay 会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；Victory 的 `UnlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。
 - `SceneService` 依赖 `IEventBus` 和 Unity 场景适配能力；它持有当前场景、待切换目标和内部操作状态，不读取配置目录，不决定下一状态。
 - `GameStateService` 订阅 `AppSceneReady`、`AppSceneUnloaded`、`AppSceneLoadFailed`、`AppSceneUnloadFailed`，并校验 `AppSceneId`、`LevelId`、`LevelRunId` 和内部 pending target；Unloaded 只用于确认旧场景事实，不直接推进稳定状态。
-- `LevelManager` 只依赖 `IGameStateService` 提交终局。`GameplaySceneEntry` 向 LevelManager 注入已校验的 `LevelConfig`、`LevelId`、`LevelRunId` 和最小服务接口。
+- `LevelManager` 只依赖 `IGameStateService` 提交终局。`GameplaySceneEntry` 向 LevelManager 注入已校验的 `LevelConfigSnapshot`、`LevelId`、`LevelRunId` 和最小服务接口。
 
 ## 应用状态
 
@@ -133,7 +133,7 @@ MainMenu 和 LevelSelect 当前仍自动跳过，没有正式 UI。计时从对�
 LevelSelect 定时器到期
 → GameStateService 校验选中关卡并创建新 LevelRunId
 → GameplayLoading
-→ SceneService.SwitchToGameplay(levelId, levelConfig, levelRunId)
+→ SceneService.SwitchToGameplay(levelId, levelConfigSnapshot, levelRunId)
 → 异步卸载 LevelSelectScene
 → 同步加载 GameplayScene
 → GameplaySceneEntry 注入依赖并完成 LevelManager.Preparing
@@ -143,7 +143,7 @@ LevelSelect 定时器到期
 → LevelManager 进入 Playing
 ```
 
-`SceneService` 不选择关卡、不读取配置目录。它只接收已校验的 `LevelConfig`、`LevelId` 和 `LevelRunId`。
+`SceneService` 不选择关卡、不读取配置目录。它只接收已校验的 `LevelConfigSnapshot`、`LevelId` 和 `LevelRunId`。
 
 ## 终局与回到选关
 
@@ -165,7 +165,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 
 ## 失败、重复与过期处理
 
-- 初始化失败时保持 `Initializing`，不得请求 MainMenuScene。
+- Luban 表、LevelCatalog 或 LevelConfig 数据初始化失败时，ConfigService 按 ADR-041 记录首个错误并立即退出应用，不得请求 MainMenuScene。其他 Bootstrap/场景装配失败不得伪装初始化成功。
 - 重复的初始化通知、切换请求、定时器回调和终局提交必须幂等，不能创建第二个会话或重复结果。
 - MainMenuScene 加载失败时保持 `Initializing`；LevelSelectScene 加载失败时不进入 `LevelSelect`，也不启动选关定时器。二者都不自动无限重试。
 - GameplayScene 加载失败时不得发布 `LevelRunStarted`；GameStateService 清除待启动会话并请求恢复 LevelSelectScene，只有 `AppSceneReady(LevelSelect)` 后才进入 `LevelSelect`。

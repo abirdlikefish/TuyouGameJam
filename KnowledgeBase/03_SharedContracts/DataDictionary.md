@@ -18,14 +18,23 @@
 | `RuntimeInstanceId` | `int` | 道路对象或敌人本次生成的运行时实例 ID | 在对应 Manager 的活动实例中唯一；不能使用配置 ID 代替 |
 | `WorldPosition` | `Vector2` | 运行时对象当前世界坐标 | 由对象运行时状态提供，不回写配置 |
 | `IsOnRoad` | `bool` | 道路对象是否仍处于道路活动范围内 | 离场或回收后为 `false` |
-| `LevelId` | `int` | 当前关卡的稳定 ID | 必须对应当前 `LevelConfig` |
+| `LevelId` | `int` | 当前关卡的稳定 ID | 运行时必须对应当前 `LevelConfigSnapshot` |
 | `LevelRunId` | `int` | 一次 Gameplay 会话的稳定运行 ID | 每次进入 Gameplay 递增；过期事件不得作用于新会话 |
 | `ConfigLoadState` | `enum` | 配置服务加载状态 | `Uninitialized`、`Loading`、`Ready`、`Failed` |
 | `ConfigErrorCode` | `enum` | 配置或资源加载失败原因 | 目录为空、ID 重复、关卡不存在、引用缺失、关卡配置无效、表加载失败、资源缺失 |
+| `ArmyConfigSnapshot` | `readonly struct` | `TbArmy` 的运行时只读副本 | `Id`、`ArmyCountLimit`、`HpPerSoldier`、`MoveSpeed`；只由 `IArmyConfigProvider` 返回 |
+| `WeaponConfigSnapshot` | `readonly struct` | `TbWeapon` 的运行时只读副本 | `Id`、`FireInterval`、`BulletId`；只由 `IWeaponConfigProvider` 返回 |
+| `BulletConfigSnapshot` | `readonly struct` | `TbBullet` 的运行时只读副本 | `Id`、`Damage`、`MoveSpeed`；只由 `IBulletConfigProvider` 返回 |
+| `EnemyConfigSnapshot` | `readonly struct` | `TbEnemy` 的运行时只读副本 | `Id`、`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange`、`AttackCooldown`；只由 `IEnemyConfigProvider` 返回 |
+| `PropConfigSnapshot` | `readonly struct` | `TbProp` 的运行时只读副本 | `Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed`；只由 `IPropConfigProvider` 返回 |
 | `AppSceneId` | `enum` | SceneService 管理的稳定应用场景身份 | `MainMenu`、`LevelSelect`、`Gameplay`；不包含 `Initializing`、`GameplayLoading` |
 | `SceneLoadErrorCode` | `enum` | 应用场景加载、规范根解析或 SceneEntry 初始化失败原因 | 请求无效、场景未配置、加载失败、入口缺失/重名/类型错误、入口初始化失败 |
 | `SceneUnloadErrorCode` | `enum` | 当前应用场景异步卸载失败原因 | 请求无效、场景卸载失败 |
 | `LevelDescriptor` | `struct` | 选关使用的关卡目录只读描述 | `LevelId`、显示名、初始解锁标记 |
+| `LevelConfigSnapshot` | `sealed class` | ConfigService 从 LevelConfig 资产复制的不可变关卡运行时快照 | 包含关卡元数据、道路数值、三个只读生成列表和元素换算系数；不暴露 ScriptableObject |
+| `EnemySpawnEntrySnapshot` | `readonly struct` | 敌人生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`ConfigId` |
+| `GateSpawnEntrySnapshot` | `readonly struct` | Gate 生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`GateType`、`InitialValue`、`ElementType`、`MaxHp` |
+| `PropSpawnEntrySnapshot` | `readonly struct` | Prop 生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`ConfigId` |
 | `UnlockedLevelIds` | `List<int>` | 当前关卡通关后记录的解锁关卡 ID | 首版只记录，不执行下一关跳转 |
 | `AppFlowState` | `enum` | 应用级流程状态；`GameplayLoading` 仅为内部过渡，不是用户可见页面 | `Initializing`、`MainMenu`、`LevelSelect`、`GameplayLoading`、`Gameplay` |
 | `LevelRunState` | `enum` | 单局游玩状态 | `Preparing`、`Playing`、`Completed` |
@@ -36,11 +45,11 @@
 | `LeftBoundary` | `float` | Army 可移动道路左边界 | 由 `RoadBounds.xMin` 派生，`value <= 0` |
 | `RightBoundary` | `float` | Army 可移动道路右边界 | 由 `RoadBounds.xMax` 派生，`value >= 0` 且大于左边界 |
 | `BottomBoundary` | `float` | 道路下边界 | 由 `RoadBounds.yMin` 派生，`value <= 0` |
-| `TopBoundary` | `float` | 道路上边界 | 由 `RoadBounds.yMax` 派生，`value >= 0` 且大于下边界 |
+| `TopBoundary` | `float` | 道路上边界 | 由 `RoadBounds.yMax` 派生；子弹根 GameObject 中心严格大于该值时回收 |
 | `ArmyStartPosition` | `Vector3` | ArmyRoot 每局初始世界坐标 | MVP 固定为 `(0,0,0)`，不作为配置字段；运行中世界 y 保持为 0 |
-| `SpawnY` | `float` | 敌人、Gate、Prop 共用的固定出生横线高度 | `0 < EnemyApproachY < SpawnY <= TopBoundary` |
-| `EnemyApproachY` | `float` | 敌人结束垂直下移、开始接近 Army 的高度 | `0 < value < SpawnY` |
-| `DespawnY` | `float` | 道路对象离开道路并触发离场处理的高度 | `BottomBoundary <= value < 0` |
+| `SpawnY` | `float` | 敌人、Gate、Prop 根 GameObject 中心共用的固定出生横线高度 | `0 < EnemyApproachY < SpawnY <= TopBoundary` |
+| `EnemyApproachY` | `float` | 敌人根 GameObject 中心结束垂直下移、开始接近 Army 的高度 | `0 < value < SpawnY` |
+| `DespawnY` | `float` | Gate/Prop 根 GameObject 中心离开道路并触发离场处理的高度 | `BottomBoundary <= value < 0`；`position.y <= value` 时离场 |
 | `ObstacleKind` | `enum` | 道路对象类别 | `Gate`、`Prop` |
 | `ObstacleState` | `enum` | 道路对象当前生命周期/交互状态 | `MovingDown`、`ContactPending`、`ContactSucceeded`、`ContactFailed`、`ExitedUncontacted`、`Broken`、`Recycled` |
 | `GateType` | `enum` | 门的规则类型 | `Additive`、`Element` |
@@ -49,7 +58,7 @@
 | `GateMaxHp` | `int` | 元素门最大生命值 | 大于 0；加法门不使用 |
 | `GateContactDamage` | `int` | 元素门失败接触时对每个槽位造成的伤害 | 大于 0；加法门不使用 |
 | `PostDepletionDamage` | `long` | 元素门 HP 归零后、成功接触前累计的可兑换额外伤害 | 初始为 0；只在 `Pending` 且奖励未锁定时增加，使用 `long` 防止多次命中累计溢出 |
-| `ElementDurationSecondsPerDamage` | `float` | 本关所有元素门把可兑换额外伤害换算为持续时间的统一系数 | LevelConfig 字段；存在元素门时有限且大于 0，否则应为 0 |
+| `ElementDurationSecondsPerDamage` | `float` | 本关所有元素门把可兑换额外伤害换算为持续时间的统一系数 | LevelConfig 资产字段并复制到快照；存在元素门时有限且大于 0，否则应为 0 |
 | `CalculatedElementDuration` | `float` | 元素门成功接触时计算出的本次持续时间 | `PostDepletionDamage × ElementDurationSecondsPerDamage`；必须有限且大于等于 0，当前不设上限 |
 | `PropContactState` | `enum` | 道具与 Army 的接触结果状态 | `Pending`、`Succeeded`、`Failed`、`ExitedUncontacted` |
 | `PropHp` | `int` | 道具当前生命值 | `0 <= value <= PropMaxHp` |

@@ -2,6 +2,8 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-20 | 新增 ADR-042 并关闭 DES-048：将 LevelConfig/LevelCatalog 资产结构与具体 ConfigService 归入 Foundation，Luban 生成代码归入 Game.ConfigGenerated，Contracts 定义不可变 LevelConfigSnapshot，IConfigService 去除具体初始化参数，Composition 直接初始化实现，Scene/Level/Spawn 只传递快照 | Contracts、ConfigGenerated、Foundation、Composition、Config、Scene、Level、Spawn、测试 | Codex |
+| 2026-09-20 | 新增 ADR-043 并关闭 DES-049：槽位激活或实际换武器后等待完整 FireInterval，每槽每逻辑帧最多一弹；AttackCooldown 从起攻计算，动画结束且冷却到期后在下一 Tick 起攻；Death 末帧事件登记回收；Gate/Prop 只做终点 Overlap，纵向阈值按根对象中心且子弹以 roadBounds.yMax 回收 | Army、Bullet、Monster、Gate、Prop、Obstacle、Level、Animation、碰撞、测试、资源 | Codex |
 | 2026-09-13 | 创建知识库目录、公共契约和模块初稿 | 全部 | Codex |
 | 2026-09-13 | 增加文档优先流程、并行模块协作规则、文档索引和设计待决清单 | 项目规范、全部文档 | Codex |
 | 2026-09-13 | 定案关卡使用 LevelConfig ScriptableObject，角色/军队、敌人、倍增门、子弹和全局数值使用 Luban；新增配置系统与表契约文档 | 架构、Army、Monster、Gate、Bullet、Level、Spawn、测试 | Codex |
@@ -40,3 +42,6 @@
 | 2026-09-19 | 新增 ADR-036，将首个 Input 工程切片收窄为设备触屏与 Editor 左键共用的单一相对拖拽输入，键盘/手柄延后；补齐 `RelativeDragTracker`、`TouchDragInput`、`GameplayInputAdapter` 职责，新增 `IHorizontalInputReceiver` 与 `IGameplayInputController`，固定 Army 移动前输入 Tick、RealTime delta 传入、`PF_UI_TouchDragArea` 结构、场景绑定、校验与测试标准 | Input、Level、Army、UI、Time、场景、共享契约、资源、测试、路线图、设计决策 | Codex |
 | 2026-09-19 | 新增 ADR-037，移除 Monster `TargetSensor`，统一以怪物到锁定槽位目标位置的 XY 距离判断攻击起始；允许 Army 槽位与敌人身体重合，不建立 `EnemyBody`/`ArmySlot` 移动碰撞；定案六个 Gameplay Layer、显式查询关系与默认关闭的自动碰撞矩阵，并补充重合时单体/范围攻击验收 | Monster、Army、Level、碰撞、配置、资源、测试、共享契约、设计决策 | Codex |
 | 2026-09-19 | 新增 ADR-038，确认不恢复乘法门并移除 `TbGate`/Gate ConfigId；逐门类型、初始数字、元素类型和 MaxHp 改由 LevelConfig 内联，同类移动速度及元素门接触伤害由对应 Prefab Inspector 提供；加法门改为按实际子弹伤害增长，元素门仅累计 HP 归零后的额外伤害并乘关卡系数兑换持续时间，零 HP 待接触门继续消费子弹，接触失败后永久锁定奖励；同步生成请求、子弹命中接口、事件、数据字典、碰撞、资源与测试 | Gate、Level、Spawn、Obstacle、Bullet、Army、Config、事件、碰撞、资源、测试、设计决策 | Codex |
+| 2026-09-19 | 新增 ADR-039 与首轮 Prefab 规格：配置/绑定错误直接记录并阻止 Ready，不建设降级或通用恢复状态机；敌人阻挡间距改由各规范 Prefab 的 `blockingGap` 提供；Gate 首轮只用单个 TMP 调试文本；HUD 与正式表现延后；通过合理速度和 Collider 调参规避高速穿透，不增加相对扫掠；Victory 立即截断未来及活动 Gate/Prop；同时修正 Pool、Level、UI 状态和模块依赖记录 | 项目范围、Composition、Config、Level、Spawn、Monster、Bullet、Gate、UI、碰撞、资源、测试、共享契约、设计决策 | Codex |
+| 2026-09-19 | 新增 ADR-040，定案怪物攻击时机由非循环 Attack Clip 的 AnimationEvent 关键帧决定：`OnAttackFrame()` 只登记带 AttackSequenceId 的请求，实际单体/范围伤害仍在 EnemyManager.ResolveAttacks 结算；末帧通过 `OnAttackAnimationFinished()` 退出本次攻击，并补齐 Prefab、Collider、取消、跨帧与重复事件测试 | Monster、Level、Animation、碰撞、资源、测试、设计决策 | Codex |
+| 2026-09-20 | 新增 ADR-041，关闭 DES-042：为 Army、Weapon、Bullet、Enemy、Prop 建立五类最小配置 Provider 与不可变快照；ConfigService 启动时完整校验目录、关卡和五类表并复制快照，配置错误只记录首个明确错误后立即退出应用，Gameplay Manager 不再重复 TryGet、默认值或恢复处理 | Config、Composition、Army、Bullet、Monster、Prop、Obstacle、Level、共享契约、测试、设计决策 | Codex |

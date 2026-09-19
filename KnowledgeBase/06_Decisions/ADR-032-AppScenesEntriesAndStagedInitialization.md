@@ -75,7 +75,7 @@ MVP 使用三个明确的类型化命令，不引入字符串场景命令或 `ob
 ```csharp
 void SwitchToMainMenu();
 void SwitchToLevelSelect();
-void SwitchToGameplay(int levelId, LevelConfig levelConfig, int levelRunId);
+void SwitchToGameplay(int levelId, LevelConfigSnapshot levelConfig, int levelRunId);
 ```
 
 SceneService 内部持有当前应用场景和待切换目标。MainMenu、LevelSelect 的事件使用 `LevelId = 0`、`LevelRunId = 0`；Gameplay 事件必须携带当前值。应用场景事件统一携带 `AppSceneId`，取代 Gameplay 专用的 Ready、LoadFailed、Unloaded 载荷。

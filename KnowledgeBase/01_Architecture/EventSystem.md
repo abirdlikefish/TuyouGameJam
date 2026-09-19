@@ -12,6 +12,8 @@ ContractReady（设计状态，不代表已有 Unity 实现）
 
 需要立即执行、返回值、失败结果或确定顺序的操作使用类型化同步接口或必执行回调，不通过事件请求另一个模块执行私有逻辑。
 
+Monster Attack Clip 中的 Unity AnimationEvent 属于 Animator 到同一根 Monster 脚本的本地回调：命中关键帧调用 `OnAttackFrame()` 登记请求，EnemyManager 在 `ResolveAttacks` 完成权威伤害后才可发布 `MonsterAttackLanded`。AnimationEvent 本身不经过 `IEventBus`，也不直接修改 Army。
+
 ## MVP 文件布局
 
 当前不创建 `.asmdef`。目录只表达职责，后续程序集工程化可以在不搬移脚本的前提下进行。
@@ -34,7 +36,7 @@ Assets/Scripts/Game/
 - `IEventBus.cs`：保存唯一的跨模块订阅、发布和取消订阅接口。
 - `SubscriptionToken.cs`：保存不透明订阅凭证；默认值无效，不暴露可由业务代码构造的订阅 ID。
 - `EventBus.cs`：纯 C# 实现，不继承 `MonoBehaviour`，不对应独立 GameObject，由 `GlobalBootstrap` 创建和持有。
-- `ApplicationEvents.cs`：应用流程、配置失败、场景握手和终局事件。
+- `ApplicationEvents.cs`：应用流程、场景握手和终局事件；配置失败由 ConfigService 直接记录首个错误并退出应用，不定义项目事件。
 - `ArmyEvents.cs`：Army 人数、阵型、受击和装备事实。
 - `ObstacleEvents.cs`：Gate、Prop 和道路对象回收事实。
 - `MonsterEvents.cs`：敌人生成、受击、攻击命中和击杀事实。
@@ -92,13 +94,13 @@ MVP 不创建 `DebugService`。`EventBus` 构造时接收 `Action<Exception>` �
 
 ### 应用级服务
 
-`GameStateService` 等应用级服务保存自己取得的 Token，并在自身清理阶段逐一取消。应用流程订阅必须在 `ConfigService.Initialize(...)` 之前完成，保证初始化失败和场景握手事实不会丢失。
+`GameStateService` 等应用级服务保存自己取得的 Token，并在自身清理阶段逐一取消。应用流程订阅必须在首次场景切换之前完成，保证场景握手事实不会丢失。配置错误由 ConfigService 直接记录首个错误并退出应用，不依赖 EventBus 才能生效。
 
 服务可以在具体实现上提供 `StartListening()` / `Dispose()`，但不把这两个生命周期方法加入业务消费者使用的公共服务接口。重复启动必须幂等，避免注册两套处理器。
 
 ### Gameplay 场景组件
 
-每个 SceneEntry 先接收本场景所需的最小服务并建立场景订阅，再报告入口准备完成。GameplaySceneEntry 还必须注入 `LevelConfig`、`LevelId`、`LevelRunId` 并完成 `LevelManager.Preparing`，SceneService 才能发布 `AppSceneReady(Gameplay)`：
+每个 SceneEntry 先接收本场景所需的最小服务并建立场景订阅，再报告入口准备完成。GameplaySceneEntry 还必须注入 `LevelConfigSnapshot`、`LevelId`、`LevelRunId` 并完成 `LevelManager.Preparing`，SceneService 才能发布 `AppSceneReady(Gameplay)`：
 
 ```text
 加载 GameplayScene
@@ -124,7 +126,7 @@ GlobalBootstrap → GameStateService.NotifyInitializationReady()
 GameStateService → SceneService.SwitchToMainMenu() → AppSceneReady(MainMenu)
 GameStateService → MainMenu 定时器 → SceneService.SwitchToLevelSelect() → AppSceneReady(LevelSelect)
 GameStateService → LevelSelect 定时器 → TrySelectLevel / TryStartSelectedGameplay
-GameStateService → SceneService.SwitchToGameplay(levelId, levelConfig, levelRunId)
+GameStateService → SceneService.SwitchToGameplay(levelId, levelConfigSnapshot, levelRunId)
 SceneService → AppSceneReady / AppSceneLoadFailed / AppSceneUnloadFailed → GameStateService
 GameStateService → LevelRunStarted → LevelManager、UI
 Gate / Prop → 调用 IArmyController 类型化命令 → Army 状态变更

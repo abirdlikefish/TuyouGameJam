@@ -12,23 +12,39 @@
 ```csharp
 public interface IArmyConfigProvider
 {
-    bool TryGetArmyConfig(int armyId, out ArmyConfigSnapshot config);
+    ArmyConfigSnapshot GetArmyConfig(int armyId);
 }
 
 public interface IWeaponConfigProvider
 {
-    bool TryGetWeaponConfig(int weaponId, out WeaponConfigSnapshot config);
+    WeaponConfigSnapshot GetWeaponConfig(int weaponId);
 }
 
-public interface IConfigService : IArmyConfigProvider, IWeaponConfigProvider
+public interface IBulletConfigProvider
 {
-    void Initialize(
-        LevelCatalog levelCatalog,
-        cfg.Tables tables,
-        IResourceRegistry resourceRegistry);
+    BulletConfigSnapshot GetBulletConfig(int bulletId);
+}
+
+public interface IEnemyConfigProvider
+{
+    EnemyConfigSnapshot GetEnemyConfig(int enemyId);
+}
+
+public interface IPropConfigProvider
+{
+    PropConfigSnapshot GetPropConfig(int propId);
+}
+
+public interface IConfigService :
+    IArmyConfigProvider,
+    IWeaponConfigProvider,
+    IBulletConfigProvider,
+    IEnemyConfigProvider,
+    IPropConfigProvider
+{
     ConfigLoadState GetConfigLoadState();
     IReadOnlyList<LevelDescriptor> GetLevelDescriptors();
-    bool TryGetLevelConfig(int levelId, out LevelConfig levelConfig);
+    bool TryGetLevelConfig(int levelId, out LevelConfigSnapshot levelConfig);
 }
 
 public readonly struct ArmyConfigSnapshot
@@ -44,6 +60,33 @@ public readonly struct WeaponConfigSnapshot
     public int Id { get; }
     public float FireInterval { get; }
     public int BulletId { get; }
+}
+
+public readonly struct BulletConfigSnapshot
+{
+    public int Id { get; }
+    public int Damage { get; }
+    public float MoveSpeed { get; }
+}
+
+public readonly struct EnemyConfigSnapshot
+{
+    public int Id { get; }
+    public EnemyType EnemyType { get; }
+    public int MaxHp { get; }
+    public int AttackPower { get; }
+    public float MoveSpeed { get; }
+    public float AttackStartRange { get; }
+    public float AttackCooldown { get; }
+}
+
+public readonly struct PropConfigSnapshot
+{
+    public int Id { get; }
+    public int WeaponId { get; }
+    public int MaxHp { get; }
+    public int ContactDamage { get; }
+    public float MoveSpeed { get; }
 }
 
 public interface IResourceRegistry
@@ -78,9 +121,50 @@ public readonly struct LevelDescriptor
     public string DisplayName { get; }
     public bool InitiallyUnlocked { get; }
 }
+
+public sealed class LevelConfigSnapshot
+{
+    public int LevelId { get; }
+    public string DisplayName { get; }
+    public IReadOnlyList<int> UnlockedLevelIds { get; }
+    public Rect RoadBounds { get; }
+    public float SpawnY { get; }
+    public float EnemyApproachY { get; }
+    public float DespawnY { get; }
+    public IReadOnlyList<EnemySpawnEntrySnapshot> EnemySpawns { get; }
+    public IReadOnlyList<GateSpawnEntrySnapshot> GateSpawns { get; }
+    public IReadOnlyList<PropSpawnEntrySnapshot> PropSpawns { get; }
+    public float ElementDurationSecondsPerDamage { get; }
+}
+
+public readonly struct EnemySpawnEntrySnapshot
+{
+    public float SpawnTime { get; }
+    public float SpawnPosition { get; }
+    public int ConfigId { get; }
+}
+
+public readonly struct GateSpawnEntrySnapshot
+{
+    public float SpawnTime { get; }
+    public float SpawnPosition { get; }
+    public GateType GateType { get; }
+    public int InitialValue { get; }
+    public ElementType ElementType { get; }
+    public int MaxHp { get; }
+}
+
+public readonly struct PropSpawnEntrySnapshot
+{
+    public float SpawnTime { get; }
+    public float SpawnPosition { get; }
+    public int ConfigId { get; }
+}
 ```
 
-`GlobalBootstrap` 通过 Inspector 提供 `LevelCatalog` 和资源注册表，并创建唯一的 Luban `cfg.Tables` 实例，再调用 `IConfigService.Initialize`。ConfigService 在初始化时验证并复制 Luban 行；`TryGetLevelConfig`、`TryGetArmyConfig` 和 `TryGetWeaponConfig` 只返回已通过校验的资产或不可变快照。查询只能在 `Ready` 状态成功，缺失 ID 返回 `false`，不得返回缺省配置。Gameplay 装配向 ArmyController 注入最小的 `IArmyConfigProvider` 和 `IWeaponConfigProvider`，不要求其取得完整 IConfigService。
+`GlobalBootstrap` 通过 Inspector 提供 `LevelCatalog` 和资源注册表，并创建唯一的 Luban `cfg.Tables` 实例，再直接调用 Foundation 中具体 `ConfigService.Initialize(...)`；初始化方法不属于 `IConfigService` 查询契约。ConfigService 在初始化时一次性验证完整目录、目录内全部 LevelConfig、五类表的数值/主键/枚举及当前跨表引用，然后把资产和表数据复制为不可变快照字典。表或目录错误按 ADR-041 只记录首个明确错误并立即终止应用，不进入 MainMenu，不提供默认配置、恢复事件或重试。
+
+五类 `GetXxxConfig` 只允许在 `Ready` 后对已通过引用校验的 ID 调用；非 Ready 查询或未知 ID 表示程序不变量被破坏，直接抛出异常，Gameplay Manager 不重复捕获并降级。`TryGetLevelConfig` 只保留给应用层验证外部关卡选择请求。Composition 分别注入最小 Provider：ArmyController 取得 Army/Weapon，BulletManager 取得 Bullet，EnemyManager 取得 Enemy，ObstacleManager 取得 Prop；它们都不需要完整 `IConfigService`。
 
 ```csharp
 public interface IGameStateService
@@ -97,7 +181,7 @@ public interface IGameStateService
 
 `GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
-`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 LevelConfig 的只读结果数据；接受 Victory 后从该配置防御性复制 `unlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
+`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制 `UnlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
 ```csharp
 public interface ISceneService
@@ -106,12 +190,12 @@ public interface ISceneService
     void SwitchToLevelSelect();
     void SwitchToGameplay(
         int levelId,
-        LevelConfig levelConfig,
+        LevelConfigSnapshot levelConfig,
         int levelRunId);
 }
 ```
 
-`SceneService` 不再次查询或解析关卡配置。调用方必须先通过 `IConfigService.TryGetLevelConfig` 取得已校验的 `LevelConfig`，再把同一 `levelId`、配置引用和新的 `LevelRunId` 传入。三个命令都表示切换目标：如果已有应用场景，SceneService 先清理并异步卸载旧场景，再同步 Additive 加载目标场景、解析固定根 SceneEntry 并显式初始化。SceneService 不推进 `AppFlowState`，也不得在 Entry 未就绪时伪装 Ready。
+`SceneService` 不再次查询或解析关卡配置。调用方必须先通过 `IConfigService.TryGetLevelConfig` 取得已校验的 `LevelConfigSnapshot`，再把同一 `levelId`、快照和新的 `LevelRunId` 传入。三个命令都表示切换目标：如果已有应用场景，SceneService 先清理并异步卸载旧场景，再同步 Additive 加载目标场景、解析固定根 SceneEntry 并显式初始化。SceneService 不推进 `AppFlowState`，也不得在 Entry 未就绪时伪装 Ready。
 
 ```csharp
 public readonly struct AppSceneReady
@@ -401,7 +485,7 @@ public readonly struct RoadLayoutSnapshot
 
 ```
 
-道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadBounds` 是唯一序列化来源，宽高和四边均由它派生；ArmyRoot 每局从世界原点 `(0,0,0)` 开始且世界 y 固定为 `0`。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。计算不考虑对象尺寸；敌人到达 `EnemyApproachY` 后由 Monster 选择最近的有效士兵槽位。
+道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadBounds` 是唯一序列化来源，启动时复制为 `LevelConfigSnapshot.RoadBounds`，宽高和四边均由快照值派生；ArmyRoot 每局从世界原点 `(0,0,0)` 开始且世界 y 固定为 `0`。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。SpawnY、EnemyApproachY、DespawnY 和子弹 TopBoundary 都比较根 GameObject 中心，不考虑 Collider、Renderer 或 Prefab 尺寸；Army 横向合并 AABB 是明确例外。
 
 配置校验必须满足 `BottomBoundary <= DespawnY < 0 < EnemyApproachY < SpawnY <= TopBoundary`，且左右边界和上下边界包含世界原点；无效值不得在运行时 Clamp 或回退到场景 Renderer Bounds。
 
@@ -415,7 +499,7 @@ public interface ITimeService
 }
 ```
 
-`ConfigId` 对 Gate 为 `null`，对 Prop 为 `TbProp.Id`；不得使用 `0` 伪装 Gate 配置 ID。`SpawnEntryIndex` 只在当前 LevelConfig 的对应生成列表内有意义，不是跨资产稳定 ID。
+`ConfigId` 对 Gate 为 `null`，对 Prop 为 `TbProp.Id`；不得使用 `0` 伪装 Gate 配置 ID。`SpawnEntryIndex` 只在当前 `LevelConfigSnapshot` 的对应生成列表内有意义，不是跨资产稳定 ID。
 
 `IDamageable` 只表达真正以生命值决定存活的对象。Enemy、Prop 等对象可以同时实现 `IDamageable` 和 `IBulletHittable`；加法门没有 HP，只实现 `IBulletHittable`。Pending 元素门即使 `CurrentHp == 0`，在接触结算前仍保持 `CanReceiveBulletHit == true`，后续子弹继续消费并累计 HP 归零后的额外伤害。元素门进入 `Failed` 后奖励永久锁定；若生命周期仍允许 `CanReceiveBulletHit == true`，命中只能用于表现或其他已明确的生命周期处理，不得增加可兑换额外伤害。BulletManager 不能用 `IsAlive` 或目标 HP 替代 `CanReceiveBulletHit`。
 
@@ -459,7 +543,7 @@ public interface ISpawnManager
 {
     // 绑定本关配置、切换当前会话并将三个游标归零。
     void StartRun(
-        LevelConfig levelConfig,
+        LevelConfigSnapshot levelConfig,
         RoadLayoutSnapshot roadLayout,
         int levelRunId);
     void Tick(int levelRunId, float elapsedTime);
@@ -502,7 +586,7 @@ public readonly struct PropSpawnRequest
 }
 ```
 
-`GateSpawnRequest` 来自已校验的 `LevelConfig.gateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`PropSpawnRequest.ConfigId` 继续引用 `TbProp.Id`。`SpawnEntryIndex` 是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。
+`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`PropSpawnRequest.ConfigId` 继续引用 `TbProp.Id`。`SpawnEntryIndex` 是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。
 
 ## BulletManager 接口
 
@@ -529,7 +613,7 @@ public interface IBulletManager
 }
 ```
 
-BulletManager 通过 Inspector 持有唯一 Bullet 规范 Prefab，并以具体 `Bullet` 根类型取得类型池。它根据 `BulletSpawnRequest.BulletId` 通过注入的 IConfigService 取得已校验的基础伤害和速度；WeaponId、ActiveElements、来源槽位、位置和方向以发射瞬间快照为准。完成父节点、Transform、配置、LevelRunId、BulletInstanceId、回调和活动登记后才激活实例。飞行中的子弹不读取 Army 当前元素计时器，Army 后续获得或失去元素不会修改既有快照。
+BulletManager 通过 Inspector 持有唯一 Bullet 规范 Prefab，并以具体 `Bullet` 根类型取得类型池。它根据 `BulletSpawnRequest.BulletId` 通过注入的 `IBulletConfigProvider` 取得已校验的 `BulletConfigSnapshot`；WeaponId、ActiveElements、来源槽位、位置和方向以发射瞬间快照为准。完成父节点、Transform、配置、LevelRunId、BulletInstanceId、回调和活动登记后才激活实例。飞行中的子弹不读取 Army 当前元素计时器，Army 后续获得或失去元素不会修改既有快照。
 
 ## EnemyManager 与 ObstacleManager 接口
 
@@ -561,6 +645,8 @@ public interface IObstacleManager : IObstacleRegistry
 ```
 
 Manager 在 `StartRun` 时切换当前会话并清空上局状态，只接受当前 `LevelRunId` 的请求，并负责活动实例、阶段规则、延后回收和会话清理；SpawnManager 不复制这些集合。阶段方法只由 LevelManager 在 `Playing` 中调用，池对象不得通过独立 Update 绕过该顺序。伤害或死亡事实在对应阶段立即完成状态与计数，`FlushPendingRecycles` 只处理已登记的结束请求和对象池归还，不延迟权威数值结果。
+
+首轮切片不为 `StartRun/StopRun` 增加通用 Result 或错误恢复状态机。配置数据已由 ConfigService 在加载场景前完成致命校验；GameplaySceneEntry 在调用任何 StartRun 前只集中校验本次会话参数、Prefab、Collider、Layer 和 Inspector 引用，发现错误时记录稳定来源并停止 Ready。StartRun 中发生的意外异常只触发已启动模块的必要 StopRun 清理，不允许使用缺省值或降级继续游玩。
 
 ## EventBus 与 PoolService 接口
 
@@ -606,22 +692,11 @@ public interface IComponentPool<T> where T : MonoBehaviour
 
 Unity 资源注册表键仍可用于非池身份的配置与表现资源绑定，但不用于 PoolService 选择 Prefab。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供。
 
-## 失败事件数据
+## 场景失败事件数据
+
+配置与必需资源校验失败不定义项目事件载荷。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 使用 `Debug.LogError` 输出一次 `ConfigErrorCode`、稳定来源和具体原因，将状态置为 `Failed` 并立即终止应用。Prefab、Collider、Layer 或 Inspector 装配错误由对应入口记录并阻止 GameplaySceneEntry Ready。两类失败都不得使用缺省值继续运行。
 
 ```csharp
-public readonly struct InitializationFailed
-{
-    public ConfigErrorCode ErrorCode { get; }
-    public string Source { get; }
-}
-
-public readonly struct LevelConfigLoadFailed
-{
-    public int LevelId { get; }
-    public ConfigErrorCode ErrorCode { get; }
-    public string Source { get; }
-}
-
 public enum SceneLoadErrorCode
 {
     InvalidRequest,
@@ -656,7 +731,7 @@ public readonly struct AppSceneUnloadFailed
 }
 ```
 
-`Source` 使用稳定的配置项、表名或资源键，供日志和 UI 定位；不得放入异常堆栈或本地绝对路径。场景失败事件只报告事实，不负责推进应用状态。目标加载或 Entry 初始化失败时，SceneService 必须先异步清理失败场景再发布 `AppSceneLoadFailed`；旧场景卸载失败时发布 `AppSceneUnloadFailed`，不得继续加载目标场景。
+配置错误日志中的 Source 使用稳定的配置项、表名、资源键、字段或条目索引，不得依赖本地绝对路径。ConfigService 只报告首个配置错误并退出，不发布配置失败或恢复事件。场景失败事件只报告事实，不负责推进应用状态。目标加载或 Entry 初始化失败时，SceneService 必须先异步清理失败场景再发布 `AppSceneLoadFailed`；旧场景卸载失败时发布 `AppSceneUnloadFailed`，不得继续加载目标场景。
 
 ## 碰撞契约
 

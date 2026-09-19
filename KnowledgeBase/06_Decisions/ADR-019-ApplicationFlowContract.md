@@ -21,7 +21,7 @@ ADR-011 已确定初始化、主界面、选关、Gameplay、终局回选关的�
 - `GameStateService` 是应用级流程的唯一状态推进者，负责 `Initializing`、`MainMenu`、`LevelSelect`、`GameplayLoading` 和 `Gameplay` 的转换。
 - `LevelManager` 只负责当前 Gameplay 会话的 `Preparing`、`Playing`、`Completed`，不得直接修改 `AppFlowState`。
 - `GlobalBootstrap` 只负责创建服务、调用配置初始化，并在 `ConfigService` 状态为 `Ready` 后通知 `GameStateService`；不得直接跳过 MainMenu 或 LevelSelect。
-- `SceneService` 只负责加载/卸载 Gameplay 场景和传递已校验的 `LevelConfig`、`LevelId`、`LevelRunId`，不得自行选择关卡或推进应用状态。
+- `SceneService` 只负责加载/卸载 Gameplay 场景和传递已校验的 `LevelConfigSnapshot`、`LevelId`、`LevelRunId`，不得自行选择关卡或推进应用状态。资产/快照边界由 ADR-042 修订。
 
 ### 公共命令
 

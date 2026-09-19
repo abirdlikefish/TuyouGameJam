@@ -13,14 +13,14 @@
 | 模块 | 状态 | 设计入口 | 主要依赖 |
 |---|---|---|---|
 | Army | InDesign | `Army/README.md` | EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager |
-| Gate | InDesign | `Gate/README.md` | TimeService、EventBus、Army、Bullet、ObstacleManager、LevelConfig |
-| Prop | InDesign | `Prop/README.md` | TimeService、EventBus、Army、Bullet、ObstacleManager、ConfigService |
-| Obstacle | InDesign | `Obstacle/README.md` | ConfigService（仅 Prop）、PoolService、TimeService、Gate、Prop、EventBus |
-| Monster | InDesign | `Monster/README.md` | Level、Bullet、Army、EventBus、ConfigService、PoolService |
-| Bullet | Planned | `Bullet/README.md` | Level、ConfigService、PoolService、IBulletHittable |
+| Gate | InDesign | `Gate/README.md` | EventBus、Army、Bullet、ObstacleManager、GateSpawnRequest；消费 LevelManager 传入的 Gate delta |
+| Prop | InDesign | `Prop/README.md` | EventBus、Army、Bullet、ObstacleManager、IPropConfigProvider；消费 LevelManager 传入的 Gate delta |
+| Obstacle | InDesign | `Obstacle/README.md` | IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level |
+| Monster | InDesign | `Monster/README.md` | Level、Bullet、Army、EventBus、IEnemyConfigProvider、PoolService |
+| Bullet | Planned | `Bullet/README.md` | Level、IBulletConfigProvider、PoolService、IBulletHittable |
 | Level | InDesign | `Level/README.md` | GameStateService、TimeService、Spawn、Monster、Army、BulletManager、ObstacleManager、InputGate、EventBus |
-| Spawn | Planned | `Spawn/README.md` | LevelConfig、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
-| UI | Planned | `UI/README.md` | EventBus、GameStateService |
+| Spawn | Planned | `Spawn/README.md` | LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
+| UI | HUD Deferred / Input UI ContractReady | `UI/README.md` | HUD 后续依赖 EventBus、GameStateService；首轮只实现 Input UI |
 | AudioVFX | Audio Deferred / VFX Planned | `AudioVFX/README.md` | VFX：EventBus、PoolService；Audio：后续另行设计 |
 | Input | ContractReady | `Input/README.md` | IHorizontalInputReceiver、UGUI EventSystem、Level；由 Gameplay 场景装配控制启停与逐帧 Tick |
 

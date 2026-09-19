@@ -27,16 +27,16 @@
 | 启动与装配 | ContractReady | `01_Architecture/BootstrapAndComposition.md` |
 | 应用流程 | ContractReady | `01_Architecture/ApplicationFlow.md` |
 | 时间系统 | ContractReady | `01_Architecture/TimeSystem.md` |
-| 对象池 | InDesign | `01_Architecture/PoolSystem.md` |
+| 对象池 | ContractReady | `01_Architecture/PoolSystem.md` |
 | 军队 | InDesign | `02_Modules/Army/README.md` |
 | Gate 门 | InDesign | `02_Modules/Gate/README.md` |
 | Prop 道具 | InDesign | `02_Modules/Prop/README.md` |
 | Obstacle 道路对象管理 | InDesign | `02_Modules/Obstacle/README.md` |
 | 怪物 | InDesign | `02_Modules/Monster/README.md` |
 | 子弹 | Planned | `02_Modules/Bullet/README.md` |
-| 关卡 | Planned | `02_Modules/Level/README.md` |
+| 关卡 | InDesign | `02_Modules/Level/README.md` |
 | 生成与对象池 | Planned | `02_Modules/Spawn/README.md` |
-| UI | Planned | `02_Modules/UI/README.md` |
+| UI | HUD Deferred / Input UI ContractReady | `02_Modules/UI/README.md` |
 | 音频与特效 | Audio Deferred / VFX Planned | `02_Modules/AudioVFX/README.md` |
 | 输入 | ContractReady | `02_Modules/Input/README.md` |
 

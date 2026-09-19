@@ -15,8 +15,9 @@
 
 | 逻辑程序集 | 职责 | 允许的引用 |
 |---|---|---|
-| `Game.Contracts` | 跨程序集公共接口、事件载荷、DTO 和稳定 ID；不放置具体运行时实现 | 尽量无 Unity 依赖；不引用其他项目程序集 |
-| `Game.Foundation` | 时间、事件、配置、应用状态、场景和对象池等全局基础能力 | `Game.Contracts` |
+| `Game.Contracts` | 跨程序集公共接口、事件载荷、不可变运行时快照、DTO 和稳定 ID；不放置具体运行时实现或配置资产 | 尽量无 Unity 依赖；不引用其他项目程序集 |
+| `Game.ConfigGenerated` | Luban 自动生成的 `cfg.Tables`、表行和容器类型；只作为配置实现细节 | 不引用 Gameplay、Presentation 或 Composition |
+| `Game.Foundation` | 时间、事件、配置资产与转换、应用状态、场景和对象池等全局基础能力 | `Game.Contracts`、`Game.ConfigGenerated` |
 | `Game.Gameplay` | Army、Gate、Prop、Monster、Bullet、Level、Spawn 和 Obstacle 等核心玩法 | `Game.Contracts`、`Game.Foundation` |
 | `Game.Presentation` | UI、摄像机、音效和特效 | `Game.Contracts`、`Game.Gameplay`；不得让玩法层反向引用本程序集 |
 | `Game.Composition` | 在最外层创建实现、完成注入与场景绑定 | 可引用上述所有程序集；不承担玩法规则 |
@@ -27,6 +28,7 @@ Game.Composition
         ├──→ Game.Presentation ──→ Game.Gameplay ──→ Game.Foundation
         ├──→ Game.Gameplay
         └──→ Game.Foundation
+                                  └──→ Game.ConfigGenerated
 
 Game.Contracts 可被各层引用，但不引用各层具体实现。
 ```
@@ -36,6 +38,26 @@ Game.Contracts 可被各层引用，但不引用各层具体实现。
 全局服务由 Composition 创建为应用级唯一实例，再以最小接口注入消费者。程序集边界不通过静态 `XxxService.Instance`、运行时 `Find` 或通用 Service Locator 连接；否则依赖会绕过编译期引用方向和测试替代边界。场景装配入口可以集中取得服务，但只能向下分发消费者实际需要的接口。
 
 `Game.Contracts` 只收录真正跨程序集的稳定契约，并按所有模块维护命名空间和文档归属，不作为无归属类型的“杂项”程序集。
+
+## LevelConfig 资产与快照边界
+
+`LevelConfig` 是 Unity `ScriptableObject` 编辑资产，不是公共运行时契约。它与 `LevelCatalog`、三类可序列化生成条目结构、具体 `ConfigService` 一并放入 `Game.Foundation`。`Game.Contracts` 只定义不可变的 `LevelConfigSnapshot` 和三类生成条目快照；`Game.Gameplay`、`ISceneService` 与场景入口只传递快照。
+
+`IConfigService` 是查询接口，不包含 `LevelCatalog`、`cfg.Tables`、`IResourceRegistry` 等具体初始化参数。最外层 `Game.Composition` 可以引用 Foundation 实现和 `Game.ConfigGenerated`，并在启动时直接调用具体 `ConfigService.Initialize(...)`，随后只向消费者分发 `IConfigService` 或更小的类型化 Provider。由此避免 Contracts/Foundation 为取得 `LevelConfig` 而反向引用 Gameplay，也避免 Luban 生成类型泄漏到 Contracts 或 Gameplay。
+
+建议文件归属：
+
+```text
+Assets/Scripts/Game/Contracts/Configuration/LevelConfigSnapshot.cs
+Assets/Generated/Game.ConfigGenerated.asmdef
+Assets/Scripts/Game/Foundation/Configuration/LevelCatalog.cs
+Assets/Scripts/Game/Foundation/Configuration/LevelConfig.cs
+Assets/Scripts/Game/Foundation/Configuration/LevelSpawnEntries.cs
+Assets/Scripts/Game/Foundation/Configuration/ConfigService.cs
+Assets/Scripts/Game/Gameplay/Level/LevelManager.cs
+```
+
+`Assets/Generated/Game.ConfigGenerated.asmdef` 是生成输出目录的稳定程序集边界，不修改其中自动生成的 `.cs`。若 Luban 生成流程会清空整个目录，则应把 asmdef 纳入生成源或生成脚本复制步骤，不能在每次生成后手工修补。
 
 ## 通信方式
 
@@ -64,6 +86,9 @@ Game.Contracts 可被各层引用，但不引用各层具体实现。
 
 - 不存在循环程序集引用。
 - `Game.Foundation` 不引用 `Game.Gameplay`、`Game.Presentation` 或其具体类。
+- `Game.Contracts` 和公共接口不引用 `LevelConfig`、Luban 生成类型或其他 Foundation/Gameplay 具体类型。
+- `Game.ConfigGenerated` 不引用任何 Gameplay/Presentation/Composition 类型；Luban 生成类型只允许被 Foundation 配置实现与 Composition 启动装配使用。
+- Gameplay 关卡启动链只消费 `LevelConfigSnapshot`；Composition 仅在装配阶段调用具体 ConfigService 初始化入口。
 - `Game.Gameplay` 不引用 `Game.Presentation` 或其具体类。
 - 必须的反向能力通过依赖倒置接口注入，不使用请求型事件伪装同步调用。
 - 玩法在无 UI、音效和特效订阅者时仍能完成正确结算。
@@ -77,3 +102,4 @@ Game.Contracts 可被各层引用，但不引用各层具体实现。
 - [ADR-024：分层依赖方向与旁路扩展](../06_Decisions/ADR-024-LayerDependencyDirection.md)
 - [ADR-025：场景层级与运行时职责命名](../06_Decisions/ADR-025-SceneHierarchyAndRuntimeRoleNaming.md)
 - [ADR-026：程序集边界与跨层通信](../06_Decisions/ADR-026-AssemblyBoundariesAndCommunication.md)
+- [ADR-042：以 LevelConfigSnapshot 闭合程序集依赖](../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md)

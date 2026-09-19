@@ -4,16 +4,20 @@
 
 - ID：`MOD-UI`
 - 层级：Presentation
-- 状态：`Planned`
+- 状态：HUD `Deferred`；Input UI `ContractReady`
 - 依赖：EventBus、GameStateService
 
-## 职责
+## 首轮工程切片
+
+首轮只创建 Input 模块所需的 Gameplay Canvas、GraphicRaycaster、EventSystem 和 `PF_UI_TouchDragArea`。不创建 Army 人数、关卡计时、生成进度、胜负或重开 HUD；玩法状态先通过 Gate 调试文本、结构化日志、Inspector 和自动化测试验证。
+
+## 后续 HUD 职责
 
 - 显示军队总人数、激活槽位数（可选显示各槽位代表人数）、加法门数字、元素门 HP 与 HP 清空后的可兑换额外伤害/持续时间、敌人生成/击杀进度和关卡计时。
 - 显示胜利、失败和重开界面；暂停界面属于后续扩展。
 - 监听状态和数值事件。
 
-当前 MVP 不要求实现 MainMenu、LevelSelect 或结果界面的实际交互；这些界面先由应用流程状态和 RealTime 自动跳过计时表示。`Victory`、`GameOver` 事件保留给后续结果反馈使用。
+当前首轮切片不要求实现 MainMenu、LevelSelect、HUD 或结果界面的实际交互；这些页面先由应用流程状态和 RealTime 自动跳过计时表示。`Victory`、`GameOver` 事件保留给后续结果反馈使用。
 
 ## 约束
 

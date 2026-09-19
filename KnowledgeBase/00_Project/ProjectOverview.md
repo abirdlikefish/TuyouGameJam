@@ -59,26 +59,35 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 
 - 首版只使用一个关卡和一个 `LevelConfig` ScriptableObject；`unlockedLevelIds` 仅记录通关后应解锁的关卡 ID，当前不实现下一关跳转。
 - Gameplay 当前只实现指定 UI 区域内的相对横向拖动；设备触屏与 Editor 左键共用 UGUI Pointer 路径，键盘/手柄延后。拖拽只消费相邻采样点的水平差，手指或鼠标停止移动时输入立即归零；原始归一化滑动速度先限制到 `[-1,1]`，再乘 `PF_UI_TouchDragArea` Inspector 中默认值为 `1` 的灵敏度系数。
-- 道路使用 LevelConfig 中唯一的世界坐标 `roadBounds`，宽高与四边由它派生；道路不设置玩法 Collider。ArmyRoot 每局从世界原点开始，共用出生横线 `spawnY` 由关卡道路配置提供。
+- 道路使用 LevelConfig 中唯一的世界坐标 `roadBounds`，启动时复制到不可变 LevelConfigSnapshot，宽高与四边由它派生；道路不设置玩法 Collider。ArmyRoot 每局从世界原点开始，共用出生横线 `spawnY` 由关卡道路配置提供。
 - 每条敌人、Gate、Prop 生成项都配置 `[0, 1]` 范围内的 `spawnPosition`：`0` 对应道路最左边，`1` 对应道路最右边，中间值线性映射为世界坐标 `x`。
 - 出生坐标以对象中心点计算，不考虑敌人、门或道具的尺寸；`spawnPosition` 只决定初始位置。敌人随后先垂直向下移动，到达关卡接近线后再向最近的有效士兵槽位移动。
 - 敌人、Gate、Prop 分别使用按本局开始时间计时的生成列表，不使用波次概念。
 - 当所有敌人生成项都已处理且 `AliveEnemyCount == 0` 时胜利；敌人死亡动画尚未回收不影响该条件，符合 EnemyManager 的存活统计规则。
+- Victory 会立即结束当前会话，不等待 Gate/Prop 时间轴派发完成，也不等待仍在道路上的 Gate/Prop 接触或离场；未来条目停止生成，活动道路对象在 StopRun 中清理。这是当前预期规则，不属于内容丢失。
 - 当 Army 总人数小于等于 0 时失败。同一帧同时满足“最后一个敌人死亡”和“Army 归零”时，失败优先。
 - 初始化成功后同步加载 MainMenuScene，固定入口 Ready 后进入主界面并使用 RealTime 等待 1 秒；随后异步卸载旧场景、同步加载 LevelSelectScene，入口 Ready 后进入选关并再等待 1 秒。
 - 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并同步加载 LevelSelectScene；入口 Ready 后再次等待 RealTime 1 秒并开始唯一的当前关卡。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
-- 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
+- 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。槽位激活或实际换武器后等待一个完整 FireInterval，每槽每逻辑帧最多发射一颗且不追赶补发。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
+- SpawnY、EnemyApproachY、DespawnY 与子弹 `roadBounds.yMax` 离场阈值都按实例根 GameObject 中心判断；Army 横向边界仍使用激活槽位合并 AABB。
 - 加法门数字可以为负数；每次有效子弹命中按本次实际伤害累加，不按命中次数使用固定增量。
 - 非负加法门增加人数并受 ArmyCountLimit 限制；负数门请求 Army 按等价单兵 HP 伤害执行减员，标记失败但仍只结算一次。
 - 元素门的 `ElementType` 与 `MaxHp` 逐生成项配置在 `LevelConfig`；HP 清空后的额外伤害乘关卡级系数得到元素持续时间，当前不设置上限。HP 为零且仍处于待接触状态时继续作为合法子弹目标并消耗子弹；未清空时接触会伤害每个接触槽位，永久锁定奖励并继续离场。
 - 道具未击破接触时对每个接触槽位造成相同伤害；接触前击破则触发一次配置的击破效果。当前 MVP 的三种武器箱按 `WeaponId` 更新武器，其他效果及组合规则仍在设计待决中。
-- 门和道具的接触判定只执行一次；未接触时允许直接从道路下方离场。
+- 门和道具在移动并同步后只对终点姿态执行一次 Overlap 接触查询，不做接触 Cast；未接触时允许直接从道路下方离场。
 - 怪物不通过到达道路底部扣除军队人数；首版按 ADR-005 在接近线后向 Army 接近并攻击。
-- 所有参与命中、接触、受击或阻挡的玩法对象（包括子弹）使用 Inspector 绑定的 `Collider2D`；LevelManager 集中读取各时间域 delta，并按移动、子弹、道路接触、敌人攻击、回收和终局的顺序同步驱动对应 Manager，核心结算使用显式 Cast/Overlap 查询。
+- 所有参与命中、接触、受击或阻挡的玩法对象（包括子弹）使用 Inspector 绑定的 `Collider2D`；LevelManager 集中读取各时间域 delta，并按移动、子弹、道路接触、敌人攻击、回收和终局的顺序同步驱动对应 Manager。子弹与敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap。
 - 存活敌人的身体 Collider 互相阻挡。前方敌人较慢或静止时，后方敌人在安全距离排队等待；首版不实现侧向绕行。
+- 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
+- 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
+- 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
+- 首轮表现只要求占位 Sprite 和 Gate 单个调试文本；Gameplay Canvas 只保留拖拽输入所需组件，不实现 HUD。正式 Gate 表现、HUD、动画和 VFX 后续迭代。
+- Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
 
 ## 非目标
 
 本阶段不包含联网、账号、支付、广告、在线排行榜、得分系统、本地进度存档、设置持久化、声音、暂停、减速、局部时停、通用调试服务和复杂养成系统。`unlockedLevelIds` 只作为当前关卡结果数据，不写入玩家存档。
+
+正式 HUD、胜负面板和 Gate 最终美术同样不属于首轮玩法验证切片；调试文本、结构化日志和测试负责提供验证反馈。

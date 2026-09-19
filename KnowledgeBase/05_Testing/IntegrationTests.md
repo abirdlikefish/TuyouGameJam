@@ -4,7 +4,8 @@
 
 - [ ] BootstrapScene 常驻；MainMenuScene、LevelSelectScene、GameplayScene 都在 Build Settings 中，并按固定根名称各有且只有一个对应 SceneEntry。
 - [ ] 服务完成 Create、Connect 且应用级事件订阅完成后才进入 Start；ConfigService Ready 前不得请求任何应用场景。
-- [ ] 初始化成功后请求同步 Additive 加载 MainMenuScene；只有 MainMenuSceneEntry 初始化并发布 `AppSceneReady(MainMenu)` 后才进入 MainMenu。初始化失败时保持 `Initializing`。
+- [ ] 配置初始化成功后请求同步 Additive 加载 MainMenuScene；只有 MainMenuSceneEntry 初始化并发布 `AppSceneReady(MainMenu)` 后才进入 MainMenu。配置数据失败时直接退出应用；MainMenu 场景加载或 Entry 装配失败时不得进入 MainMenu。
+- [ ] 配置数据非法时日志包含稳定来源、字段或条目索引并立即退出应用；Prefab、Collider、Layer 或必需 Inspector 引用非法时日志包含对象路径并阻止对应 Ready。两者都不使用默认值、自动补组件、降级或重试继续运行。
 - [ ] MainMenu 的 RealTime 1 秒计时从 Scene Ready 后开始；到期后只请求一次 LevelSelect 切换，旧场景异步卸载完成前不加载目标场景。
 - [ ] LevelSelectSceneEntry Ready 后才进入 LevelSelect、选择目录中有效且可选的唯一 `LevelId`，并启动新的 RealTime 1 秒计时。
 - [ ] LevelSelect 计时结束后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 同步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
@@ -26,7 +27,7 @@
 - [ ] Gameplay 场景装配入口只向 LevelManager、ArmyController、BulletManager、EnemyManager、ObstacleManager 等消费者注入其实际需要的最小接口。
 - [ ] Bullet、Monster、Gate 和 Prop 等池对象不访问全局服务集合；对应 Manager 在复用时传入本局配置快照、`LevelRunId`、`RuntimeInstanceId` 和必要回调。
 - [ ] Input Adapter 只存在于 Gameplay 场景，在 Playing 阶段启用，不创建跨场景 `InputService`，也不注入或查询 TimeService；LevelManager 读取本帧 `RealTime` delta 并作为 `unscaledDeltaTime` 传给输入 Tick，Input 不直接读取 Unity `Time`。
-- [ ] 除 Bootstrap/Config 的过渡加载边界外，模块不直接访问 `LubanTables.Instance`；Army 只经注入的 `IArmyConfigProvider`、`IWeaponConfigProvider` 取得不可变快照，其他运行时配置查询经 `IConfigService` 或后续定案的最小类型化 Provider。
+- [ ] 除 Bootstrap/Config 的过渡加载边界外，模块不直接访问 `LubanTables.Instance`；Army 只经 Army/Weapon Provider、BulletManager 只经 Bullet Provider、EnemyManager 只经 Enemy Provider、ObstacleManager 只经 Prop Provider 取得不可变快照，任何 Gameplay 模块都不接收完整 Tables。
 
 ## 输入
 
@@ -68,16 +69,24 @@
 - [ ] 新增人数优先补充受击后人数较少或为空的槽位。
 - [ ] 槽位聚合 HP 按 `HpPerSoldier` 计算，伤害按比例转换为槽位人数损失。
 - [ ] 每个激活槽位从独立发射点按同一武器间隔发射一枚子弹；改变代表人数不改变单次发射数量、伤害或速度。
+- [ ] 本局初始激活槽位、运行中新激活槽位和失活后重新激活的槽位均等待完整 `FireInterval` 后首发。
+- [ ] 实际切换到不同 WeaponId 后全部激活槽位按新武器完整间隔重置；重复当前 WeaponId 不重置。
+- [ ] 单个逻辑帧每槽最多生成一颗子弹；delta 跨过多个 FireInterval 时不补发历史子弹。
 - [ ] 每局初始武器为 WeaponId=0，火/冰/雷剩余时间均为 0；三元素可以同时有效并从 Gameplay delta 扣减到不小于 0。
 - [ ] 子弹保存发射瞬间的 WeaponId 与 ElementMask；Army 后续换武器、获得元素或元素过期不修改飞行中的子弹。
 - [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
 - [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
 - [ ] 三类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。
 - [ ] 子弹、敌人 BodyCollider、Elite/Boss AttackCollider、Army 槽位、Gate 和 Prop 的 Prefab 均配置职责明确的 Collider2D 和 Layer。
-- [ ] 子弹沿上一位置到期望位置执行 Collider Cast，高速或掉帧时不穿透敌人、Gate 或 Prop，且一次命中只结算一次。
+- [ ] 子弹沿上一位置到期望位置执行 Collider Cast，在 MVP 约定速度、Collider 尺寸和测试帧率范围内稳定命中且一次只结算一次；不测试双方任意高速相对运动或严重掉帧下的绝对不穿透。
 - [ ] 精英/Boss 的 AttackCollider 只在攻击判定帧执行一次显式重叠查询，每个 Army 槽位最多受击一次。
-- [ ] Gate/Prop 与 Army 的接触通过显式查询完成，接触状态和运行时 ID 保证一次性结算。
-- [ ] 存活敌人的 BodyCollider 不重叠；前方敌人较慢或静止时，后方敌人在安全间距等待且不会推动前方敌人。
+- [ ] 三种敌人的非循环 Attack Clip 在命中关键帧恰好调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；AnimationEvent 不直接修改 Army，实际伤害只在 `EnemyManager.ResolveAttacks` 中发生。
+- [ ] AttackCooldown 从每次攻击开始时刻计算且在攻击动画期间继续递减；动画结束时若已到期，下一次 EnemyManager.TickMovement 重新验证成功后立即起攻，不由动画回调直接递归起攻。
+- [ ] 三种非循环 Death Clip 末帧恰好调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期回调不重复计数、发布 MonsterKilled 或归还对象池，StopRun 不等待动画。
+- [ ] 同一 AttackSequenceId 的重复关键帧事件只登记一次；事件前目标失效、事件后但结算前死亡、StopRun 或回池都会使待结算请求无效。
+- [ ] AnimationEvent 在当帧 ResolveAttacks 之后触发时，请求安全保留到下一次 ResolveAttacks，且不会因为跨帧而重复结算。
+- [ ] Gate/Prop 在移动并同步 Transform 后只以终点姿态执行一次 `OverlapCollider`；不执行接触 Cast/扫掠，接触状态和运行时 ID 保证一次性结算。
+- [ ] 三种敌人 Prefab 各自提供有限且非负的 `blockingGap`；存活敌人的 BodyCollider 不重叠，前方敌人较慢或静止时，后方敌人按自身 Prefab 间距等待且不会推动前方敌人。
 - [ ] Monster 移动不查询 `ArmySlot`，Army 横向移动不查询 `EnemyBody`；士兵与敌人部分或完全重合时不发生推挤、接触伤害或位移修正。
 - [ ] 士兵与敌人重合且目标仍有效时，普通敌人可以对锁定槽位结算伤害，精英/Boss 可以通过 `AttackCollider` 正常命中范围内槽位。
 - [ ] 敌人进入 Dead 后退出受击和阻挡查询；死亡动画不会阻塞后方敌人。
@@ -88,8 +97,11 @@
 - [ ] ArmyRoot 每局准确重置到世界原点并保持 y=0；无道路 Collider 时仍能用槽位合并 AABB 完成左右限位。
 - [ ] 多个槽位同时接触同一门时只应用一次门接触结果。
 - [ ] `ObstacleManager` 能登记、查询、注销和回收 Gate/Prop，且相同生成参数的多个 Gate 或相同配置的多个 Prop 拥有不同运行时 ID。
+- [ ] Gate/Prop 根中心 `y <= DespawnY` 时离场，Collider/Renderer 尺寸不改变阈值；离场对象不再结算接触。
+- [ ] 子弹根中心严格大于 `roadBounds.yMax` 时回收；等于上边界时不因 Sprite 或 Collider 边缘提前回收。
 - [ ] 军队人数为 0 时进入 GameOver。
 - [ ] 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后进入 Victory。
+- [ ] Victory 不等待 Gate/Prop 时间轴或活动实例完成；未来 Gate/Prop 停止生成，活动对象在 StopRun 中回收，且不会补发接触、击破或奖励效果。
 - [ ] Victory 携带当前关卡 ID 和配置中的 `unlockedLevelIds`。
 - [ ] Victory 的 `unlockedLevelIds` 只作为本局结果传递，不创建或修改本地存档。
 - [ ] Army 归零后进入 GameOver。
@@ -114,10 +126,15 @@
 
 - [ ] 初始化阶段可以加载 `LevelCatalog`、Luban `cfg.Tables` 和资源注册表，不依赖 Gameplay 场景。
 - [ ] `LevelCatalog` 中每个引用的 `LevelConfig.levelId` 唯一，第一关默认解锁且存在有效引用。
-- [ ] LevelSelect 选定 `LevelId` 后，ConfigService 返回已校验的 `LevelConfig`；SceneService 不重复查询配置，并将同一关卡 ID、配置引用和新的 `LevelRunId` 传入 Gameplay。
-- [ ] 配置目录、关卡配置或共享表加载失败时发布错误并阻止进入 Gameplay。
+- [ ] LevelSelect 选定 `LevelId` 后，ConfigService 返回已校验的 `LevelConfigSnapshot`；SceneService 不重复查询配置，并将同一关卡 ID、快照和新的 `LevelRunId` 传入 Gameplay。
+- [ ] ConfigService 启动时完整校验目录内全部 LevelConfig、五类表的主键/枚举/数值和当前跨表引用，并复制为关卡快照及五类数值快照字典；运行中修改资产不能改变当前快照。
+- [ ] `IConfigService` 只包含查询，不暴露 `Initialize`、LevelConfig 资产或 `cfg.Tables`；Composition 直接初始化 Foundation 的具体 ConfigService，Contracts/Foundation 不引用 Gameplay。
+- [ ] Luban 生成代码编入 `Game.ConfigGenerated`；它不引用领域层，生成类型只被 Foundation 配置实现和 Composition 装配使用，Contracts/Gameplay/Presentation 的接口不出现 `cfg.*`。
+- [ ] Army、Weapon、Bullet、Enemy、Prop Provider 只在 Ready 后接受已校验 ID；相同 ID 重复查询返回相同值语义的快照，不暴露 Luban 生成行或可变集合。
+- [ ] 任一 Luban 表、LevelCatalog、LevelConfig 或已确认引用错误时只输出首个包含 `ConfigErrorCode`、稳定来源、字段或条目索引和原因的 `Debug.LogError`，ConfigService 进入 Failed，Player 退出、Editor 停止 Play Mode；不发布配置恢复事件、不重试、不继续加载 MainMenu。
+- [ ] Gameplay Manager 不为缺失配置编写第二套 `TryGet`、默认值、日志或 StopRun 恢复分支；非 Ready 查询或未登记 ID 直接暴露为程序不变量异常。
 - [ ] `LevelConfig` 引用的敌人和 Prop 配置 ID 全部存在；Gate 生成项不含 ConfigId，并按类型正确填写 InitialValue，或 ElementType 与 MaxHp；EnemyManager 的三个敌人规范 Prefab、ObstacleManager 的 Gate/Prop 规范 Prefab、BulletManager 的子弹规范 Prefab、阵型槽位和发射点绑定完整。
-- [ ] `enemySpawns` 为空时返回 `InvalidLevelConfig` 并阻止进入 Gameplay；`gateSpawns` 或 `propSpawns` 为空仍可正常加载。
+- [ ] `enemySpawns` 为空时报告 `InvalidLevelConfig` 并退出应用；`gateSpawns` 或 `propSpawns` 为空仍可正常完成配置初始化。
 - [ ] 当前不存在 `TbGate` 或 Gate 配置 Provider；包含元素门时 `elementDurationSecondsPerDamage` 有限且大于 0，不包含元素门时为 0；`TbProp` 的生命值、伤害及武器引用符合配置契约。
 - [ ] `TbArmy.Id=1` 和固定 `TbWeapon.Id=0/1/2` 均存在，`TbWeapon.BulletId` 引用有效；当前不建立 TbElement，缺失必需行或引用时启动失败。
 - [ ] `TbArmy.ArmyCountLimit = 0` 时不限制人数，大于 0 时正确应用上限；初始人数始终为固定值 1。
@@ -127,12 +144,14 @@
 - [ ] 缺少必需的 Unity Prefab、Collider2D、阵型槽位或发射点绑定时阻止进入 Gameplay，并报告稳定来源。
 - [ ] `NormalMonster`、`EliteMonster`、`BossMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
 - [ ] AdditiveGate Prefab 只提供所有加法门共用的速度；ElementGate Prefab 提供所有元素门共用的速度与接触伤害。逐门初始数字、元素类型和 MaxHp 不重复配置在 Prefab。
+- [ ] AdditiveGate 和 ElementGate 各自只用一个显式绑定的 TMP_Text 显示已结算状态；缺失文本引用时阻止 Gameplay Ready，首轮不依赖 HUD 或最终 Gate 美术。
+- [ ] Normal/Elite/Boss 的阻挡间距只来自各自 Prefab 的 `blockingGap`，不在 TbEnemy 或 LevelConfig 保存第二份数值。
 - [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。
-- [ ] `roadBounds.yMin <= despawnY < 0 < enemyApproachY < spawnY <= roadBounds.yMax`；无效 Rect、未包含原点或 Y 线顺序错误时返回 `InvalidLevelConfig`。
+- [ ] `roadBounds.yMin <= despawnY < 0 < enemyApproachY < spawnY <= roadBounds.yMax`；无效 Rect、未包含原点或 Y 线顺序错误时报告 `InvalidLevelConfig` 并退出应用。
 - [ ] 相同 `spawnPosition` 的不同尺寸敌人、Gate 和 Prop 使用相同中心点坐标，不按碰撞体或渲染尺寸内缩。
-- [ ] 任一生成项的 `spawnPosition` 越界、为 NaN 或无穷值时返回 `InvalidLevelConfig` 并阻止进入 Gameplay。
+- [ ] 任一生成项的 `spawnPosition` 越界、为 NaN 或无穷值时报告 `InvalidLevelConfig` 并退出应用。
 - [ ] 配置源不被运行时人数、生命值、门数字、道具 HP、生成游标或关卡计时覆盖。
 
 ## Spawn 与公共契约
@@ -140,7 +159,7 @@
 - [ ] 三个时间轴游标只存在于 SpawnManager，LevelManager 不直接访问生成列表。
 - [ ] LevelManager 每帧传入当前 `LevelRunId` 和 `elapsedTime`，生成条目只消费一次；过期会话的 Tick 不会推进新会话。
 - [ ] 进入 Playing 时先执行一次 `SpawnManager.Tick(LevelRunId, 0)`；时间为 0 的生成项在首帧移动前只出现一次。
-- [ ] 终局后 SpawnManager 停止消费；新会话只调用一次 `StartRun(LevelConfig, RoadLayoutSnapshot, LevelRunId)`，并重置全部游标。
+- [ ] 终局后 SpawnManager 停止消费；Victory 允许 Gate/Prop 游标尚未结束并直接截断；新会话只调用一次 `StartRun(LevelConfigSnapshot, RoadLayoutSnapshot, LevelRunId)`，并重置全部游标。
 - [ ] 过期 `LevelRunId` 的生成请求、管理器操作和结果事件不会影响新会话。
 - [ ] Config、Scene、Spawn、Enemy、Obstacle、EventBus、Time 和 Pool 接口均有明确输入、输出和失败语义；Pool 遵守 ADR-031 的类型身份、重复归还、业务重置和防御性失活契约。
 

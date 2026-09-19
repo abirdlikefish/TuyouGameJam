@@ -18,9 +18,9 @@
 | Bullet | `BodyCollider` | 子弹飞行扫掠 | Collider Cast / CircleCast | Enemy、Gate、Prop 的受击 Collider |
 | Monster | `BodyCollider` | 子弹受击、敌人间阻挡 | Bullet Cast、Monster Body Cast | Bullet、其他存活 Monster |
 | Monster | `AttackCollider` | 精英/Boss 范围攻击 | 判定帧 `OverlapCollider` | Army `SlotCollider` |
-| Army Slot | `SlotCollider` | 接收攻击和道路对象接触 | Monster Attack、Gate/Prop Cast/Overlap | Monster `AttackCollider`、Gate、Prop |
-| Gate | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Gate Cast/Overlap | Bullet、Army Slot |
-| Prop | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Prop Cast/Overlap | Bullet、Army Slot |
+| Army Slot | `SlotCollider` | 接收攻击和道路对象接触 | Monster Attack、Gate/Prop 终点 Overlap | Monster `AttackCollider`、Gate、Prop |
+| Gate | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Gate `OverlapCollider` | Bullet、Army Slot |
+| Prop | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Prop `OverlapCollider` | Bullet、Army Slot |
 
 道路四边、生成线、接近线和离场线全部来自 `RoadLayoutSnapshot` 的数值；道路不设置玩法 Collider。ArmyRoot 从世界原点开始，其激活槽位合并 AABB 使用 LeftBoundary/RightBoundary 做横向限制。
 
@@ -54,11 +54,12 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 - 元素门 HP 归零后，只要仍处于 `Pending`，就继续作为合法子弹目标并消费子弹；该次全部伤害计入 `PostDepletionDamage`。接触失败后奖励永久锁定，后续命中不得增加可兑换的 `PostDepletionDamage`。
 - `AttackCollider`、其他 Bullet 和 Army `SlotCollider` 不属于首版子弹目标。
 - 飞行中 Army 的武器、元素或人数变化不修改已经生成的子弹快照。
+- 首轮只扫掠子弹自身从上一逻辑位置到期望位置的位移，不计算子弹与本帧同时移动目标的相对扫掠，也不做子步进。MVP 通过合理的速度、Collider 尺寸、编排和目标帧率避免穿透；测试不承诺任意高速或严重掉帧下绝不穿透。
 
 ## 敌人阻挡
 
 - 只有存活且已注册的 Monster `BodyCollider` 参与敌人间阻挡。
-- 敌人主动移动前沿期望位移 Cast；检测到前方敌人时，将位移截断到配置或 Prefab 定义的安全间距。
+- 敌人主动移动前沿期望位移 Cast；检测到前方敌人时，将位移截断到当前敌人规范 Prefab 根脚本序列化的 `blockingGap`。该值必须有限且非负，不进入 Luban 或 LevelConfig。
 - 前方敌人的速度较慢或为 0 时仍保持阻挡；后方敌人不得推动、穿透或与其重叠。
 - 两侧绕行不属于 MVP。当前没有可直接前进的安全位移时，后方敌人保持等待；阻挡解除后继续原移动状态。
 - 敌人进入 `Dead` 后立即禁用玩法 BodyCollider 或将其移出受击/阻挡查询 Layer。
@@ -73,7 +74,8 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 
 ## 范围攻击与道路对象接触
 
-- `AttackCollider` 只在攻击判定时用于一次显式重叠查询。同一攻击以攻击序号和 `SlotIndex` 去重。
+- Animator Attack Clip 的命中关键帧只登记当前 AttackSequenceId 的攻击请求；`AttackCollider` 只在 EnemyManager.ResolveAttacks 消费该请求时用于一次显式重叠查询。同一攻击以攻击序号和 `SlotIndex` 去重。Collider 可以保持启用作为查询形状，但自动碰撞矩阵关闭，不通过启停 Collider 决定攻击窗口。
+- Gate/Prop 在本帧位移已经应用且 `Physics2D.SyncTransforms()` 完成后，只以终点姿态执行一次 `BodyCollider.OverlapCollider`。不对移动路径执行 Cast、扫掠或子步进；合理速度、Collider 尺寸与目标帧率是 MVP 的防穿透约束。
 - Gate/Prop 只对当前查询命中的有效 Army 槽位结算。多个槽位接触同一对象时，整体成功效果只应用一次，逐槽伤害按槽位索引去重。
 - Gate/Prop 接触失败后可以继续保留用于子弹受击表现的 BodyCollider，但接触状态机必须拒绝后续成功奖励。元素门失败后即使继续命中并最终清空 HP，也不得累计新的可兑换伤害或发放元素持续时间。
 - MVP 不实现暂停或局部时停。未来启用后需要重新确认停止对象的 Collider2D 是否仍可被其他活动对象查询，以及暂停与受击判定的关系。
@@ -92,6 +94,8 @@ Prop
 ```
 
 Layer 只负责过滤候选目标，不替代模块状态检查。道路左右边界、生成线、接近线和离场线均使用数值，不建立 Collider 或 Layer。
+
+所有纵向数值线以池化实例根 GameObject 的 `transform.position` 为准：出生使用中心落在 `SpawnY`；怪物中心到达 `EnemyApproachY` 后切换接近 Army；Gate/Prop 中心满足 `y <= DespawnY` 时离场；子弹中心满足 `y > TopBoundary`（即 `roadBounds.yMax`）时回收。不得改用 Collider 或 Renderer 边缘。Army 横向边界使用激活槽位合并 AABB，是唯一明确例外。
 
 ## Layer Collision Matrix（DES-030）
 

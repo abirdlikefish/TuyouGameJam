@@ -4,8 +4,6 @@
 |---|---|---|---|
 | `AppFlowChanged` | GameStateService | UI | 旧状态、新状态、当前关卡 ID、当前 `LevelRunId` |
 | `LevelRunStarted` | GameStateService | LevelManager、UI | `LevelId`、`LevelRunId`；仅在匹配的 `AppSceneReady(Gameplay)` 后发布；LevelManager 收到后从 `Preparing` 进入 `Playing` |
-| `InitializationFailed` | ConfigService | GameStateService、UI | `ConfigErrorCode`、稳定来源 |
-| `LevelConfigLoadFailed` | ConfigService | GameStateService、UI | 关卡编号、`ConfigErrorCode`、稳定来源 |
 | `AppSceneReady` | SceneService | GameStateService、UI | `AppSceneId`、`LevelId`、`LevelRunId`；规范 SceneEntry 已初始化，Gameplay 的 `LevelManager.Preparing` 已完成 |
 | `AppSceneUnloaded` | SceneService | GameStateService、UI | `AppSceneId`、`LevelId`、`LevelRunId`；旧场景 Entry 已清理且异步卸载完成 |
 | `AppSceneLoadFailed` | SceneService | GameStateService、UI | 目标 `AppSceneId`、`LevelId`、`LevelRunId`、`SceneLoadErrorCode`；失败场景已清理 |
@@ -48,9 +46,11 @@
 - `AppSceneLoadFailed` 只能在失败目标场景完成清理后发布；`AppSceneUnloadFailed` 会终止本次切换，且不得继续加载目标场景。
 - Gate/Prop 报告离场或回收请求后，由 `ObstacleManager` 作为 `GateExitedRoad`、`PropExitedRoad` 和 `ObstacleRecycled` 的唯一事实发布者。
 - Monster 生命值归零后先通过 EnemyManager 的必执行回调完成死亡去重和 `AliveEnemyCount` 更新，再由 EnemyManager 发布 `MonsterKilled`；监听者不承担敌人注销、计数或回收。
+- `OnDeathAnimationFinished()` 是 Monster Prefab 上的本地 AnimationEvent 方法，不是 EventBus 事件。它只登记延后回收，不能再次发布 `MonsterKilled` 或改变死亡计数。
 - `ArmyReachedZero` 和 `MonsterKilled` 不驱动 LevelManager 即时终局；LevelManager 在 ADR-033 的攻击和回收阶段之后统一查询权威状态，保证同帧失败优先级。
 - MVP 所有包含 Army 身份的事件使用固定 `ArmyId = 1`；多 Army 扩展前必须更新契约。
 - 元素剩余时间不通过 EventBus 每帧广播；只在成功增加持续时间和从有效变为过期时发布事实。子弹、受击和击杀事实使用发射瞬间不可变的 `ElementMask`。
+- 配置或必需资源校验失败不通过 EventBus 建立恢复流程。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 输出首个稳定错误并立即退出应用；Prefab、Collider、Layer 或 Inspector 装配错误由 GlobalBootstrap 或 GameplaySceneEntry 输出错误并阻止对应 Ready。
 - MVP 完全无声音且不初始化 DebugService；事件目录不把 Audio 或通用调试服务列为当前监听者。未来表现模块仍可在不改变核心结果的前提下订阅既有事实事件。
 - 暂停、减速和局部时停延后，当前事件目录不定义 `GamePaused` 或 `GameResumed`。
 

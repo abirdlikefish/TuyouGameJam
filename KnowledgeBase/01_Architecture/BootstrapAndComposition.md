@@ -67,15 +67,16 @@ Start
 └── GameStateService.NotifyInitializationReady()，由它请求切换 MainMenuScene
 ```
 
-具体 `LevelConfig` 不在全局初始化时绑定；它在 LevelSelect 确定关卡后由 ConfigService 返回，再经 SceneService 注入 Gameplay。
+具体 `LevelConfig` 资产在全局初始化时由 ConfigService 校验并复制为 `LevelConfigSnapshot`；LevelSelect 确定关卡后只查询快照，再经 SceneService 注入 Gameplay。`GlobalBootstrap` 直接调用具体 `ConfigService.Initialize(...)`，该初始化入口不属于 `IConfigService`。
 
 纯 C# 服务仍优先在 Create 阶段使用构造注入；Connect 只处理 SceneEntry 装配桥接等构造时尚不可闭合的跨模块依赖，不把所有服务强制改为可变的 Setter 注入。不是每个服务都必须实现统一的三阶段生命周期接口。EventBus 等没有跨服务连接需求的对象可以在构造后使用；三阶段是 Composition Root 的装配屏障。清理按 Start、Connect、Create 的逆序进行，并且只回滚本入口已完成的阶段。
 
 ## 失败与幂等
 
 - 如果发现已有有效 `GlobalRoot`，新入口不得再创建第二套服务；重复入口应停止自身初始化。
-- 任一必需 Inspector 引用、场景标识、Build Settings、配置表或资源注册项无效时，启动失败并保持应用在 `Initializing`。
-- 初始化失败后不得调用 `NotifyInitializationReady`，不得加载任何应用场景，也不得使用缺省配置继续运行。
+- Luban 表、LevelCatalog、LevelConfig 或其已确认引用无效时，ConfigService 按 ADR-041 只记录首个可定位错误并立即终止应用；不得保持一个可继续操作的错误页面或重试循环。
+- 必需 Inspector 引用、场景标识、Build Settings 或场景装配资源无效时，启动失败并阻止对应 Ready；这类装配错误不由 Gameplay Manager 使用默认值补齐。
+- 初始化失败时直接使用 `Debug.LogError` 输出稳定来源、字段或对象路径和原因；不得调用 `NotifyInitializationReady`，不得加载任何应用场景，也不得使用缺省配置、自动补组件、降级或重试继续运行。
 - 重复成功通知由 GameStateService 幂等拒绝，不能重复请求 MainMenuScene 或创建 MainMenu 定时器。
 - 已完成初始化的服务在清理时按逆序释放；只清理本入口实际创建的对象和订阅。
 - 全局服务不得长期持有已卸载 MainMenu、LevelSelect 或 Gameplay 场景对象的具体引用。
@@ -101,6 +102,7 @@ Start
 - MVP 启动层级中不存在 AudioRoot、SaveService 或 DebugService。
 - 服务初始化与清理顺序可通过 EditMode 测试或测试替代实现复现。
 - GameStateService 可以注入假的 Config、Scene、Time 和 EventBus 实现进行纯流程测试，不依赖静态全局状态。
+- 任一必需配置非法时，日志包含可定位来源且应用立即退出；任一必需绑定非法时不会进入对应 Ready。两者都不要求额外错误 UI、恢复流程或默认值。
 
 ## 关联文档
 
@@ -114,3 +116,4 @@ Start
 - `../06_Decisions/ADR-029-EventBusImplementationAndPayloads.md`
 - `../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 - `../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`
+- `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`

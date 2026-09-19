@@ -22,7 +22,7 @@ Accepted
 - `LevelConfig.unlockedLevelIds` 表示通关当前关卡后应解锁的关卡 ID，不能替代 `LevelCatalog` 的初始解锁标记。
 - `ConfigService` 初始化时加载 `LevelCatalog`、唯一的 Luban `cfg.Tables` 和 Unity 资源注册表；初始化不读取 Gameplay 场景中的 `LevelConfig`。
 - 当前版本的 LevelSelect 只根据目录中的 `initiallyUnlocked` 得到可选 `LevelId`，不读取存档。未来加入存档后再单独定案存档状态与默认解锁的合并规则，见 ADR-017。
-- 选定 `LevelId` 后，`ConfigService` 校验并返回对应 `LevelConfig`；调用方将关卡 ID、配置引用和新的 `LevelRunId` 一并交给 `SceneService`。`SceneService` 不再次查询配置，只负责加载 Gameplay 并将三者交给场景中的 `LevelManager`。
+- 选定 `LevelId` 后，`ConfigService` 返回启动阶段已校验并复制的 `LevelConfigSnapshot`；调用方将关卡 ID、快照和新的 `LevelRunId` 一并交给 `SceneService`。`SceneService` 不再次查询配置，只负责加载 Gameplay 并将三者交给场景中的 `LevelManager`。资产/快照边界由 ADR-042 修订。
 - 找不到关卡、重复 ID、空引用或配置校验失败时，流程不得自动进入 Gameplay，必须报告具体错误。
 
 ## 数据结构
@@ -58,7 +58,7 @@ GlobalBootstrap
 ## 影响
 
 - `ConfigService` 需要提供关卡目录查询、按 ID 获取配置和分层校验能力。
-- `SceneService` 需要支持将已校验的 `LevelConfig` 和 `LevelRunId` 传入 Gameplay。
+- `SceneService` 需要支持将已校验的 `LevelConfigSnapshot` 和 `LevelRunId` 传入 Gameplay。
 - `SaveService` 属于后续扩展；未来实现时不修改目录资产，存档状态与 `initiallyUnlocked` 的合并规则需另行定案。
 - 配置测试需要覆盖目录唯一性、默认解锁、选定关卡注入和失败阻断。
 

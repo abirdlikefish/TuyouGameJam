@@ -6,12 +6,12 @@
 - 层级：Gameplay
 - 状态：`InDesign`
 - 依赖：EventBus、Army、Bullet、ObstacleManager、Level
-- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`
+- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
 
 ## 职责
 
 - 控制加法门和元素门向下移动；移动流程使用 LevelManager 传给 ObstacleManager 的 `Gate` 时间域 delta，一次更新不再读取或叠加 `Gameplay` delta。
-- 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；移动后通过显式 Cast/Overlap 查询，不依赖自动碰撞回调。
+- 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；本帧移动与 Physics2D 同步完成后只对终点姿态执行一次 `OverlapCollider`，不做接触 Cast、扫掠或子步进，也不依赖自动碰撞回调。
 - 保存门的运行时数字、HP、接触状态和运行时实例 ID。
 - 接收 `BulletDamageContext`；加法门按实际伤害增加数字，元素门扣减 HP 并在 HP 归零后累计额外伤害。
 - 在 Army 首次接触时执行一次判定。
@@ -94,16 +94,34 @@ Assets/Prefabs/Gate/
 └── PF_Gate_Element.prefab    根组件 ElementGate
 ```
 
+首轮 Prefab 使用最小占位层级：
+
+```text
+PF_Gate_Additive [AdditiveGate]
+├── Visual [SpriteRenderer 或占位底图]
+├── BodyCollider [Collider2D；Gate Layer]
+└── StateText [TMP_Text]
+
+PF_Gate_Element [ElementGate]
+├── Visual [SpriteRenderer 或占位底图]
+├── BodyCollider [Collider2D；Gate Layer]
+└── StateText [TMP_Text]
+```
+
+加法门的单个 `stateText` 显示当前 GateValue；元素门的单个 `stateText` 至少显示 ElementType、`CurrentHp/MaxHp` 和 PostDepletionDamage。排版、颜色、动画和最终文案不属于当前契约，文本不得反向修改玩法状态。
+
 两个根组件都由 `ObstacleManager` 驱动移动、接触和回收，不实现独立 `Update`，也不持有 ConfigService、PoolService 或 ArmyController 具体类型。最小序列化/运行时字段分工：
 
 | 根组件 | Inspector 序列化 | 每次生成注入/重置 |
 |---|---|---|
-| `AdditiveGate` | `BodyCollider`、`MoveSpeed`、数字表现引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
-| `ElementGate` | `BodyCollider`、`MoveSpeed`、`ContactDamage`、元素/HP/额外伤害表现引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType`、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
+| `AdditiveGate` | `BodyCollider`、`MoveSpeed`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
+| `ElementGate` | `BodyCollider`、`MoveSpeed`、`ContactDamage`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType`、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
 
 Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数；LevelConfig 也不保存两类门的统一速度和元素门统一接触伤害。必需引用缺失、速度非有限/小于 0、元素门接触伤害小于等于 0 时，Gameplay 不得进入 Ready，不能运行时静默补组件或使用默认值。
 
 表现组件只读取根组件已经结算出的快照或事实事件，不反向修改门值、HP、额外伤害或奖励锁定状态。若后续发现两类门有稳定且足够多的共同生命周期代码，可再提取内部基类；当前文档不要求为了复用少量字段预先建立通用 Gate 框架。
+
+完整最小绑定见 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)。
 
 ## 非职责
 
@@ -128,5 +146,8 @@ Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数�
 - 元素门未清空时，对每个接触槽位造成相同伤害，之后继续移动离场。
 - 元素门接触失败后被后续子弹击破时不增加 Army 的元素持续时间或可兑换额外伤害。
 - 未接触的门离场时不产生接触成功或失败事件。
+- Gate 根 GameObject 中心满足 `position.y <= RoadLayoutSnapshot.DespawnY` 时离场；不使用 Collider 或 Renderer 下边缘。
+- 接触只使用移动终点的 `OverlapCollider` 结果；MVP 不验收路径中穿过但终点未重叠的接触。
 - Gate 的 BodyCollider 使用 Gate Layer；同一查询返回多个子 Collider 时按运行时实例 ID 去重。
 - 两种具体 Gate 类型各自只绑定一个规范 Prefab；从类型池取得时未激活，ObstacleManager 完成初始化和登记后才激活，归还前清理运行时状态并主动失活。
+- 两种 Gate 在不依赖 HUD 或最终美术的情况下，单个 stateText 能随运行时状态刷新并用于验证结算结果。

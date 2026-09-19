@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InDesign`
 - 依赖：EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager
-- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`
+- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
 - MVP `ArmyId` 固定为 `1`，同时读取 `TbArmy.Id = 1` 并选择序列化 `ArmyPrefabBinding.ArmyId = 1` 的 Prefab。
 
 ## 职责
@@ -22,8 +22,8 @@
 
 ## 配置输入
 
-- MVP 初始人数固定为 `1`；从 `IArmyConfigProvider` 读取 `TbArmy.Id = 1` 的总人数上限、单兵生命值和横向移动速度不可变快照。
-- `TbArmy` 不保存槽位容量、武器或元素。`WeaponId` 是本局运行时唯一武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`；每局从 `0` 开始，并通过 `IWeaponConfigProvider` 查询发射间隔和基础子弹 ID。
+- MVP 初始人数固定为 `1`；通过 `IArmyConfigProvider.GetArmyConfig(1)` 必得 ConfigService 已校验并复制的总人数上限、单兵生命值和横向移动速度不可变快照。
+- `TbArmy` 不保存槽位容量、武器或元素。`WeaponId` 是本局运行时唯一武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`；每局从 `0` 开始，并通过 `IWeaponConfigProvider.GetWeaponConfig(WeaponId)` 必得发射间隔和基础子弹 ID。ArmyController 不持有 Luban 生成行，也不处理配置缺失恢复。
 - 当前不建立 `TbElement`。火、冰、雷三种剩余持续时间每局从 `0` 开始，由元素门按类型增加。
 - GameplaySceneEntry 通过序列化 `ArmyPrefabBinding` 选择 Army Prefab；ArmyController 通过序列化 `ArmySlotView[] slots` 持有槽位，不通过 Luban 资源键或运行时搜索取得。
 - 当前人数、槽位状态、WeaponId、三元素剩余时间和射击计时都是本局运行时状态，不回写 Luban。
@@ -57,7 +57,7 @@ ArmyElementStateSnapshot GetElementStateSnapshot();
 
 `SetHorizontalInput(float)` 由继承的 `IHorizontalInputReceiver` 提供。Input Adapter 只取得该最小接收接口，不取得上述其他 Army 命令与查询能力。
 
-LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。
+LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时与每槽位射击冷却，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。槽位首次激活等待完整 `FireInterval`，实际换到不同武器时全部激活槽位按新间隔重置，每槽位每逻辑帧最多发射一颗且不追赶补发。
 
 ## Prefab 与场景装配
 
@@ -122,6 +122,8 @@ public sealed class ArmyPrefabBinding
 - 负数门按 `Abs(GateValue) × HpPerSoldier` 产生伤害，优先由当前 HP 最少、同 HP 时 SlotIndex 最小的槽位承担；请求减员和实际损失人数分别记录。
 - 元素门失败时，每个接触槽位受到相同伤害；成功时只给对应 ElementType 增加一次持续时间，同类型累加且不覆盖其他元素。
 - 当前 MVP 的武器箱成功击破时只切换一次 WeaponId；元素持续时间保持不变，道具接触失败后不得触发任何击破效果。
+- 本局初始激活槽位和运行中新激活槽位均等待一个完整 FireInterval；实际换武器后全部激活槽位重置为新间隔，重复当前 WeaponId 不重置。
+- 单个逻辑帧内每个激活槽位最多生成一颗子弹；大帧间隔不补发历史跨过的射击次数。
 - Army 先扣减本帧元素计时再发射；元素门在接触阶段新增的元素从下一逻辑帧子弹开始生效，飞行中的子弹元素掩码保持不变。
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。

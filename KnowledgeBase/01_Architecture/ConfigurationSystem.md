@@ -65,7 +65,11 @@ Assets/StreamingAssets/Luban
 
 资源注册表键使用大小写敏感的 ASCII `类别/身份` 格式，只用于需要运行时选择的非池身份资源。这些键属于 Unity 资源侧，不写入 Luban，也不使用绝对路径。池化规范 Prefab 不通过资源键交给 PoolService：对应 Manager 通过 Inspector 持有具体根组件 Prefab，并以具体类型取得类型池。
 
-进入 LevelSelect 后，`ConfigService` 从 `LevelCatalog` 根据选定的 `LevelId` 提供对应的 `LevelConfig`。Gameplay 由 SceneService 接收并注入这份已校验的 `LevelConfig`；Level 和 Spawn 只消费注入的关卡配置与道路快照。ConfigService 在初始化时把 `TbArmy`、`TbWeapon` 等生成行验证并复制为不可变快照；ArmyController 只取得 `IArmyConfigProvider` 和 `IWeaponConfigProvider`。场景装配验证 `ArmyId = 1` 的序列化 Prefab 绑定和槽位数组，其他 Manager 验证各自规范 Prefab 后再向全局 PoolService 请求类型池。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables 或访问静态 `LubanTables.Instance`。
+启动阶段由 Composition 直接调用具体 `ConfigService.Initialize(LevelCatalog, Tables, ResourceRegistry)`；该初始化入口不放入公共 `IConfigService`。ConfigService 完整校验后，把每个 `LevelConfig` 资产防御性复制为不可变 `LevelConfigSnapshot`。进入 LevelSelect 后，应用层按 `LevelId` 查询对应快照；SceneService、GameplaySceneEntry、Level 和 Spawn 只传递或消费快照，不持有 `ScriptableObject` 资产。
+
+ConfigService 在启动初始化中完成唯一一次配置转换：校验目录内全部 LevelConfig、`TbArmy`、`TbWeapon`、`TbBullet`、`TbEnemy`、`TbProp` 的主键、枚举、数值和当前跨表引用，然后分别复制为 `LevelConfigSnapshot`、`ArmyConfigSnapshot`、`WeaponConfigSnapshot`、`BulletConfigSnapshot`、`EnemyConfigSnapshot`、`PropConfigSnapshot` 的只读字典。Composition 只向消费者注入最小查询面：ArmyController 取得 Army/Weapon Provider，BulletManager 取得 Bullet Provider，EnemyManager 取得 Enemy Provider，ObstacleManager 取得 Prop Provider。场景装配验证 `ArmyId = 1` 的序列化 Prefab 绑定和槽位数组，各 Manager 验证规范 Prefab 后再向全局 PoolService 请求类型池。任何 Gameplay 模块都不得直接读取文件、访问 `StreamingAssets`、创建新的 Tables、保存 Luban 生成行或访问静态 `LubanTables.Instance`。
+
+类型化 Provider 使用必得查询而不是 `TryGet + 默认值`。初始化成功已经保证所有关卡和跨表引用可解析；非 Ready 查询或未知 ID 属于程序不变量被破坏，直接抛出异常，不由 Gameplay Manager 捕获并恢复。
 
 `LevelCatalog` 只保存 `LevelConfig` 引用和 `initiallyUnlocked` 标记。`LevelConfig.levelId` 是唯一 ID，目录不重复保存 ID；当前目录只有第一关且该条目默认解锁。
 
@@ -74,12 +78,15 @@ Assets/StreamingAssets/Luban
 ```text
 GlobalBootstrap → ConfigService.Initialize(LevelCatalog, Tables, ResourceRegistry)
 LevelSelect → SelectLevel(levelId)
-ConfigService → Validate and GetLevelConfig(levelId)
-SceneService → SwitchToGameplay(levelId, levelConfig, levelRunId)
-LevelManager → Initialize(levelConfig, levelRunId)
+ConfigService → Validate assets/tables and build snapshots
+IConfigService → TryGetLevelConfig(levelId, out levelConfigSnapshot)
+SceneService → SwitchToGameplay(levelId, levelConfigSnapshot, levelRunId)
+LevelManager → Initialize(levelConfigSnapshot, levelRunId)
 ```
 
 当前工程的 `LubanTables` 是 Luban loader 适配器；它不应成为各模块的第二套配置服务。后续实现 `ConfigService` 时，应复用同一个 Tables 实例。
+
+创建 asmdef 时，`Assets/Generated/Luban` 下的 `cfg.Tables` 与生成行统一编入只读支撑程序集 `Game.ConfigGenerated`，由 Foundation 的具体 ConfigService 和 Composition 启动装配引用。生成类型不得进入 `IConfigService`、快照、Scene 或 Gameplay 接口。若生成命令会清空程序集定义所在目录，应修改生成源/生成脚本保留或重建该 asmdef，而不是直接编辑生成 `.cs`。
 
 ## 新增或修改配置的流程
 
@@ -106,9 +113,12 @@ LevelManager → Initialize(levelConfig, levelRunId)
 - 当前武器、火/冰/雷剩余时间属于 Army 本局状态；`TbArmy` 不保存 WeaponId 或元素，当前也不建立 `TbElement`。
 - Unity 资源注册表如使用字符串键，键只属于 Unity 资源侧，不构成 Luban 表字段。
 - LevelConfig 只描述本关卡如何编排，不复制敌人、军队和门的数值。
+- LevelConfig、LevelCatalog 和生成条目资产结构属于 Foundation 配置实现；Contracts 与 Gameplay 只接收不可变 LevelConfigSnapshot，不暴露 ScriptableObject 或 Luban 生成类型。
 - LevelConfig 不重复保存道路宽高和四边；这些值由唯一 `roadBounds` 派生。道路不通过 Collider 提供玩法边界。
 - Luban 表只描述可复用的数据，不承担场景对象的生命周期。
-- 配置加载失败必须在初始化或选定关卡加载阶段报告，不允许静默使用缺省数值继续运行或自动进入 Gameplay。
+- 配置错误采用 ADR-041 的单点 Fail-Fast：ConfigService 在启动初始化中遇到第一个 Luban 表、LevelCatalog、LevelConfig 或已确认引用错误时，通过 `Debug.LogError` 报告 `ConfigErrorCode`、稳定来源、字段或条目索引和原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode。
+- 配置失败不发布项目事件、不聚合第二套错误结果、不重试；GlobalBootstrap 不调用 `NotifyInitializationReady`，Gameplay Manager 不重复记录或恢复同一错误。
+- Prefab、Collider、Layer 和 Inspector 绑定继续由场景装配校验并阻止 Ready，不与配置表致命校验混为一套恢复框架。
 
 ## 平台说明
 
@@ -121,5 +131,7 @@ LevelManager → Initialize(levelConfig, levelRunId)
 - `../06_Decisions/ADR-014-SharedRuntimeContractBaseline.md`
 - `../06_Decisions/ADR-020-MinimalMvpConfigurationSurface.md`
 - `../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`
+- `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`
+- `../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`
 - `../03_SharedContracts/ConfigurationTables.md`
 - `GlobalServices.md`

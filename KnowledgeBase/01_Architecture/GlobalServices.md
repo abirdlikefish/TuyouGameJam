@@ -10,7 +10,7 @@
 | `GameStateService` | 应用流程状态、游玩会话进入/退出和结果分发 | 必需 | `ApplicationFlow.md` |
 | `EventBus` | 跨模块事实事件通信 | 必需 | `EventSystem.md` |
 | `SceneService` | MainMenu、LevelSelect、Gameplay 场景切换、入口绑定和卸载协调 | 必需（薄协调器） | `ApplicationFlow.md`、`SceneStructure.md` |
-| `ConfigService` | 读取 `LevelCatalog`、选定的 `LevelConfig`、唯一的 Luban `cfg.Tables` 实例和资源注册表 | 必需 | `ConfigurationSystem.md` |
+| `ConfigService` | 读取并校验 `LevelCatalog`、全部 `LevelConfig`、唯一 Luban `cfg.Tables` 与资源注册表，生成不可变运行时快照 | 必需 | `ConfigurationSystem.md` |
 | `PoolService` | 按具体 MonoBehaviour 类型持有和复用实例 | 必需（ContractReady） | `PoolSystem.md` |
 
 ## 实例所有权与访问方式
@@ -20,7 +20,7 @@
 - 服务和 Gameplay 模块不通过静态 `XxxService.Instance`、运行时 `Find` 或通用 Service Locator 隐式取得依赖。Composition Root 或 Gameplay 场景装配入口只在初始化时取得服务，并把最小接口注入实际消费者。
 - 纯 C# 对象优先使用构造注入；Unity 场景组件使用明确的 `Initialize(...)` 或 Inspector 引用。配置、`LevelRunId`、生成位置等一次性上下文作为方法参数或初始化快照传递，不注册成全局服务。
 - Bullet、Monster、Gate、Prop 等池对象由对应 Manager 初始化；池对象不得自行访问全局服务集合或持有类型池。Manager 负责传入本次会话所需的配置快照、ID 和窄回调，并在业务清理后归还类型池。
-- 现有静态 `LubanTables.Instance` 只可作为 Bootstrap 创建唯一 `cfg.Tables` 的过渡加载入口，Gameplay 模块不得直接访问它；运行时配置统一经 `IConfigService` 查询。
+- 现有静态 `LubanTables.Instance` 只可作为 Bootstrap 创建唯一 `cfg.Tables` 的过渡加载入口，Gameplay 模块不得直接访问它；运行时数值分别经 Army、Weapon、Bullet、Enemy、Prop 最小类型化 Provider 查询，只有应用流程与 Composition 取得完整 `IConfigService`。
 
 ## 服务依赖与调用
 
@@ -40,7 +40,7 @@ GlobalBootstrap / Composition Root
 |---|---|---|
 | `GameStateService` | `IConfigService`、`ISceneService`、`ITimeService`、`IEventBus` | 选关校验、场景命令、流程定时和事实发布 |
 | `SceneService` | `IEventBus`、UnitySceneRuntime | 同步加载、固定入口绑定和异步卸载后发布 Ready、Failed、Unloaded 事实；不回调具体 GameState 实现 |
-| `ConfigService` | `IEventBus`、`LevelCatalog`、`cfg.Tables`、`IResourceRegistry` | 校验配置并发布失败事实；不依赖具体 Gameplay 模块 |
+| `ConfigService` | `LevelCatalog`、`cfg.Tables`、`IResourceRegistry` | 完整校验并复制五类只读快照；失败时记录首个错误、进入 Failed 并立即退出，不依赖 Gameplay 模块或配置失败事件 |
 | `PoolService` | `PersistentPoolRoot`、可选诊断委托 | 按具体类型持有类型池和空闲实例；不依赖资源注册表、SpawnManager 或玩法状态 |
 | `TimeService`、`EventBus` | 无业务服务依赖 | 作为基础叶节点，不反向依赖玩法或表现层 |
 
@@ -57,11 +57,11 @@ Bootstrap → Create 服务 → Connect 明确依赖 → Start 并注册事件
 ## 约束
 
 - 只有 `GlobalRoot`、Composition Root 和服务实例具有应用级生命周期；Gameplay Controller、Manager 和池对象均不得做成跨场景单例。
-- MVP 服务初始化使用固定屏障：Create 创建实例且不产生业务副作用；Connect 注入明确类型依赖并校验场景与序列化配置；Start 先注册应用流程事件，再初始化共享配置并启动应用流程。具体 `LevelConfig` 在选关确定后交给 Gameplay。
+- MVP 服务初始化使用固定屏障：Create 创建实例且不产生业务副作用；Connect 注入明确类型依赖并校验场景与序列化配置；Start 先注册应用流程事件，再由 Composition 调用具体 ConfigService 初始化资产与表并启动应用流程。选关后只把 `LevelConfigSnapshot` 交给 Gameplay。
 - MVP 不创建或初始化 `AudioService`、`SaveService`、`DebugService`，也不创建音频根节点、音量设置或调试命令入口。
 - 场景重载时不得创建重复的 `GlobalRoot`。
 - MainMenu、LevelSelect 和 Gameplay 都使用实际 Additive 场景及固定根 SceneEntry；`Initializing`、`GameplayLoading` 仍只是流程状态。MainMenu/LevelSelect 场景 Ready 后的自动跳过计时使用 RealTime。
-- `ConfigService` 初始化失败时保持应用在 `Initializing`，并发布带错误码的 `InitializationFailed`；未成功初始化不得进入 MainMenu。
+- `ConfigService` 初始化失败时使用 `Debug.LogError` 输出首个稳定来源与原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode；不进入 MainMenu，不使用默认值，不自动恢复或重试，也不发布配置失败事件。
 - `GlobalBootstrap` 在确认 `ConfigService.GetConfigLoadState() == Ready` 后调用 `GameStateService.NotifyInitializationReady()`；`GameStateService` 负责后续 `MainMenu`、`LevelSelect` 和 Gameplay 流程推进。
 - MainMenu/LevelSelect 的 RealTime 定时器由 `GameStateService` 持有并在离开状态、加载失败或终局时取消；UI 不直接创建流程定时器。
 - `SceneService` 执行 `SwitchToMainMenu`、`SwitchToLevelSelect`、`SwitchToGameplay`，使用同步 Additive 加载、固定根入口绑定和异步卸载，并通过 `AppSceneReady`、`AppSceneLoadFailed`、`AppSceneUnloaded`、`AppSceneUnloadFailed` 与 `GameStateService` 握手；它不直接修改应用状态。
@@ -77,6 +77,7 @@ Bootstrap → Create 服务 → Connect 明确依赖 → Start 并注册事件
 - `../06_Decisions/ADR-029-EventBusImplementationAndPayloads.md`
 - `../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 - `../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`
+- `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`
 
 ## 关联文档
 

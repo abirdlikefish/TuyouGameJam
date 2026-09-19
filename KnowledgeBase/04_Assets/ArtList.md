@@ -5,14 +5,14 @@
 | 道路背景 | Sprite / `PF_Road_Default` Prefab | RoadView 根据 `roadBounds` 调整视觉；不配置玩法 Collider | Planned |
 | 军队 | Sprite / Animator | 屏幕底部单位 | Planned |
 | Army 规范 Prefab | Prefab | `PF_Army_001` 根挂 ArmyController，序列化槽位数组决定 SlotCapacity；GameplaySceneEntry 以 ArmyId=1 绑定 | Planned |
-| 加法门 | Sprite / `PF_Gate_Additive` Prefab | 根组件 `AdditiveGate`；显示可为负数的门数字，Inspector 配置所有加法门共用的移动速度 | Planned |
-| 元素门 | Sprite / `PF_Gate_Element` Prefab | 根组件 `ElementGate`；显示元素、HP、HP 清空后的额外伤害/可兑换持续时间及接触状态，Inspector 配置所有元素门共用的移动速度和接触伤害 | Planned |
+| 加法门 | Sprite / `PF_Gate_Additive` Prefab | 根组件 `AdditiveGate`；首轮只用单个 TMP_Text 显示 GateValue，Inspector 配置所有加法门共用的移动速度 | Prototype Text |
+| 元素门 | Sprite / `PF_Gate_Element` Prefab | 根组件 `ElementGate`；首轮只用单个 TMP_Text 显示元素、HP 和额外伤害，Inspector 配置所有元素门共用的移动速度和接触伤害 | Prototype Text |
 | 弹弓箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |
 | 弓箭箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |
 | 法杖箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |
-| 普通怪物 | Sprite / Animator / Prefab | `NormalMonster` 规范 Prefab；需要 `BodyCollider`，不使用攻击 Collider 或 `TargetSensor` | Planned |
-| 精英怪物 | Sprite / Animator / Prefab | `EliteMonster` 规范 Prefab；需要 `BodyCollider`、`AttackCollider`，不使用 `TargetSensor` | Planned |
-| Boss 怪物 | Sprite / Animator / Prefab | `BossMonster` 规范 Prefab；需要 `BodyCollider`、`AttackCollider`，不使用 `TargetSensor` | Planned |
+| 普通怪物 | Sprite / Animator / Prefab | `NormalMonster` 根同节点挂 Animator；非循环 Attack Clip 含攻击帧与结束事件，Death Clip 末帧含回收事件；需要 `BodyCollider` 与非负 `blockingGap`，不使用攻击 Collider 或 `TargetSensor` | Planned |
+| 精英怪物 | Sprite / Animator / Prefab | `EliteMonster` 根同节点挂 Animator；非循环 Attack Clip 含攻击帧与结束事件，Death Clip 末帧含回收事件；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap`，不使用 `TargetSensor` | Planned |
+| Boss 怪物 | Sprite / Animator / Prefab | `BossMonster` 根同节点挂 Animator；非循环 Attack Clip 含攻击帧与结束事件，Death Clip 末帧含回收事件；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap`，不使用 `TargetSensor` | Planned |
 | 武器箱规范 Prefab | Prefab | 唯一 `WeaponProp` 根类型，按 `WeaponId` 绑定表现 | Planned |
 | 子弹 | Sprite / Prefab | 唯一 `Bullet` 规范 Prefab；按 `BulletId` 绑定表现 | Planned |
 | 命中特效 | Particle / Prefab | 子弹反馈 | Planned |
@@ -28,3 +28,4 @@
 - 进入 Gameplay 前验证本关使用的资源绑定、Collider2D 和 Layer；缺失时报告配置或资源来源，不静默创建替代对象。
 - `PF_Road_Default` 只提供 SpriteRenderer/Transform 和 RoadView，不参与 PoolService，也不设置玩法 Collider；道路四边以 LevelConfig 的数值 `roadBounds` 为权威。
 - `Assets/Prefabs/UI/PF_UI_TouchDragArea.prefab` 根对象名为 `TouchDragArea`，默认相对 Gameplay Canvas 全屏拉伸；根同时持有透明 Image 和 TouchDragInput。`TouchDragInput.touchArea` 显式绑定根 RectTransform，`raycastGraphic` 显式绑定根 Image，`horizontalMultiplier` 默认值为 `1`。Prefab 不包含 Canvas、GraphicRaycaster、EventSystem、StandaloneInputModule、Input Adapter 或 Army 引用；GameplaySceneEntry 校验场景组件并由独立 GameplayInputAdapter 绑定 `IHorizontalInputReceiver`。
+- 首轮只使用占位 Sprite、占位 Animator Controller、Gate 调试文本和 Input UI，不要求 HUD、正式动画资源、VFX 或最终美术；Monster 的占位 Controller、Attack Clip 事件与 Death Clip 末帧 `OnDeathAnimationFinished()` 仍是必需绑定。最小层级与字段见 [PrefabSpecifications](PrefabSpecifications.md)。

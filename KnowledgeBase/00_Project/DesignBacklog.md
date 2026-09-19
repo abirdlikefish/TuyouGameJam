@@ -53,12 +53,14 @@
 | DES-039 | MainMenu/LevelSelect 实际场景、固定 SceneEntry、场景切换与服务分阶段初始化 | Accepted | 应用流程、场景、Composition、全局服务、事件、测试 | 见 ADR-032；三个稳定页面使用实际 Additive 场景和固定根入口，GameState 只命令 SceneService，加载同步、卸载异步，服务按 Create/Connect/Start 装配 |
 | DES-040 | Gameplay 同帧阶段顺序的执行所有者 | Accepted | Level、Army、Bullet、Monster、Obstacle、Spawn、Input、Time、测试 | 见 ADR-033；LevelRunStarted 只启动会话，LevelManager 通过同步阶段接口依次驱动生成、移动、命中、接触、攻击、回收和终局判断 |
 | DES-041 | 道路边界权威字段与 Army 初始坐标 | Accepted | Level、Army、Spawn、Monster、Gate、Prop、Config、Scene | 见 ADR-034；LevelConfig 使用唯一 `roadBounds` 派生宽高和四边，ArmyRoot 每局从世界原点开始，道路不使用玩法 Collider |
-| DES-042 | Gameplay 数值配置的类型化查询与只读快照 | InDesign（Army/Weapon 已接受） | Config、Army、Bullet、Monster、Prop、Composition | ADR-035 已定案 IArmyConfigProvider、IWeaponConfigProvider 与不可变快照；Gate 已由 ADR-038 明确不读表，Bullet、Enemy、Prop 的独立查询仍需补齐，禁止模块直接访问静态 Luban Tables |
-| DES-043 | Animator 攻击判定与确定性敌人攻击阶段的衔接 | InDesign | Monster、Level、Animation、测试 | 需决定 Animator Event 只登记请求还是改用纯玩法计时，并保证任何回调时机下都只在 `ResolveAttacks` 阶段造成一次伤害 |
-| DES-044 | Gameplay Manager StartRun/StopRun 的失败语义 | InDesign | Level、Composition、Army、Bullet、Monster、Obstacle、Spawn、应用流程 | 当前接口返回 void；需确定初始化失败使用结果类型还是异常、运行时阶段异常如何终止会话，以及 SceneEntry 如何报告稳定来源并逆序回滚 |
+| DES-042 | Gameplay 数值配置的类型化查询与只读快照 | Accepted | Config、Army、Bullet、Monster、Prop、Composition | 见 ADR-041；五类表分别通过最小类型化 Provider 返回不可变快照，ConfigService 启动时完整校验并复制，表错误单点报错后立即退出 |
+| DES-043 | Animator 攻击判定与确定性敌人攻击阶段的衔接 | Accepted | Monster、Level、Animation、测试 | 见 ADR-040；非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记一次请求，末帧调用结束通知，实际伤害只在 `ResolveAttacks` 中校验并结算 |
+| DES-044 | Gameplay Manager StartRun/StopRun 的失败语义 | Accepted | Level、Composition、Army、Bullet、Monster、Obstacle、Spawn、应用流程 | 见 ADR-039；配置与绑定在 StartRun 前集中校验，错误直接记录并阻止 Ready，接口保持 void，不建设通用 Result、降级或恢复状态机；意外异常只做必要清理并停止进入可玩状态 |
 | DES-045 | unlockedLevelIds 的目录校验规则 | InDesign | Config、Level、GameState、LevelSelect | 需确认重复 ID、自引用和目录中不存在的 ID 是否一律判为 InvalidLevelConfig；当前只确认 GameStateService 从本局 LevelConfig 复制结果 |
 | DES-046 | Army 配置、Prefab 容量、运行时装备、三元素计时与负数门减员 | Accepted | Army、Config、Composition、Gate、Bullet、事件、测试 | 见 ADR-035；ArmyId=1 同时选择 TbArmy 与序列化 Prefab，槽位数组决定容量，WeaponId 固定 0/1/2，当前删除 TbElement，元素按三计时器与 ElementMask 表达 |
 | DES-047 | Gate 配置来源、伤害驱动数值与元素奖励结算 | Accepted | Level、Spawn、Obstacle、Gate、Bullet、Army、Config、事件、测试 | 见 ADR-038；仅保留加法门和元素门，Gate 不读表；逐门初始值、元素类型与 MaxHp 位于 LevelConfig，Prefab 提供同类共用速度/接触伤害；加法门按实际伤害累加，元素门只用 HP 归零后的额外伤害乘关卡系数兑换持续时间，失败后永久锁定奖励 |
+| DES-048 | LevelConfig 资产、运行时快照与程序集依赖闭合 | Accepted | Contracts、ConfigGenerated、Foundation、Composition、Scene、Level、Spawn | 见 ADR-042；LevelConfig 资产及转换归 Foundation，Luban 代码归生成程序集，Contracts 定义不可变 LevelConfigSnapshot，IConfigService 只保留查询，具体初始化由 Composition 调用 |
+| DES-049 | 槽位射击、攻击冷却、死亡动画与道路接触/阈值语义 | Accepted | Army、Bullet、Monster、Gate、Prop、Obstacle、Level、Animation、测试 | 见 ADR-043；激活/换武器后等待完整射击间隔，每槽每帧最多一弹；攻击冷却从起攻计算，Death 末帧登记回收；Gate/Prop 只做终点 Overlap，纵向阈值按根中心判定 |
 
 ## 已接受决策
 
@@ -66,6 +68,11 @@
 - `../06_Decisions/ADR-002-GateCalculation.md`：历史上的乘法门方案，已由 ADR-006 替代。
 - `../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`：定案加法门、元素门、一次接触结算和未接触离场。
 - `../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`：修订 Gate 配置与伤害结算：Gate 不读表、只保留加法门和元素门、逐门参数进入 LevelConfig、同类共用参数进入 Prefab，并以实际伤害及 HP 归零后的额外伤害驱动数值与元素持续时间。
+- `../06_Decisions/ADR-039-PrototypeValidationScope.md`：定案首轮工程切片的场景装配错误直接记录并停止 Ready、敌人 Prefab `blockingGap`、Gate 单文本占位表现、HUD 延后、调参规避高速穿透，以及 Victory 立即截断剩余 Gate/Prop；配置表致命失败语义由 ADR-041 后续修订。
+- `../06_Decisions/ADR-040-AnimatorAttackFrameBridge.md`：定案 Animator 非循环 Attack Clip 的关键帧调用 Monster 本地方法登记攻击请求，实际伤害仍由 EnemyManager 在 ResolveAttacks 阶段执行，并以动画末帧通知结束本次攻击。
+- `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`：补齐 Army、Weapon、Bullet、Enemy、Prop 五类最小配置 Provider 与不可变快照，并定案配置表、目录和关卡数据错误由 ConfigService 单点报错后立即退出应用。
+- `../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`：将 LevelConfig 编辑资产与运行时快照分离，关闭 Contracts/Foundation 对 Gameplay 具体类型的潜在反向依赖。
+- `../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`：定案槽位射击冷却、攻击冷却起点与重攻时机、死亡动画回收事件、Gate/Prop 终点 Overlap 及根中心阈值。
 - `../06_Decisions/ADR-007-WeaponIdentity.md`：定案使用 `WeaponId` 作为唯一武器身份。
 - `../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`：定案 Army 配置快照与 Prefab 绑定、槽位容量、固定武器、三元素计时、子弹 ElementMask 和负数门最低 HP 减员。
 - `../06_Decisions/ADR-008-ObstacleManager.md`：定案由 `ObstacleManager` 管理道路上的 Gate/Prop 实例。

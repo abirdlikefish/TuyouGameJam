@@ -7,7 +7,7 @@
 | 配置 | 形式 | 主责模块 | 当前状态 |
 |---|---|---|---|
 | `LevelCatalog` | Unity ScriptableObject | Config、LevelSelect | Planned |
-| `LevelConfig` | Unity ScriptableObject | Level | Planned |
+| `LevelConfig` | Unity ScriptableObject | Config/Foundation（资产结构）；Level（内容） | Planned |
 | `TbArmy` | Luban 表 | Army | Planned |
 | `TbWeapon` | Luban 表 | Army、Bullet | Planned |
 | `TbEnemy` | Luban 表 | Monster | Planned |
@@ -30,7 +30,7 @@ MVP 固定读取 `TbArmy.Id = 1`，初始人数固定为 `1`，不配置 `Initia
 
 初始字段：`Id`、`FireInterval`、`BulletId`。
 
-`Id` 是唯一的武器身份，MVP 固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`，三行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个激活槽位按对应行的 `FireInterval` 独立发射一枚 `BulletId` 对应的子弹；`FireInterval` 必须有限且大于 `0`。多弹道、散射和代表人数缩放不属于 MVP。
+`Id` 是唯一的武器身份，MVP 固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`，三行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个激活槽位按对应行的 `FireInterval` 独立发射一枚 `BulletId` 对应的子弹；`FireInterval` 必须有限且大于 `0`。槽位激活与实际切换到不同武器后都等待完整间隔，单槽每逻辑帧最多发射一颗且不追赶补发；重复当前 WeaponId 不重置。多弹道、散射和代表人数缩放不属于 MVP。
 
 当前不建立 `TbElement`。火、冰、雷使用固定 `ElementType`，元素门按 LevelConfig 中的关卡系数和 HP 归零后的额外伤害计算持续时间，Army 保存本局剩余时间；具体元素效果进入范围后再决定是否新增元素配置表。
 
@@ -38,7 +38,7 @@ MVP 固定读取 `TbArmy.Id = 1`，初始人数固定为 `1`，不配置 `Initia
 
 初始字段：`Id`、`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange`、`AttackCooldown`。
 
-首版 `EnemyType` 为 `Normal`、`Elite`、`Boss`。攻击类型由敌人类型固定派生：普通敌人为 `SingleTarget`，精英和 Boss 为 `Area`，不重复配置 `AttackType`。`AttackStartRange` 使用怪物与锁定槽位目标位置的 XY 欧氏距离，距离为 `0` 的重合状态同样允许开始攻击，不使用 `TargetSensor`。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定 `NormalMonster`、`EliteMonster`、`BossMonster` 三个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。
+首版 `EnemyType` 为 `Normal`、`Elite`、`Boss`。攻击类型由敌人类型固定派生：普通敌人为 `SingleTarget`，精英和 Boss 为 `Area`，不重复配置 `AttackType`。`AttackStartRange` 使用怪物与锁定槽位目标位置的 XY 欧氏距离，距离为 `0` 的重合状态同样允许开始攻击，不使用 `TargetSensor`。`AttackCooldown` 表示两次攻击开始之间的最短时间，从每次攻击开始时递减；动画结束时若已到期，可在下一次 EnemyManager Tick 重新验证后起攻。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定 `NormalMonster`、`EliteMonster`、`BossMonster` 三个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。敌人间阻挡安全间距由各规范 Prefab 根脚本的 `blockingGap` 提供，不加入 `TbEnemy` 或 LevelConfig。
 
 ### `TbProp`
 
@@ -55,6 +55,24 @@ MVP 固定读取 `TbArmy.Id = 1`，初始人数固定为 `1`，不配置 `Initia
 MVP 子弹固定为命中首个有效目标后回收，不配置 `CollisionBehavior`。全部 MVP 子弹共用一个 `Bullet` 根类型、规范 Prefab 和类型池；数值与表现按 `BulletId` 初始化，Prefab 与池身份不写入 Luban。
 
 数值单位、上下限和默认值必须在实际表建立时补齐，不在模块代码中另写一份。
+
+## 类型化运行时快照
+
+ConfigService 是 Luban 生成行到运行时配置的唯一转换边界。初始化成功后只通过以下最小 Provider 返回不可变快照：
+
+Luban 生成的 `cfg.Tables` 与表行编入 `Game.ConfigGenerated`，只供 Foundation 的具体 ConfigService 和 Composition 启动装配引用；以下 Provider 与快照均定义在 Contracts，不暴露生成类型。
+
+| Luban 表 | Provider | 快照 |
+|---|---|---|
+| `TbArmy` | `IArmyConfigProvider` | `ArmyConfigSnapshot(Id, ArmyCountLimit, HpPerSoldier, MoveSpeed)` |
+| `TbWeapon` | `IWeaponConfigProvider` | `WeaponConfigSnapshot(Id, FireInterval, BulletId)` |
+| `TbBullet` | `IBulletConfigProvider` | `BulletConfigSnapshot(Id, Damage, MoveSpeed)` |
+| `TbEnemy` | `IEnemyConfigProvider` | `EnemyConfigSnapshot(Id, EnemyType, MaxHp, AttackPower, MoveSpeed, AttackStartRange, AttackCooldown)` |
+| `TbProp` | `IPropConfigProvider` | `PropConfigSnapshot(Id, WeaponId, MaxHp, ContactDamage, MoveSpeed)` |
+
+Provider 使用必得 `GetXxxConfig(id)`；它只接受初始化引用链中已校验的 ID，不返回默认行或可变 Luban 对象。`TryGetLevelConfig` 只用于应用层验证关卡选择，不作为 Gameplay 数值表查询模式。
+
+`LevelCatalog`、`LevelConfig` 和三类可序列化生成条目属于 Foundation 配置实现。ConfigService 在启动校验后把每个关卡资产复制为 Contracts 中的不可变 `LevelConfigSnapshot` 与三类生成条目快照；SceneService、GameplaySceneEntry、Level 和 Spawn 都不得持有 ScriptableObject 资产。具体 `ConfigService.Initialize(LevelCatalog, cfg.Tables, IResourceRegistry)` 只由 Composition 调用，不进入 `IConfigService` 查询契约。
 
 ## Unity 关卡资产
 
@@ -98,9 +116,9 @@ elementType  仅 Element 使用，必须为 Fire / Ice / Lightning
 maxHp        仅 Element 使用且大于 0
 ```
 
-Additive 条目的 `elementType = None`、`maxHp = 0`；Element 条目的 `initialValue = 0`。未使用字段不得被运行时读取。本关存在元素门时，`elementDurationSecondsPerDamage` 必须有限且大于 `0`；不存在元素门时使用中性值 `0`。条件字段不符合规则时以 `InvalidLevelConfig` 阻止该关卡进入 Gameplay，并报告 LevelConfig 资产和生成项索引。
+Additive 条目的 `elementType = None`、`maxHp = 0`；Element 条目的 `initialValue = 0`。未使用字段不得被运行时读取。本关存在元素门时，`elementDurationSecondsPerDamage` 必须有限且大于 `0`；不存在元素门时使用中性值 `0`。条件字段不符合规则时以 `InvalidLevelConfig` 报告 LevelConfig 资产和生成项索引，并按统一配置致命语义退出应用。
 
-生成列表按 `spawnTime` 非递减排序；同一时间按列表顺序处理。每条敌人、Gate、Prop 生成项都必须提供有限且位于 `[0,1]` 的 `spawnPosition`，越界、NaN 或无穷值以 `InvalidLevelConfig` 拒绝。SpawnManager 使用 LevelManager 从 `roadBounds` 构建的 RoadLayoutSnapshot，按左右边界线性计算 `x`，使用固定 `spawnY` 作为 `y`；坐标以对象中心点为准，不考虑 Collider、Renderer 或 Prefab 尺寸。该值不约束对象生成后的移动路径。MVP 的 `enemySpawns` 至少包含一个条目；`gateSpawns` 和 `propSpawns` 可以为空。
+生成列表按 `spawnTime` 非递减排序；同一时间按列表顺序处理。每条敌人、Gate、Prop 生成项都必须提供有限且位于 `[0,1]` 的 `spawnPosition`，越界、NaN 或无穷值以 `InvalidLevelConfig` 报错并退出应用。SpawnManager 使用 LevelManager 从 `roadBounds` 构建的 RoadLayoutSnapshot，按左右边界线性计算 `x`，使用固定 `spawnY` 作为 `y`；坐标以对象中心点为准，不考虑 Collider、Renderer 或 Prefab 尺寸。该值不约束对象生成后的移动路径。MVP 的 `enemySpawns` 至少包含一个条目；`gateSpawns` 和 `propSpawns` 可以为空。
 
 LevelConfig 不保存敌人 HP、子弹伤害等表驱动的复用数值。Gate 是例外：每条门生成项直接保存初始数字、元素类型和元素门 MaxHp；加法门统一速度来自 AdditiveGate Prefab，元素门统一速度和接触伤害来自 ElementGate Prefab。当前门数字、当前 HP 和 HP 归零后的额外伤害仍属于运行时状态。
 
@@ -116,7 +134,7 @@ TbProp.weaponId            -> TbWeapon.Id
 
 参与玩法碰撞的 Prefab 必须按 `CollisionRules.md` 配置对应的 `Collider2D`、职责 Layer 和稳定职责名称。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供，一个具体池化根类型只绑定一个 Prefab；Prefab、碰撞形状、阵型槽位、发射点与对象生命周期属于 Unity 资源或运行时状态，不写入 Luban 数值表，MVP 不通过 Luban `PrefabKey` 间接引用这些对象。
 
-所有跨表引用和条件字段必须在初始化或选定关卡加载期验证。找不到目录条目、重复 `levelId`、缺少 `TbArmy.Id = 1`、缺少任一固定 `TbWeapon` 行、空 `enemySpawns`、无效目标 ID 或无效条件字段时，配置加载失败并报告具体来源。必需的 Unity 资源绑定在进入 Gameplay 前单独验证；序列化 Army Prefab 绑定必须包含唯一的 `ArmyId = 1`，其槽位数组必须至少包含一个有效槽位。
+所有数值、枚举、主键、跨表引用和目录内 LevelConfig 条件字段必须在 ConfigService 启动初始化时完成验证。找不到目录条目、重复 `levelId`、缺少 `TbArmy.Id = 1`、缺少任一固定 `TbWeapon` 行、空 `enemySpawns`、无效目标 ID 或无效条件字段时，ConfigService 只报告首个包含稳定来源的错误，将状态置为 `Failed` 并立即退出应用；不得进入关卡选择后才由 Manager 补做同一配置检查。必需的 Unity Prefab、Collider、Layer 和 Inspector 绑定在进入 Gameplay 前单独验证；序列化 Army Prefab 绑定必须包含唯一的 `ArmyId = 1`，其槽位数组必须至少包含一个有效槽位。
 
 ## 运行时状态边界
 
@@ -131,3 +149,5 @@ TbProp.weaponId            -> TbWeapon.Id
 - Army、Prefab、武器和三元素字段对 ADR-020 的修订见 `../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`。
 - Gate 内联配置、伤害驱动数字和元素门额外伤害换算见 `../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`。
 - 固定出生横线与 `spawnPosition` 的坐标解析和校验见 `../06_Decisions/ADR-023-NormalizedSpawnPosition.md`。
+- 类型化 Provider、不可变快照与配置错误单点退出见 `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`。
+- LevelConfig 资产、运行时快照与程序集依赖边界见 `../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`。
