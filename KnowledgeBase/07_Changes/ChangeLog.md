@@ -2,7 +2,7 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
-| 2026-09-20 | 新增 ADR-047 与 `ImplementationPlan.md`，项目进入分批代码生成阶段；固定 AI 只生成代码/目录、用户手工完成表格与 Unity 资源的边界，记录 Contracts→Foundation→Config→并行 Gameplay→Level→Composition→资源装配→集成的顺序、并行目录所有权和每批验证门 | 项目状态、实施流程、全部运行时模块、配置、资源、测试、并行协作 | Codex |
+| 2026-09-20 | 新增并补充 ADR-047 与 `ImplementationPlan.md`，项目进入分批代码生成阶段；固定 AI 只生成代码/目录、用户手工完成表格与 Unity 资源的边界，记录 Contracts→Foundation→Config→并行 Gameplay→Level→Composition→资源装配→集成的唯一执行顺序、并行目录所有权和每批验证门；明确 Roadmap 阶段只按能力与验收范围分组，不代表编码先后 | 项目状态、实施流程、全部运行时模块、配置、资源、测试、并行协作 | Codex |
 | 2026-09-20 | 新增 ADR-046 并完成首轮玩法契约收口：所有配置 ID 非负且从 0 开始，MVP `ArmyId/TbArmy.Id` 同步改为 0；`ApplySlotDamage` 保持 void；增加显式 Collider 身份代理；Failed 元素门与 Prop 后续受击锁血 1；敌人只对上一同步姿态执行近似阻挡；补齐增员、数值饱和、攻击结算、生成索引和事件所有权规则。Army、Gate、Prop、Obstacle、Monster、Bullet、Level、Spawn 设计状态统一进入 ContractReady | 项目状态、Army、Gate、Prop、Obstacle、Monster、Bullet、Level、Spawn、Config、共享契约、资源、测试、设计决策 | Codex |
 | 2026-09-20 | 新增 ADR-044 并关闭 DES-045：`unlockedLevelIds` 允许为空，重复 ID 或当前关卡自引用按 InvalidLevelConfig 致命退出；当前 LevelCatalog 中不存在的未来关卡 ID 使用 Debug.LogWarning 后过滤，ConfigService 继续 Ready，快照与 Victory 只携带保持原顺序的有效 ID | Config、Level、GameState、LevelSelect、应用流程、共享契约、测试、设计决策 | Codex |
 | 2026-09-20 | 新增 ADR-045 与 MVP 测试策略：当前不创建任何 `.asmdef`、EditMode/PlayMode 测试程序集或自动测试代码；测试清单先通过编译、结构化日志、Inspector 和可复现手工步骤执行，纯规则保持可测试结构，正式程序集阶段再迁移高价值自动化用例 | 项目路线、程序集、应用流程、UI、测试、设计决策 | Codex |

@@ -8,6 +8,8 @@
 
 工程按 `Contracts → EventBus/Time/Pool → Config → 可并行 Gameplay 模块 → Spawn/Level → Application/Composition → 用户资源装配 → 集成验收` 推进。每批先通过 Unity 编译和范围检查再进入下一批；详细目录、并行所有权、人工检查点和交付格式见 [MVP 代码生成实施计划](ImplementationPlan.md)。
 
+下列“阶段”只按交付能力和验收范围分组，不表示代码生成的先后顺序。同一阶段可以由多个实施批次共同完成，同一实施批次也可以推进多个阶段的条目；发生顺序疑问时，以 `ImplementationPlan.md` 的“生成批次与依赖顺序”为准。复选框只在对应能力实际实现并完成要求的验证后勾选。
+
 ## 阶段 1：核心闭环
 
 - [ ] GlobalBootstrap / Composition Root 与唯一 GlobalRoot
