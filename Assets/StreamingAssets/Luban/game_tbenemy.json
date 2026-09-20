@@ -1,0 +1,29 @@
+[
+  {
+    "id": 0,
+    "enemyType": 0,
+    "maxHp": 10,
+    "attackPower": 1,
+    "moveSpeed": 1,
+    "attackStartRange": 1,
+    "attackCooldown": 1
+  },
+  {
+    "id": 1,
+    "enemyType": 1,
+    "maxHp": 20,
+    "attackPower": 2,
+    "moveSpeed": 1,
+    "attackStartRange": 1,
+    "attackCooldown": 1
+  },
+  {
+    "id": 2,
+    "enemyType": 2,
+    "maxHp": 30,
+    "attackPower": 3,
+    "moveSpeed": 1,
+    "attackStartRange": 1,
+    "attackCooldown": 1
+  }
+]

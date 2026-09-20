@@ -1,0 +1,23 @@
+[
+  {
+    "id": 0,
+    "weaponId": 0,
+    "maxHp": 10,
+    "contactDamage": 10,
+    "moveSpeed": 1
+  },
+  {
+    "id": 1,
+    "weaponId": 1,
+    "maxHp": 10,
+    "contactDamage": 10,
+    "moveSpeed": 1
+  },
+  {
+    "id": 2,
+    "weaponId": 2,
+    "maxHp": 10,
+    "contactDamage": 10,
+    "moveSpeed": 1
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "id": 0,
+    "fireInterval": 1,
+    "bulletId": 0
+  },
+  {
+    "id": 1,
+    "fireInterval": 1,
+    "bulletId": 1
+  },
+  {
+    "id": 2,
+    "fireInterval": 1,
+    "bulletId": 2
+  }
+]

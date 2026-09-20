@@ -11,41 +11,36 @@ using Luban;
 using Luban.SimpleJSON;
 
 
-namespace cfg.demo
+namespace cfg.game
 {
-public sealed partial class item : Luban.BeanBase
+public sealed partial class Weapon : Luban.BeanBase
 {
-    public item(JSONNode _buf) 
+    public Weapon(JSONNode _buf) 
     {
         { if(!_buf["id"].IsNumber) { throw new SerializationException(); }  Id = _buf["id"]; }
-        { if(!_buf["name"].IsString) { throw new SerializationException(); }  Name = _buf["name"]; }
-        { if(!_buf["desc"].IsString) { throw new SerializationException(); }  Desc = _buf["desc"]; }
-        { if(!_buf["count"].IsNumber) { throw new SerializationException(); }  Count = _buf["count"]; }
+        { if(!_buf["fireInterval"].IsNumber) { throw new SerializationException(); }  FireInterval = _buf["fireInterval"]; }
+        { if(!_buf["bulletId"].IsNumber) { throw new SerializationException(); }  BulletId = _buf["bulletId"]; }
     }
 
-    public static item Deserializeitem(JSONNode _buf)
+    public static Weapon DeserializeWeapon(JSONNode _buf)
     {
-        return new demo.item(_buf);
+        return new game.Weapon(_buf);
     }
 
     /// <summary>
-    /// id
+    /// ID
     /// </summary>
     public readonly int Id;
     /// <summary>
-    /// 名称
+    /// 射击间隔（秒）
     /// </summary>
-    public readonly string Name;
+    public readonly float FireInterval;
     /// <summary>
-    /// 描述
+    /// 子弹配置 ID
     /// </summary>
-    public readonly string Desc;
-    /// <summary>
-    /// 个数
-    /// </summary>
-    public readonly int Count;
+    public readonly int BulletId;
    
-    public const int __ID__ = 750578750;
+    public const int __ID__ = -1335684168;
     public override int GetTypeId() => __ID__;
 
     public  void ResolveRef(Tables tables)
@@ -56,9 +51,8 @@ public sealed partial class item : Luban.BeanBase
     {
         return "{ "
         + "id:" + Id + ","
-        + "name:" + Name + ","
-        + "desc:" + Desc + ","
-        + "count:" + Count + ","
+        + "fireInterval:" + FireInterval + ","
+        + "bulletId:" + BulletId + ","
         + "}";
     }
 }

@@ -14,17 +14,29 @@ namespace cfg
 {
 public partial class Tables
 {
-    public demo.Tbitem Tbitem {get; }
+    public game.TbArmy TbArmy {get; }
+    public game.TbBullet TbBullet {get; }
+    public game.TbEnemy TbEnemy {get; }
+    public game.TbProp TbProp {get; }
+    public game.TbWeapon TbWeapon {get; }
 
     public Tables(System.Func<string, JSONNode> loader)
     {
-        Tbitem = new demo.Tbitem(loader("demo_tbitem"));
+        TbArmy = new game.TbArmy(loader("game_tbarmy"));
+        TbBullet = new game.TbBullet(loader("game_tbbullet"));
+        TbEnemy = new game.TbEnemy(loader("game_tbenemy"));
+        TbProp = new game.TbProp(loader("game_tbprop"));
+        TbWeapon = new game.TbWeapon(loader("game_tbweapon"));
         ResolveRef();
     }
     
     private void ResolveRef()
     {
-        Tbitem.ResolveRef(this);
+        TbArmy.ResolveRef(this);
+        TbBullet.ResolveRef(this);
+        TbEnemy.ResolveRef(this);
+        TbProp.ResolveRef(this);
+        TbWeapon.ResolveRef(this);
     }
 }
 

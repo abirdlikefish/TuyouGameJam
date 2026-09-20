@@ -1,0 +1,14 @@
+interface:
+  display_name: "Luban Config"
+  short_description: "Inspect and validate project Luban tables"
+  default_prompt: "Use $luban-config to inspect and validate the project's Luban configuration."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "luban"
+      description: "Project-local Luban MCP server"
+
+policy:
+  allow_implicit_invocation: true
+

@@ -1,0 +1,17 @@
+[
+  {
+    "id": 0,
+    "damage": 1,
+    "moveSpeed": 5
+  },
+  {
+    "id": 1,
+    "damage": 2,
+    "moveSpeed": 5
+  },
+  {
+    "id": 2,
+    "damage": 3,
+    "moveSpeed": 5
+  }
+]
