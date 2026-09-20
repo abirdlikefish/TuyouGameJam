@@ -11,6 +11,8 @@ namespace Game.Gameplay
         private IHorizontalInputReceiver receiver;
         private bool gameplayEnabled;
 
+        public TouchDragInput TouchDragInput => touchDragInput;
+
         public void Initialize(IHorizontalInputReceiver inputReceiver)
         {
             if (inputReceiver == null)

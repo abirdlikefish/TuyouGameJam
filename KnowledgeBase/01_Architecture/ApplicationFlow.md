@@ -2,7 +2,7 @@
 
 ## 状态
 
-ContractReady（设计状态，不代表已有 Unity 实现）
+InProgress（批次 6 脚本已实现；实际场景、Build Settings、Inspector 装配与完整流程联调待批次 7/8）
 
 ## 目标与边界
 

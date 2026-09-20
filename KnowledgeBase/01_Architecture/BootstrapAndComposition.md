@@ -2,7 +2,7 @@
 
 ## 状态
 
-ContractReady（设计状态，不代表已有 Unity 实现）
+InProgress（批次 6 脚本已实现；GlobalRoot、场景资产、资源注册表实例与 Inspector 装配待批次 7/8）
 
 ## 职责
 
