@@ -124,8 +124,8 @@ Bullet、Monster、Gate、Prop 等池对象不自行查找或长期持有全局 
 ```text
 GlobalBootstrap → GameStateService.NotifyInitializationReady()
 GameStateService → SceneService.SwitchToMainMenu() → AppSceneReady(MainMenu)
-GameStateService → MainMenu 定时器 → SceneService.SwitchToLevelSelect() → AppSceneReady(LevelSelect)
-GameStateService → LevelSelect 定时器 → TrySelectLevel / TryStartSelectedGameplay
+MainMenuView → GameStateService.TryEnterLevelSelect() → SceneService.SwitchToLevelSelect() → AppSceneReady(LevelSelect)
+LevelSelectNodeView → LevelSelectView → TrySelectLevel / TryStartSelectedGameplay
 GameStateService → SceneService.SwitchToGameplay(levelId, levelConfigSnapshot, levelRunId)
 SceneService → AppSceneReady / AppSceneLoadFailed / AppSceneUnloadFailed → GameStateService
 GameStateService → LevelRunStarted → LevelManager、UI

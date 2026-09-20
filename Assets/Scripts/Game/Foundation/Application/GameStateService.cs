@@ -7,11 +7,8 @@ namespace Game.Foundation
 {
     public sealed class GameStateService : IGameStateService, IDisposable
     {
-        private const float AutomaticPageDelaySeconds = 1f;
-
         private readonly IConfigService configService;
         private readonly ISceneService sceneService;
-        private readonly ITimeService timeService;
         private readonly IEventBus eventBus;
         private readonly HashSet<int> unlockedLevelIds = new HashSet<int>();
 
@@ -19,7 +16,6 @@ namespace Game.Foundation
         private SubscriptionToken sceneUnloadedSubscription;
         private SubscriptionToken sceneLoadFailedSubscription;
         private SubscriptionToken sceneUnloadFailedSubscription;
-        private TimerHandle transitionTimer;
         private PendingScene pendingScene;
         private AppFlowState state = AppFlowState.Initializing;
         private AppSceneId currentSceneId;
@@ -39,12 +35,10 @@ namespace Game.Foundation
         public GameStateService(
             IConfigService configService,
             ISceneService sceneService,
-            ITimeService timeService,
             IEventBus eventBus)
         {
             this.configService = configService ?? throw new ArgumentNullException(nameof(configService));
             this.sceneService = sceneService ?? throw new ArgumentNullException(nameof(sceneService));
-            this.timeService = timeService ?? throw new ArgumentNullException(nameof(timeService));
             this.eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         }
 
@@ -108,9 +102,13 @@ namespace Game.Foundation
                 return false;
             }
 
-            CancelTransitionTimer();
             RequestScene(AppSceneId.LevelSelect, 0, 0, null);
             return true;
+        }
+
+        public bool IsLevelUnlocked(int levelId)
+        {
+            return !disposed && started && unlockedLevelIds.Contains(levelId);
         }
 
         public bool TrySelectLevel(int levelId)
@@ -144,7 +142,6 @@ namespace Game.Foundation
                 return false;
             }
 
-            CancelTransitionTimer();
             currentLevelRunId = AllocateLevelRunId();
             currentLevelConfig = levelConfig;
             gameplayCompleted = false;
@@ -163,8 +160,6 @@ namespace Game.Foundation
             }
 
             gameplayCompleted = true;
-            CancelTransitionTimer();
-
             if (completion.Result == LevelResult.Victory)
             {
                 var unlockedCopy = CopyLevelIds(currentLevelConfig.UnlockedLevelIds);
@@ -195,7 +190,6 @@ namespace Game.Foundation
             }
 
             disposed = true;
-            CancelTransitionTimer();
             Unsubscribe(sceneUnloadFailedSubscription);
             Unsubscribe(sceneLoadFailedSubscription);
             Unsubscribe(sceneUnloadedSubscription);
@@ -226,7 +220,6 @@ namespace Game.Foundation
                 case AppSceneId.LevelSelect:
                     ClearCurrentSession();
                     ChangeState(AppFlowState.LevelSelect);
-                    ScheduleLevelSelectAdvance();
                     break;
                 case AppSceneId.Gameplay:
                     if (state != AppFlowState.GameplayLoading ||
@@ -271,7 +264,6 @@ namespace Game.Foundation
 
             var failedTarget = pendingScene.SceneId;
             pendingScene = default(PendingScene);
-            CancelTransitionTimer();
             Debug.LogError(
                 $"[GameStateService] SceneLoadFailed={message.SceneId}; Code={message.ErrorCode}; " +
                 $"LevelId={message.LevelId}; LevelRunId={message.LevelRunId}");
@@ -298,31 +290,6 @@ namespace Game.Foundation
                 $"[GameStateService] SceneUnloadFailed={message.SceneId}; Code={message.ErrorCode}; " +
                 $"LevelId={message.LevelId}; LevelRunId={message.LevelRunId}");
             pendingScene = default(PendingScene);
-            CancelTransitionTimer();
-        }
-
-        private void ScheduleLevelSelectAdvance()
-        {
-            CancelTransitionTimer();
-            var descriptors = configService.GetLevelDescriptors();
-            if (descriptors.Count != 1 || !TrySelectLevel(descriptors[0].LevelId))
-            {
-                Debug.LogError(
-                    $"[GameStateService] MVP LevelSelect requires exactly one unlocked level; " +
-                    $"DescriptorCount={descriptors.Count}.");
-                return;
-            }
-
-            transitionTimer = timeService.Schedule(
-                AutomaticPageDelaySeconds,
-                () =>
-                {
-                    if (!disposed && state == AppFlowState.LevelSelect && !pendingScene.IsValid)
-                    {
-                        TryStartSelectedGameplay();
-                    }
-                },
-                TimeDomain.RealTime);
         }
 
         private void RequestScene(
@@ -403,12 +370,6 @@ namespace Game.Foundation
             currentLevelConfig = null;
             currentLevelRunId = 0;
             gameplayCompleted = false;
-        }
-
-        private void CancelTransitionTimer()
-        {
-            transitionTimer.Cancel();
-            transitionTimer = default(TimerHandle);
         }
 
         private void Unsubscribe(SubscriptionToken token)

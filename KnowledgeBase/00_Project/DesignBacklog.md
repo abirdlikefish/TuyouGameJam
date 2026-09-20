@@ -26,7 +26,7 @@
 | DES-012 | 门/道具接触失败后，后续子弹命中是否仍发放成功奖励 | Accepted | Gate、Prop、Bullet、Army | 见 ADR-006、ADR-046；失败状态锁定奖励并将 HP 最低锁在 1，后续仍受击和消费子弹，但不会击破或发放元素、武器效果 |
 | DES-013 | 武器身份使用 `WeaponId`，不维护第二份 `WeaponType` 身份 | Accepted | Army、Prop、Bullet、Config | 见 ADR-007、ADR-035；固定 `0=Slingshot`、`1=Bow`、`2=Staff` |
 | DES-014 | Gate/Prop 的道路实例由统一 ObstacleManager 管理 | Accepted | Obstacle、Gate、Prop、Spawn、Scene | 见 ADR-008；补充运行时实例查询和回收测试 |
-| DES-015 | 初始化、主界面、选关与游玩会话的流程边界 | Accepted | GlobalServices、Level、Scene、Config、UI | 见 ADR-011、ADR-019、ADR-051；主界面等待玩家点击开始，选关暂时等待 1 秒，终局回到选关并重新开始同一关 |
+| DES-015 | 初始化、主界面、选关与游玩会话的流程边界 | Accepted | GlobalServices、Level、Scene、Config、UI | 见 ADR-011、ADR-019、ADR-051、ADR-053；主界面等待开始，选关按目录显示节点并等待选择，终局回到选关 |
 | DES-016 | LevelCatalog、LevelConfig 与配置初始化/注入边界 | Accepted | Config、GlobalServices、Scene、Level | 见 ADR-012；初始化加载目录，选关后按 LevelId 注入 Gameplay |
 | DES-017 | 三类生成时间轴的游标所有权和调度接口 | Accepted | Level、Spawn、Monster、Obstacle | 见 ADR-013；游标只由 SpawnManager 持有，LevelManager 只传入时间并查询结果 |
 | DES-018 | Config、Scene、Spawn、Manager、EventBus、Time 和 Pool 公共契约基线 | Accepted | 架构、全部 Gameplay 模块 | 见 ADR-014；Pool 的原始 `GameObject + string key` 契约已由 ADR-031 修订为具体组件类型池 |

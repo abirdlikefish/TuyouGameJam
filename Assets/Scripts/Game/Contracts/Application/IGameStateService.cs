@@ -7,6 +7,7 @@ namespace Game.Contracts
         int GetCurrentLevelRunId();
         void NotifyInitializationReady();
         bool TryEnterLevelSelect();
+        bool IsLevelUnlocked(int levelId);
         bool TrySelectLevel(int levelId);
         bool TryStartSelectedGameplay();
         void CompleteGameplay(LevelCompletion completion);

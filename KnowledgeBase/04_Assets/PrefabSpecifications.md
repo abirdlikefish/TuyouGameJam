@@ -6,11 +6,19 @@
 
 所有必需引用在 Bootstrap 或 Gameplay Preparing 阶段集中校验。缺失或非法时直接 `Debug.LogError` 输出对象路径、字段和原因，并停止进入 Ready；不得运行时 `Find`、`GetComponent`、`AddComponent` 或使用默认资源补齐。
 
+## Bootstrap 常驻摄像机
+
+```text
+GlobalRoot
+└── AppCamera [Camera；Orthographic；MainCamera Tag；AudioListener]
+```
+
+AppCamera 保留唯一启用的 Camera 和 AudioListener，由 GlobalBootstrap 显式绑定并随 GlobalRoot 常驻。Camera 使用 Solid Color 清屏并渲染当前 Additive 应用场景；MainMenu、LevelSelect 和 Gameplay Canvas 均保持 Screen Space - Overlay。应用场景不得再创建自己的 Camera 或 AudioListener。
+
 ## Gameplay 场景最小结构
 
 ```text
 GameplayRoot [GameplaySceneEntry]
-├── MainCamera [Camera；Orthographic]
 ├── Road [RoadView；PF_Road_Default 实例]
 ├── ArmyContainer
 ├── LevelSystems
@@ -27,7 +35,7 @@ GameplayRoot [GameplaySceneEntry]
 └── EventSystem [EventSystem；StandaloneInputModule]
 ```
 
-首轮不创建 HUD 节点、胜负面板或计时文本。MainCamera、CanvasScaler 的最终适配参数在工程创建时按目标竖屏分辨率配置，但不作为玩法数值来源。
+首轮不创建 HUD 节点、胜负面板或计时文本。AppCamera、CanvasScaler 的最终适配参数在工程创建时按目标竖屏分辨率配置，但不作为玩法数值来源。
 
 ## Army
 

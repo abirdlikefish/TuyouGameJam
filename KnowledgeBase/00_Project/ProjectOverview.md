@@ -48,12 +48,12 @@
 ## 当前临时应用流程
 
 ```text
-初始化 → 加载 MainMenuScene 并等待玩家点击开始 → 切换 LevelSelectScene 并等待 1 秒
+初始化 → 加载 MainMenuScene 并等待玩家点击开始 → 切换 LevelSelectScene 并等待玩家选择关卡
 → 切换 GameplayScene → 胜利或失败 → 清理并卸载本局 → 切换回 LevelSelectScene
-→ 等待 1 秒后重新开始当前唯一关卡
+→ 等待玩家再次选择关卡
 ```
 
-MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固定根 SceneEntry。MainMenu 已接入开始与退出按钮并停留等待输入；LevelSelect 仍没有正式 UI，继续用 RealTime 自动跳过与结构化日志验证场景切换。该流程不是游戏的核心循环；后续选关交互可以替换剩余自动等待，而不改变上述核心玩法循环。
+MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固定根 SceneEntry。MainMenu 已接入开始与退出按钮；LevelSelect 按关卡目录动态生成节点，显示运行期解锁状态并等待玩家选择。页面交互不是游戏的核心循环。
 
 ## MVP 基线
 
@@ -66,8 +66,8 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 当所有敌人生成项都已处理且 `AliveEnemyCount == 0` 时胜利；敌人死亡动画尚未回收不影响该条件，符合 EnemyManager 的存活统计规则。
 - Victory 会立即结束当前会话，不等待 Gate/Prop 时间轴派发完成，也不等待仍在道路上的 Gate/Prop 接触或离场；未来条目停止生成，活动道路对象在 StopRun 中清理。这是当前预期规则，不属于内容丢失。
 - 当 Army 总人数小于等于 0 时失败。同一帧同时满足“最后一个敌人死亡”和“Army 归零”时，失败优先。
-- 初始化成功后异步加载 MainMenuScene，固定入口 Ready 后进入主界面并等待玩家点击开始；随后异步卸载旧场景、异步加载 LevelSelectScene，入口 Ready 后进入选关并等待 RealTime 1 秒。
-- 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并异步加载 LevelSelectScene；入口 Ready 后再次等待 RealTime 1 秒并开始唯一的当前关卡。
+- 初始化成功后异步加载 MainMenuScene，固定入口 Ready 后进入主界面并等待玩家点击开始；随后异步卸载旧场景、异步加载 LevelSelectScene，入口 Ready 后生成关卡节点并等待选择。
+- 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并异步加载 LevelSelectScene；入口 Ready 后使用最新运行期解锁集合重建节点并等待玩家选择。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
 - 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。槽位激活或实际换武器后等待一个完整 FireInterval，每槽每逻辑帧最多发射一颗且不追赶补发。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。

@@ -2,12 +2,12 @@
 
 ## 目标
 
-MVP 为玩法模块提供统一的正常时间步进，并为 MainMenu、LevelSelect 等应用流程提供可取消的 RealTime 定时任务。暂停、减速、加速、局部时停和对象局部倍率属于后续扩展。
+MVP 为玩法模块提供统一的正常时间步进，并保留可取消的 RealTime 定时任务能力。MainMenu 与 LevelSelect 已改为显式 UI 命令，不再消费应用页面定时器；暂停、减速、加速、局部时停和对象局部倍率属于后续扩展。
 
 ## 时间域
 
 ```text
-RealTime   应用流程自动等待、本地系统任务、拖拽输入归一化
+RealTime   本地系统任务、拖拽输入归一化
 Gameplay   关卡和普通游戏逻辑
 Bullet     子弹
 Gate       Gate、Prop 与其他道路对象
@@ -21,7 +21,6 @@ VFX        视觉特效
 
 | 消费者或逻辑 | MVP 时间域 | 边界 |
 |---|---|---|
-| MainMenu、LevelSelect 和不依赖 Gameplay 推进的流程等待 | `RealTime` | UI 或应用流程计时不归入 Gameplay |
 | Gameplay 相对拖拽归一化 | `RealTime` | LevelManager 读取后作为 `unscaledDeltaTime` 传给 Input；Input 不注入 TimeService，也不直接读取 Unity `Time` |
 | Army 移动、LevelManager 本局计时及未细分的玩法逻辑 | `Gameplay` | LevelManager 读取后传给 Army；SpawnManager 只消费由此累计的 `elapsedTime` |
 | 子弹移动、寿命和命中查询 | `Bullet` | LevelManager 读取后传给 BulletManager；不叠加 Gameplay delta |
@@ -50,7 +49,7 @@ TimerHandle Schedule(float seconds, Action callback, TimeDomain domain);
 
 ## MVP 范围
 
-MVP 中所有时间域倍率固定为 `1`，不提供运行时倍率查询或修改接口，也不提供暂停令牌。`RealTime` 用于 MainMenu、LevelSelect 等流程定时器，Gameplay 使用正常未缩放步进。`TimerHandle.Cancel()` 必须幂等，已取消或已完成的任务不得再次调用回调。
+MVP 中所有时间域倍率固定为 `1`，不提供运行时倍率查询或修改接口，也不提供暂停令牌。`RealTime` 用于拖拽输入归一化和未来确需未缩放时间的本地任务，Gameplay 使用正常未缩放步进。`TimerHandle.Cancel()` 必须幂等，已取消或已完成的任务不得再次调用回调；当前 MainMenu 与 LevelSelect 不创建此类任务。
 
 ## 后续扩展
 
@@ -73,7 +72,7 @@ MVP 中所有时间域倍率固定为 `1`，不提供运行时倍率查询或修
 
 ## 注意事项
 
-- `WaitForSeconds` 会受 Unity 全局时间缩放影响；当前应用流程统一使用 `RealTime` 定时器。
+- `WaitForSeconds` 会受 Unity 全局时间缩放影响；当前 MainMenu 与 LevelSelect 由 UI 命令推进，不依赖等待计时。
 - Collider2D 作为碰撞形状和查询依据，不改变时间权威；LevelManager 把各自有效 delta 传给对应阶段，一次操作不重复读取或累计其他域。
 - 当前不实现暂停或局部时停下的 Collider2D 行为；未来启用时另行确认。
 
@@ -85,3 +84,5 @@ MVP 中所有时间域倍率固定为 `1`，不提供运行时倍率查询或修
 - `../06_Decisions/ADR-030-TimeDomainStructure.md`
 - `../06_Decisions/ADR-033-LevelManagerFramePipeline.md`
 - `../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`
+- `../06_Decisions/ADR-051-InteractiveMainMenuFlow.md`
+- `../06_Decisions/ADR-053-InteractiveLevelSelectFlow.md`

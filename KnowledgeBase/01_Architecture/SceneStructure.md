@@ -15,6 +15,7 @@
 BootstrapScene
 └── GlobalRoot [DontDestroyOnLoad]
     ├── GlobalBootstrap
+    ├── AppCamera [Camera；Orthographic；MainCamera Tag；AudioListener]
     ├── ServiceHost
     │   ├── TimeService
     │   ├── GameStateService
@@ -25,7 +26,7 @@ BootstrapScene
     └── PersistentPoolRoot
 ```
 
-`ServiceHost` 表示服务的所有权和注册位置，不要求图中的每个服务都实现为子 GameObject；适合使用纯 C# 的服务可以由 `GlobalBootstrap` 或统一宿主持有。服务由 Composition Root 创建并通过接口注入，不要求也不提供各自的静态 `Instance`。MVP 完全无声音，不创建 `AudioRoot` 或 `AudioService`；`SaveService` 和 `DebugService` 同样不初始化。
+`AppCamera` 是唯一应用级摄像机，随 GlobalRoot 常驻并渲染当前 Additive 应用场景；它不是服务，不提供静态访问。三个应用场景的 Canvas 继续使用 Screen Space - Overlay。`ServiceHost` 表示服务的所有权和注册位置，不要求图中的每个服务都实现为子 GameObject；适合使用纯 C# 的服务可以由 `GlobalBootstrap` 或统一宿主持有。服务由 Composition Root 创建并通过接口注入，不要求也不提供各自的静态 `Instance`。MVP 完全无声音，不创建 `AudioRoot` 或 `AudioService`；唯一 AudioListener 随 AppCamera 保留，`SaveService` 和 `DebugService` 同样不初始化。
 
 `PersistentPoolRoot` 由 PoolService 持有，并按具体池化根组件类型维护空闲子节点。空闲实例全部失活；租出后由对应 Manager 移入当前 Gameplay 场景的 `MonsterRoot`、`ObstacleRoot`、`BulletRoot` 或其他职责节点，场景卸载前归还。
 
@@ -46,9 +47,12 @@ MainMenuScene
 
 LevelSelectScene
 └── LevelSelectRoot [LevelSelectSceneEntry]
+    ├── LevelSelectCanvas [Canvas、CanvasScaler、GraphicRaycaster、LevelSelectView]
+    │   └── LevelNodeContainer [动态 LevelSelectNodeView 实例]
+    └── EventSystem [EventSystem、StandaloneInputModule]
 ```
 
-MainMenuSceneEntry 和 LevelSelectSceneEntry 是场景装配入口。MainMenuSceneEntry 校验并初始化 MainMenuView；开始按钮向 GameStateService 提交进入选关命令，退出按钮请求停止 Editor Play 或退出 Player，视觉样式仍由 Inspector 资产负责。LevelSelect 的正式 UI 尚未实现，场景 Ready 后仍由 GameStateService 使用 RealTime 等待 1 秒自动推进。
+MainMenuSceneEntry 和 LevelSelectSceneEntry 是场景装配入口。MainMenuSceneEntry 校验并初始化 MainMenuView；LevelSelectSceneEntry 使用配置目录与 GameStateService 初始化 LevelSelectView。选关 View 从单一节点 Prefab 动态创建目录节点，节点只提交 LevelId，不直接加载场景。视觉样式仍由 Inspector 资产负责。
 
 三个应用场景都遵守固定根入口约定。Unity 场景适配器只在本次加载的 `Scene.GetRootGameObjects()` 中解析规范根，不使用跨场景 `GameObject.Find`。根缺失、重名、入口类型错误或初始化失败都必须报告加载失败，不得以运行时添加组件或静态入口注册兜底。
 
@@ -57,7 +61,6 @@ MainMenuSceneEntry 和 LevelSelectSceneEntry 是场景装配入口。MainMenuSce
 ```text
 GameplayScene
 └── GameplayRoot [GameplaySceneEntry]
-    ├── MainCamera
     ├── Road [RoadView；无玩法 Collider]
     ├── ArmyContainer [固定场景容器]
     │   └── ArmyRoot [ArmyController；序列化绑定选择并实例化的 PF_Army_000；每局从关卡配置坐标开始]
@@ -76,7 +79,7 @@ GameplayScene
     └── VFXRoot
 ```
 
-`GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 0` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到 LevelConfig 的 `armySpawnPosition`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的 `roadWidth`、`roadHeight` 提供原点居中的视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收。
+`GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理；Camera 与 AudioListener 不属于单局对象，由 GlobalRoot 的 AppCamera 持有。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 0` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到 LevelConfig 的 `armySpawnPosition`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的 `roadWidth`、`roadHeight` 提供原点居中的视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收。
 
 首轮玩法验证不创建 Gameplay HUD、胜负面板或计时文本。Canvas 只承载 Input 模块的 TouchDragArea；Gate 自身使用世界空间单个 TMP 调试文本显示当前状态。完整最小绑定见 [PrefabSpecifications](../04_Assets/PrefabSpecifications.md)。
 

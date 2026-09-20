@@ -2,6 +2,8 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 新增 ADR-054，将 Gameplay MainCamera 提升为 Bootstrap/GlobalRoot 下的唯一常驻 AppCamera；保留原镜头参数并由 GlobalBootstrap 显式校验 Camera、MainCamera Tag 与同对象 AudioListener，三个应用场景继续使用 Overlay Canvas，避免切换离开 Gameplay 后残留最后一帧 | Bootstrap、Scene、Camera、测试、共享装配 | Codex |
+| 2026-09-21 | 新增 ADR-053，将 LevelSelect 从 RealTime 自动跳过改为动态节点与显式关卡启动；新增运行期解锁查询、LevelSelectView、LevelSelectNodeView 和节点 Prefab，按 LevelDescriptor 生成列表并在点击时复用既有关卡选择/开始命令。当前不修改单关卡配置 | LevelSelect、UI、Application、Scene、共享契约 | Codex |
 | 2026-09-21 | 新增 ADR-052 并实施原点居中道路与可配置 Army 出生坐标：LevelConfig 以 `roadWidth`/`roadHeight` 取代左下角 Rect，RoadLayoutSnapshot 唯一派生对称四边；新增 `armySpawnPosition`，Army 开局精确应用该世界坐标并保持配置 Y，初始阵型越界时 Preparing 失败。第一关迁移为 5×15、Army `(0,0)`，生成时间轴和归一化横向位置保持不变 | Config、Level、Army、Spawn、共享契约、测试、ADR-052 | Codex |
 | 2026-09-21 | 新增 ADR-051，将 MainMenu 从 Ready 后等待 1 秒自动跳转改为显式按钮驱动；新增 `TryEnterLevelSelect()` 与 MainMenuView，开始按钮沿用 GameStateService/SceneService 切换链路，退出按钮区分 Editor 与 Player，视觉样式保留给 Inspector。LevelSelect 的临时自动开始逻辑保持不变；本轮只执行静态编译、引用与差异检查，不进入 Play Mode | MainMenu、UI、Application、Scene、共享契约 | Codex |
 | 2026-09-21 | 执行批次 7.6 现有素材基线验收：Sequence Animation Builder 复扫得到 12 UpToDate、0 Pending、19 Empty、0 Invalid；校验 39 Clip、5 Controller、6 AOC、Prefab 引用和 Monster AnimationEvent。真实 Gameplay 验证三武器全槽位显式状态切换、Monster Move/Attack/Death 与事件回收、三 BulletId、四 Gate 身份以及三类对象池复借无 Animator 残留；TouchDragInput 场景实例拖动与抬手归零通过。记录 554 张现有 Sprite 在 StandaloneWindows64 Editor 的已加载纹理内存约 156.17 MiB。批次仍保持 InProgress：19 个动作为空，PlayerSettings 仍为横屏 1920×1080/AutoRotation，最终视觉连续性、9:16、多分辨率及 Player 内存待补验 | 批次 7.6、Animation、Army、Monster、Bullet、Gate、Input、Pool、Performance | Codex |

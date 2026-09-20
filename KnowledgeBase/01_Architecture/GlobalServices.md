@@ -32,13 +32,13 @@ GlobalBootstrap / Composition Root
 ├── 创建 TimeService
 ├── 创建 ConfigService(EventBus)
 ├── 创建 SceneService(EventBus, UnitySceneRuntime)
-├── 创建 GameStateService(ConfigService, SceneService, TimeService, EventBus)
+├── 创建 GameStateService(ConfigService, SceneService, EventBus)
 └── 创建 PoolService(PersistentPoolRoot, 诊断委托)
 ```
 
 | 服务 | 直接依赖 | 原因 |
 |---|---|---|
-| `GameStateService` | `IConfigService`、`ISceneService`、`ITimeService`、`IEventBus` | 选关校验、场景命令、流程定时和事实发布 |
+| `GameStateService` | `IConfigService`、`ISceneService`、`IEventBus` | 运行期解锁、选关校验、场景命令和事实发布 |
 | `SceneService` | `IEventBus`、UnitySceneRuntime | 异步加载完成后固定入口绑定，异步卸载完成后发布 Ready、Failed、Unloaded 事实；不回调具体 GameState 实现 |
 | `ConfigService` | `LevelCatalog`、`cfg.Tables`、`IResourceRegistry` | 完整校验并复制五类只读快照；失败时记录首个错误、进入 Failed 并立即退出，不依赖 Gameplay 模块或配置失败事件 |
 | `PoolService` | `PersistentPoolRoot`、可选诊断委托 | 按具体类型持有类型池和空闲实例；不依赖资源注册表、SpawnManager 或玩法状态 |
@@ -60,10 +60,10 @@ Bootstrap → Create 服务 → Connect 明确依赖 → Start 并注册事件
 - MVP 服务初始化使用固定屏障：Create 创建实例且不产生业务副作用；Connect 注入明确类型依赖并校验场景与序列化配置；Start 先注册应用流程事件，再由 Composition 调用具体 ConfigService 初始化资产与表并启动应用流程。选关后只把 `LevelConfigSnapshot` 交给 Gameplay。
 - MVP 不创建或初始化 `AudioService`、`SaveService`、`DebugService`，也不创建音频根节点、音量设置或调试命令入口。
 - 场景重载时不得创建重复的 `GlobalRoot`。
-- MainMenu、LevelSelect 和 Gameplay 都使用实际 Additive 场景及固定根 SceneEntry；`Initializing`、`GameplayLoading` 仍只是流程状态。MainMenu 场景 Ready 后等待按钮命令，LevelSelect 的临时自动跳过计时使用 RealTime。
+- MainMenu、LevelSelect 和 Gameplay 都使用实际 Additive 场景及固定根 SceneEntry；`Initializing`、`GameplayLoading` 仍只是流程状态。MainMenu 和 LevelSelect 场景 Ready 后都等待 UI 命令。
 - `ConfigService` 初始化失败时使用 `Debug.LogError` 输出首个稳定来源与原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode；不进入 MainMenu，不使用默认值，不自动恢复或重试，也不发布配置失败事件。
 - `GlobalBootstrap` 在确认 `ConfigService.GetConfigLoadState() == Ready` 后调用 `GameStateService.NotifyInitializationReady()`；`GameStateService` 负责后续 `MainMenu`、`LevelSelect` 和 Gameplay 流程推进。
-- LevelSelect 的 RealTime 定时器由 `GameStateService` 持有并在离开状态、加载失败或终局时取消；MainMenuView 只提交同步应用命令，不直接创建流程定时器。
+- MainMenuView 和 LevelSelectView 只提交同步应用命令；页面 UI 不直接切换场景，也不创建流程定时器。
 - `SceneService` 执行 `SwitchToMainMenu`、`SwitchToLevelSelect`、`SwitchToGameplay`，使用异步 Additive 加载、固定根入口绑定和异步卸载，并通过 `AppSceneReady`、`AppSceneLoadFailed`、`AppSceneUnloaded`、`AppSceneUnloadFailed` 与 `GameStateService` 握手；它不直接修改应用状态。
 - `GameStateService` 不持有具体 SceneEntry；SceneEntry 只负责场景内部装配，不能选择下一场景或推进 `AppFlowState`。
 - `GameStateService` 与 `SceneService` 共同记录在 `ApplicationFlow.md`，但保持独立实现职责；前者拥有状态机，后者只适配 Unity 场景操作。

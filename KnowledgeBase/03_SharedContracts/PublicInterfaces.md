@@ -256,13 +256,14 @@ public interface IGameStateService
     int GetCurrentLevelRunId();
     void NotifyInitializationReady();
     bool TryEnterLevelSelect();
+    bool IsLevelUnlocked(int levelId);
     bool TrySelectLevel(int levelId);
     bool TryStartSelectedGameplay();
     void CompleteGameplay(LevelCompletion completion);
 }
 ```
 
-`GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
+`GameStateService` 是 `AppFlowState` 和运行期解锁集合的唯一所有者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`IsLevelUnlocked` 查询当前运行期集合，未知或未解锁 ID 返回 `false`；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
 `CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
@@ -594,13 +595,13 @@ public interface ITimeService
 
 `IDamageable` 只表达真正以生命值决定存活的对象。Enemy、Prop 等对象可以同时实现 `IDamageable` 和 `IBulletHittable`；加法门没有 HP，只实现 `IBulletHittable`。Pending 元素门即使 `CurrentHp == 0`，在接触结算前仍保持 `CanReceiveBulletHit == true`，后续子弹继续消费并累计 HP 归零后的额外伤害。元素门进入 `Failed` 后奖励永久锁定；若生命周期仍允许 `CanReceiveBulletHit == true`，命中只能用于表现或其他已明确的生命周期处理，不得增加可兑换额外伤害。BulletManager 不能用 `IsAlive` 或目标 HP 替代 `CanReceiveBulletHit`。
 
-`TimerHandle` 必须支持幂等取消。所有 RealTime 自动跳过计时都使用 `RealTime` 时间域；状态离开或会话失效后，旧回调不得继续推进应用流程。
+`TimerHandle` 必须支持幂等取消。MainMenu 和 LevelSelect 已改为显式 UI 命令，不再创建应用页面自动跳过计时器。
 
 MVP 中所有时间域倍率固定为 `1`。当前公共契约不包含倍率查询/修改、暂停令牌、减速、加速或局部时停；未来启用前另行定案。
 
 `TimeDomain` 是一次移动、计时或调度所选择的时间策略，不是对象可以同时加入的标签集合。每次操作只选择一个最具体的域，不把 `Gameplay` delta 与 `Bullet`、`Gate`、`Monster` 或 `VFX` delta 重复累计。MVP 归属固定为：
 
-- LevelSelect 和不依赖 Gameplay 推进的流程等待使用 `RealTime`；MainMenu 改为按钮驱动后不再创建自动等待计时器。
+- MainMenu 和 LevelSelect 都由 UI 命令推进，不使用时间域自动跳过。
 - LevelManager 在逻辑帧开始集中读取 `Gameplay`、`Bullet`、`Gate` 和 `Monster` delta。Army 与未细分玩法消费传入的 `Gameplay` delta；SpawnManager 只消费 LevelManager 累计的 `elapsedTime`。
 - BulletManager 消费传入的 `Bullet` delta；EnemyManager 消费传入的 `Monster` delta；ObstacleManager 及 Gate/Prop 消费传入的 `Gate` delta。具体池对象不直接访问 `ITimeService`。
 - `VFX` 只表示跟随 Gameplay 世界推进的视觉特效；UI 动画和应用流程表现不使用该域。

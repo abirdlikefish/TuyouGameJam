@@ -8,7 +8,7 @@ Accepted
 
 2026-09-18
 
-> 后续决策：ADR-051 为 MainMenu 增加场景内 View 和按钮命令，但不增加跨场景输入服务；LevelSelect 仍使用临时自动推进。
+> 后续决策：ADR-051 与 ADR-053 分别为 MainMenu、LevelSelect 增加场景内 View 和按钮命令，但不增加跨场景输入服务；两者均不再使用临时自动推进。
 
 ## 背景
 

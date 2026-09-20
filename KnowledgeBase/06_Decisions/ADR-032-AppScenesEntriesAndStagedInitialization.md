@@ -8,7 +8,7 @@ Accepted
 
 2026-09-18
 
-> 后续决策：ADR-051 已用场景内 MainMenuView 和显式应用命令取代 MainMenu 的 1 秒自动推进；LevelSelect 临时自动推进及本 ADR 的场景入口、切换和初始化边界保持有效。
+> 后续决策：ADR-051 与 ADR-053 已分别用场景内 View 和显式应用命令取代 MainMenu、LevelSelect 的 1 秒自动推进；本 ADR 的场景入口、切换和初始化边界保持有效。
 
 ## 背景
 

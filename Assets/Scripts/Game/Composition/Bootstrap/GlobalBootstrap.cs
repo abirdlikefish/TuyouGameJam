@@ -13,6 +13,10 @@ namespace Game.Composition
         [SerializeField] private TimeService timeService;
         [SerializeField] private UnitySceneRuntime sceneRuntime;
 
+        [Header("常驻渲染")]
+        [SerializeField] private Camera applicationCamera;
+        [SerializeField] private AudioListener applicationAudioListener;
+
         [Header("配置资产")]
         [SerializeField] private LevelCatalog levelCatalog;
         [SerializeField] private UnityResourceRegistry resourceRegistry;
@@ -95,7 +99,6 @@ namespace Game.Composition
             gameStateService = new GameStateService(
                 configService,
                 sceneService,
-                timeService,
                 eventBus);
             created = true;
             Debug.Log("[GlobalBootstrap] Phase=Create; Succeeded=True");
@@ -155,6 +158,17 @@ namespace Game.Composition
                 throw new InvalidOperationException("GlobalBootstrap.sceneRuntime is not assigned.");
             }
 
+            if (applicationCamera == null)
+            {
+                throw new InvalidOperationException("GlobalBootstrap.applicationCamera is not assigned.");
+            }
+
+            if (applicationAudioListener == null)
+            {
+                throw new InvalidOperationException(
+                    "GlobalBootstrap.applicationAudioListener is not assigned.");
+            }
+
             if (levelCatalog == null)
             {
                 throw new InvalidOperationException("GlobalBootstrap.levelCatalog is not assigned.");
@@ -171,10 +185,32 @@ namespace Game.Composition
             }
 
             if (!timeService.transform.IsChildOf(transform) || !sceneRuntime.transform.IsChildOf(transform) ||
-                !persistentPoolRoot.IsChildOf(transform))
+                !persistentPoolRoot.IsChildOf(transform) ||
+                !applicationCamera.transform.IsChildOf(transform))
             {
                 throw new InvalidOperationException(
-                    "TimeService, UnitySceneRuntime and PersistentPoolRoot must belong to GlobalRoot.");
+                    "TimeService, UnitySceneRuntime, AppCamera and PersistentPoolRoot must belong to GlobalRoot.");
+            }
+
+            if (applicationAudioListener.gameObject != applicationCamera.gameObject)
+            {
+                throw new InvalidOperationException(
+                    "GlobalBootstrap.applicationAudioListener must belong to the AppCamera GameObject.");
+            }
+
+            if (!applicationCamera.CompareTag("MainCamera"))
+            {
+                throw new InvalidOperationException("GlobalBootstrap.applicationCamera must use the MainCamera tag.");
+            }
+
+            if (!applicationCamera.isActiveAndEnabled || !applicationAudioListener.isActiveAndEnabled)
+            {
+                throw new InvalidOperationException("AppCamera and its AudioListener must both be active and enabled.");
+            }
+
+            if (applicationCamera.clearFlags != CameraClearFlags.SolidColor)
+            {
+                throw new InvalidOperationException("AppCamera must use Solid Color clear flags.");
             }
         }
 

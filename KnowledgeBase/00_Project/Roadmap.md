@@ -35,7 +35,7 @@
 - [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID，ConfigService 校验后生成供 Gameplay 使用的不可变 `LevelConfigSnapshot`
 - [ ] Luban 配置角色/军队、敌人、Prop 和子弹属性；Gate 不读表，由 LevelConfig 生成项与对应 Prefab 提供配置
 - [ ] Luban 配置 Army 基础数值、固定 Weapon 0/1/2 和每名士兵生命值；当前不建立 TbElement，阵型槽位由 Army Prefab 序列化绑定
-- [ ] 当前临时流程：MainMenuScene 在 Entry Ready 后等待开始按钮；LevelSelectScene 仍等待 1 秒；胜利/失败后清理 Gameplay 并切换回 LevelSelectScene，再开始当前关卡
+- [ ] 当前应用流程：MainMenuScene 等待开始按钮；LevelSelectScene 动态生成关卡节点并等待选择；胜利/失败后清理 Gameplay 并返回 LevelSelectScene
 
 ## 阶段 3：表现和性能
 

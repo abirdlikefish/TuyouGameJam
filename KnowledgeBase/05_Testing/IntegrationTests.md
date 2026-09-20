@@ -10,23 +10,25 @@
 - [ ] 配置数据非法时日志包含稳定来源、字段或条目索引并立即退出应用；Prefab、Collider、Layer 或必需 Inspector 引用非法时日志包含对象路径并阻止对应 Ready。两者都不使用默认值、自动补组件、降级或重试继续运行。
 - [ ] MainMenu Scene Ready 后持续停留且不创建自动计时；开始按钮只请求一次 LevelSelect 切换，快速重复点击无重复请求，旧场景异步卸载完成前不加载目标场景。
 - [ ] MainMenu 退出按钮在 Editor 停止 Play Mode，在 Player 退出应用；开始或退出请求接受后两个按钮立即不可交互。
-- [ ] LevelSelectSceneEntry Ready 后才进入 LevelSelect、选择目录中有效且可选的唯一 `LevelId`，并启动新的 RealTime 1 秒计时。
-- [ ] LevelSelect 计时结束后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 异步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
+- [ ] LevelSelectSceneEntry 使用目录和运行期解锁集合生成节点；当前配置只生成一个名称为“第 1 关”的已解锁节点，停留超过 1 秒不自动开始关卡。
+- [ ] 点击已解锁节点后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 异步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
 - [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
 - [ ] MainMenu、LevelSelect 的场景事实使用 `LevelId = 0`、`LevelRunId = 0`；Gameplay 事实携带当前值，目标不匹配或过期事实不会推进状态。
 - [ ] 根缺失、重名、入口类型错误或 Entry 初始化失败时，失败目标场景先完成清理，再发布 `AppSceneLoadFailed`；不得发布 Ready。
 - [ ] Gameplay 加载失败时不发布 `LevelRunStarted`，清除待启动会话并请求恢复 LevelSelectScene；只有 LevelSelect Ready 后才进入 LevelSelect。
 - [ ] 异步卸载失败发布 `AppSceneUnloadFailed`，停止本次切换且不加载目标场景。
 - [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 请求切换 LevelSelect，GameplaySceneEntry 清理并卸载，LevelSelectSceneEntry Ready 后才清除当前会话并进入 LevelSelect。
-- [ ] 回到 LevelSelect 后等待 RealTime 1 秒，使用新的 `LevelRunId` 再次开始同一关；上一局的延迟事件、定时器和池实例不会影响新会话。
-- [ ] 离开稳定状态、加载失败和终局时旧 RealTime 定时器均已取消，不能启动旧页面或旧关卡。
+- [ ] 回到 LevelSelect 后只重建一组节点并等待再次选择；上一局的延迟事件、节点监听和池实例不会影响新会话。
+- [ ] 快速重复点击只接受一次选择和开始命令，不能创建第二个会话或重复场景请求。
 - [ ] 结构化日志中每次加载恰好出现一次切换请求、Entry 初始化和 Ready；每次卸载恰好出现一次 Entry 清理和 Unloaded，Gameplay 日志包含 `LevelId`、`LevelRunId`。日志不参与流程控制。
 
 ## 装配与服务访问
 
 - [ ] 冷启动和 Gameplay 重开期间始终只有一个 `GlobalRoot` 和一套 MVP 全局服务实例。
+- [x] Bootstrap、MainMenu、LevelSelect、Gameplay 和终局返回选关的全过程始终只有一个启用的 AppCamera、`MainCamera` Tag 和 AudioListener；Camera 实例跨应用场景切换保持不变。
+- [ ] GameplayScene 不包含 Camera 或 AudioListener；离开 Gameplay 后 AppCamera 继续以 Solid Color 清屏，不残留上一帧玩法画面，三个 Overlay Canvas 不绑定 World Camera。
 - [ ] 服务唯一性由 GlobalBootstrap / Composition Root 持有，不要求各服务暴露静态 `Instance`；Gameplay 和 Presentation 代码不通过运行时 `Find` 或通用 Service Locator 取得必需服务。
-- [ ] GameStateService 可以注入假的 Config、Scene、Time 和 EventBus 实现，独立验证状态转换、失败和幂等行为。
+- [ ] GameStateService 可以注入假的 Config、Scene 和 EventBus 实现，独立验证状态转换、失败和幂等行为。
 - [ ] Gameplay 场景装配入口只向 LevelManager、ArmyController、BulletManager、EnemyManager、ObstacleManager 等消费者注入其实际需要的最小接口。
 - [ ] Bullet、Monster、Gate 和 Prop 等池对象不访问全局服务集合；对应 Manager 在复用时传入本局配置快照、`LevelRunId`、`RuntimeInstanceId` 和必要回调。
 - [ ] Input Adapter 只存在于 Gameplay 场景，在 Playing 阶段启用，不创建跨场景 `InputService`，也不注入或查询 TimeService；LevelManager 读取本帧 `RealTime` delta 并作为 `unscaledDeltaTime` 传给输入 Tick，Input 不直接读取 Unity `Time`。
@@ -133,14 +135,14 @@
 - [ ] Victory 的 `unlockedLevelIds` 只作为本局结果传递，不创建或修改本地存档。
 - [ ] Army 归零后进入 GameOver。
 - [ ] 同一帧最后一只敌人死亡且 Army 归零时进入 GameOver。
-- [ ] Victory 和 GameOver 停止本局逻辑并清理当前会话；重新进入同一关前经过 LevelSelect 的 1 秒 RealTime 等待。
+- [ ] Victory 和 GameOver 停止本局逻辑并清理当前会话；返回 LevelSelect 后等待玩家再次选择。
 
 ## 时间系统
 
 - [ ] `Gameplay`、`Bullet`、`Gate`、`Monster` 和 `VFX` 都返回倍率为 `1` 的正常未缩放步进；同一帧输入下与 `RealTime` 数值一致。
 - [ ] LevelManager 集中读取 `RealTime`、`Gameplay`、`Bullet`、`Monster`、`Gate` delta：Input 使用 RealTime，Army 和本局计时使用 Gameplay，BulletManager 使用 Bullet，EnemyManager 使用 Monster，ObstacleManager 使用 Gate；SpawnManager 只消费累计的 `elapsedTime`，Gameplay 世界特效使用 VFX。
 - [ ] 单次移动、计时或调度只读取一个最具体的时间域，不把 `Gameplay` delta 与子系统域 delta 重复累计。
-- [ ] MainMenu 和 LevelSelect 的等待使用 `RealTime` 定时器，不依赖 Gameplay 推进。
+- [ ] MainMenu 和 LevelSelect 都等待 UI 命令，不创建自动跳过定时器，也不依赖 Gameplay 推进。
 - [ ] `TimerHandle.Cancel()` 幂等；状态离开、加载失败、终局或会话失效后，旧回调不会执行或推进流程。
 - [ ] MVP 不暴露父域图、重叠归属、倍率修改、暂停令牌、减速、加速或局部时停接口。
 

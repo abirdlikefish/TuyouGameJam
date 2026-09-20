@@ -8,7 +8,7 @@ Integration（批次 7.5C 已完成实际场景、Build Settings、Inspector 装
 
 本文件是 `GameStateService`、`SceneService` 与三个应用场景入口的应用流程活文档：
 
-- `GameStateService` 拥有 `AppFlowState`、关卡选择、`LevelRunId`、流程定时器、待切换目标和结果推进。
+- `GameStateService` 拥有 `AppFlowState`、运行期解锁集合、关卡选择、`LevelRunId`、待切换目标和结果推进。
 - `SceneService` 协调 MainMenu、LevelSelect、Gameplay 三个应用场景的异步 Additive 加载、固定入口绑定和异步卸载，并发布场景事实。
 - `MainMenuSceneEntry`、`LevelSelectSceneEntry`、`GameplaySceneEntry` 只负责各自场景内装配和清理，不选择下一场景或推进应用状态。
 - `GlobalBootstrap` 只按 Create、Connect、Start 三阶段创建并连接服务；`LevelManager` 只管理当前 Gameplay 会话。
@@ -64,7 +64,7 @@ Assets/Tests/
 
 ## 服务依赖
 
-- `GameStateService` 通过 `IConfigService` 校验选关，通过 `ITimeService` 创建 RealTime 流程定时器，通过 `ISceneService` 发出类型化切换命令，并通过 `IEventBus` 发布应用状态和结果事实。
+- `GameStateService` 通过 `IConfigService` 校验选关，通过 `ISceneService` 发出类型化切换命令，并通过 `IEventBus` 发布应用状态和结果事实。
 - GameStateService 在创建 Gameplay 会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；Victory 的 `UnlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。该集合已由 ConfigService 按 ADR-044 过滤当前目录中不存在的未来关卡 ID，应用流程不回读原始 LevelConfig，也不重复警告或过滤。
 - `SceneService` 依赖 `IEventBus` 和 Unity 场景适配能力；它持有当前场景、待切换目标和内部操作状态，不读取配置目录，不决定下一状态。
 - `GameStateService` 订阅 `AppSceneReady`、`AppSceneUnloaded`、`AppSceneLoadFailed`、`AppSceneUnloadFailed`，并校验 `AppSceneId`、`LevelId`、`LevelRunId` 和内部 pending target；Unloaded 只用于确认旧场景事实，不直接推进稳定状态。
@@ -76,7 +76,7 @@ Assets/Tests/
 |---|---|---|---|
 | `Initializing` | GameStateService | 应用启动 | ConfigService Ready，MainMenuScene 的 Entry 完成初始化并收到 `AppSceneReady(MainMenu)` |
 | `MainMenu` | GameStateService | MainMenuScene Ready | 玩家点击开始，`TryEnterLevelSelect()` 接受请求并切换 LevelSelect |
-| `LevelSelect` | GameStateService | LevelSelectScene Ready | 已选择有效关卡并请求开始新会话 |
+| `LevelSelect` | GameStateService | LevelSelectScene Ready | 玩家点击已解锁节点，选择有效关卡并请求开始新会话 |
 | `GameplayLoading` | GameStateService | 创建新 `LevelRunId` 并请求切换 Gameplay | 收到匹配的 `AppSceneReady(Gameplay)` 或场景失败事实 |
 | `Gameplay` | GameStateService | GameplayScene Ready，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver，并请求切换 LevelSelect |
 
@@ -124,16 +124,17 @@ GlobalBootstrap 完成 Create 与 Connect
 → SceneService 异步卸载 MainMenuScene
 → 异步加载 LevelSelectScene，完成后初始化 LevelSelectSceneEntry
 → AppSceneReady(LevelSelect)
-→ GameStateService 进入 LevelSelect、选择唯一关卡并启动 RealTime 1 秒定时器
+→ GameStateService 进入 LevelSelect 并等待节点点击
 ```
 
-MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用命令，不直接调用 SceneManager；退出按钮在 Editor 停止 Play，在 Player 请求退出。LevelSelect 当前仍自动跳过，没有正式 UI；其计时从 Scene Ready 后开始，而不是从加载请求时开始。
+MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用命令，不直接调用 SceneManager；退出按钮在 Editor 停止 Play，在 Player 请求退出。LevelSelectView 按目录动态创建节点，查询 GameStateService 的运行期解锁状态并等待玩家点击。
 
 ## 进入 Gameplay
 
 ```text
-LevelSelect 定时器到期
-→ GameStateService 校验选中关卡并创建新 LevelRunId
+玩家点击已解锁关卡节点
+→ LevelSelectView 请求选择并开始该关卡
+→ GameStateService 再次校验解锁状态与配置并创建新 LevelRunId
 → GameplayLoading
 → SceneService.SwitchToGameplay(levelId, levelConfigSnapshot, levelRunId)
 → 异步卸载 LevelSelectScene
@@ -160,7 +161,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 → 异步加载并初始化 LevelSelectSceneEntry
 → AppSceneReady(LevelSelect)
 → GameStateService 清除当前会话并进入 LevelSelect
-→ 启动新的 RealTime 1 秒定时器
+→ LevelSelectView 使用最新解锁集合生成节点并等待选择
 ```
 
 `LevelManager` 不直接切换或卸载场景，`SceneService` 不自行决定回到 LevelSelect。
@@ -168,12 +169,12 @@ LevelManager 完成当前会话并停止玩法逻辑
 ## 失败、重复与过期处理
 
 - Luban 表、LevelCatalog 或 LevelConfig 数据初始化失败时，ConfigService 按 ADR-041 记录首个错误并立即退出应用，不得请求 MainMenuScene。ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只警告并过滤，不进入失败流程。其他 Bootstrap/场景装配失败不得伪装初始化成功。
-- 重复的初始化通知、切换请求、定时器回调和终局提交必须幂等，不能创建第二个会话或重复结果。
-- MainMenuScene 加载失败时保持 `Initializing`；LevelSelectScene 加载失败时不进入 `LevelSelect`，也不启动选关定时器。二者都不自动无限重试。
+- 重复的初始化通知、切换请求、节点点击和终局提交必须幂等，不能创建第二个会话或重复结果。
+- MainMenuScene 或 LevelSelectScene 加载失败时不进入目标稳定状态，也不自动无限重试。
 - GameplayScene 加载失败时不得发布 `LevelRunStarted`；GameStateService 清除待启动会话并请求恢复 LevelSelectScene，只有 `AppSceneReady(LevelSelect)` 后才进入 `LevelSelect`。
 - `AppSceneUnloadFailed` 会停止当前切换，保留可诊断状态；不得在旧场景仍存在时加载目标场景。
 - 所有场景事实必须匹配当前 pending target；Gameplay 事实还必须匹配当前 `LevelRunId`。过期事实不能影响新会话。
-- 离开稳定状态、目标加载失败、终局或会话失效时取消旧 `TimerHandle`；回调执行前再次检查当前状态和 pending target。
+- 每个 UI 命令执行前再次检查当前状态和 pending target；过期或重复点击不得推进流程。
 - 全局服务不得长期持有已卸载场景对象的具体引用。
 
 ## 首轮日志验收
@@ -188,5 +189,5 @@ LevelManager 完成当前会话并停止玩法逻辑
 - 事实事件：`../03_SharedContracts/EventCatalog.md`
 - 场景层级：`SceneStructure.md`
 - 验收清单：`../05_Testing/IntegrationTests.md` 的“应用流程”部分
-- 决策依据：`../06_Decisions/ADR-019-ApplicationFlowContract.md`、`../06_Decisions/ADR-027-MvpGlobalServiceScope.md`、`../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`、`../06_Decisions/ADR-050-UnitySceneLoadCompletionBoundary.md`
+- 决策依据：`../06_Decisions/ADR-019-ApplicationFlowContract.md`、`../06_Decisions/ADR-027-MvpGlobalServiceScope.md`、`../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`、`../06_Decisions/ADR-050-UnitySceneLoadCompletionBoundary.md`、`../06_Decisions/ADR-053-InteractiveLevelSelectFlow.md`
 - 当前测试策略：`../05_Testing/TestingStrategy.md`、`../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md`

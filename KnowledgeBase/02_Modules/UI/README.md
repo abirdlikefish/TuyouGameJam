@@ -4,7 +4,7 @@
 
 - ID：`MOD-UI`
 - 层级：Presentation
-- 状态：MainMenu `InTest`；HUD `Deferred`；Input UI `ContractReady`
+- 状态：MainMenu `InTest`；LevelSelect `InTest`；HUD `Deferred`；Input UI `ContractReady`
 - 依赖：EventBus、GameStateService
 
 ## 首轮工程切片
@@ -17,7 +17,7 @@
 - 显示胜利、失败和重开界面；暂停界面属于后续扩展。
 - 监听状态和数值事件。
 
-MainMenu 已接入开始与退出按钮：`MainMenuView` 只持有序列化 Button、提交 `IGameStateService.TryEnterLevelSelect()` 并处理应用退出，不在代码中控制视觉样式。LevelSelect、HUD 和结果界面仍未实现实际交互；LevelSelect 暂时继续由应用流程状态和 RealTime 自动跳过计时表示。MainMenu 当前只完成静态验证，Play Mode 点击、切换和 Player 退出行为仍待运行验收。`Victory`、`GameOver` 事件保留给后续结果反馈使用。
+MainMenu 已接入开始与退出按钮。LevelSelect 按 `LevelDescriptor` 动态生成 `LevelSelectNodeView`，显示运行期解锁状态，并通过 GameStateService 的选择和开始命令进入关卡。两类页面代码都不控制视觉样式。HUD 和结果界面仍未实现；`Victory`、`GameOver` 事件保留给后续结果反馈使用。
 
 ## 约束
 
