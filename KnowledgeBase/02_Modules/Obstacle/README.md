@@ -4,7 +4,7 @@
 
 - ID：`MOD-OBSTACLE`
 - 层级：Gameplay
-- 状态：`ContractReady`
+- 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Layer 与对象池联调待完成）
 - 依赖：IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level
 - 决策：`../../06_Decisions/ADR-008-ObstacleManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 

@@ -4,7 +4,7 @@
 
 - ID：`MOD-GATE`
 - 层级：Gameplay
-- 状态：`ContractReady`
+- 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Layer 与接触手测待完成）
 - 依赖：EventBus、Army、Bullet、ObstacleManager、Level
 - 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
@@ -81,7 +81,7 @@ Pending
 
 ## 计划脚本与 Prefab 结构
 
-文档确认后的最小实现结构如下；当前尚未创建这些工程文件：
+批次 4 已按以下最小结构创建脚本；对应 Prefab 仍待用户装配：
 
 ```text
 Assets/Scripts/Game/Gameplay/Gate/

@@ -4,7 +4,7 @@
 
 - ID：`MOD-ARMY`
 - 层级：Gameplay
-- 状态：`ContractReady`
+- 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Scene 装配与玩法手测待完成）
 - 依赖：EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager
 - 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`
 - MVP `ArmyId` 固定为 `0`，同时读取首行 `TbArmy.Id = 0` 并选择序列化 `ArmyPrefabBinding.ArmyId = 0` 的 Prefab。

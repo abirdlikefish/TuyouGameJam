@@ -4,7 +4,7 @@
 
 - ID：`MOD-INPUT`
 - 层级：Presentation / Gameplay Adapter
-- 状态：`ContractReady`
+- 状态：`InProgress`（批次 4 脚本已实现并通过编译；UI Prefab/Scene 装配与输入手测待完成）
 - 生命周期：Gameplay 场景内；不跨场景保留
 - 依赖：`IHorizontalInputReceiver`、UGUI EventSystem、Level；由 Gameplay 场景装配控制启停
 - 决策：`../../06_Decisions/ADR-027-MvpGlobalServiceScope.md`、`../../06_Decisions/ADR-028-MvpRelativeDragInput.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`
@@ -79,12 +79,12 @@ horizontalInput = baseTouchInput * horizontalMultiplier
 ### 代码结构与接口
 
 ```text
-Assets/Scripts/Game/Contracts/Input/
+Assets/Scripts/Game/Contracts/Gameplay/
 ├── IHorizontalInputReceiver.cs
 ├── IGameplayInputGate.cs
 └── IGameplayInputController.cs
 
-Assets/Scripts/Input/
+Assets/Scripts/Game/Gameplay/Input/
 ├── RelativeDragTracker.cs
 ├── TouchDragInput.cs
 └── GameplayInputAdapter.cs
