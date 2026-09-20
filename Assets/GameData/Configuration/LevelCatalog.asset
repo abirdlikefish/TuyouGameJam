@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f91ade7d06a6a4941b6bacfdd58b74e9, type: 3}
   m_Name: LevelCatalog
   m_EditorClassIdentifier: 
-  entries: []
+  entries:
+  - levelConfig: {fileID: 11400000, guid: 8cb3d321d56d783419d4e2561e041a64, type: 2}
+    initiallyUnlocked: 1

@@ -17,14 +17,32 @@ MonoBehaviour:
   unlockedLevelIds: 
   roadBounds:
     serializedVersion: 2
-    x: 0
-    y: 0
-    width: 0
-    height: 0
-  spawnY: 0
-  enemyApproachY: 0
-  despawnY: 0
-  elementDurationSecondsPerDamage: 0
-  enemySpawns: []
-  gateSpawns: []
-  propSpawns: []
+    x: -3.5
+    y: -5
+    width: 7
+    height: 10
+  spawnY: 4
+  enemyApproachY: 1
+  despawnY: -2
+  elementDurationSecondsPerDamage: 1
+  enemySpawns:
+  - spawnTime: 1
+    spawnPosition: 0.468
+    configId: 0
+  gateSpawns:
+  - spawnTime: 2
+    spawnPosition: 0.072
+    gateType: 0
+    initialValue: -20
+    elementType: 0
+    maxHp: 0
+  - spawnTime: 3
+    spawnPosition: 0.072
+    gateType: 1
+    initialValue: 0
+    elementType: 1
+    maxHp: 20
+  propSpawns:
+  - spawnTime: 4
+    spawnPosition: 1
+    configId: 1
