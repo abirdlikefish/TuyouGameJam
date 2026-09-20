@@ -73,46 +73,46 @@ PF_Bullet [Bullet；Animator]
 ## Monster
 
 ```text
-PF_Monster_Normal [NormalMonster；Animator]
+PF_Monster_Chick [ChickMonster；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer]
 └── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 
-PF_Monster_Elite [EliteMonster；Animator]
+PF_Monster_Hen [HenMonster；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer]
 ├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 
-PF_Monster_Boss [BossMonster；Animator]
+PF_Monster_Rooster [RoosterMonster；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer]
 ├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 ```
 
-- 三个根 GameObject 都同时挂载具体 Monster 根脚本和 Animator，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
-- Elite/Boss 另外绑定 `attackCollider`；Normal 不绑定 AttackCollider。
+- 三个根 GameObject 都同时挂载具体 Monster 根脚本、Animator 和 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
+- Hen/Rooster 另外绑定 `attackCollider`；Chick 不绑定 AttackCollider。
 - 三种 Prefab 均不创建 TargetSensor。
 - `blockingGap` 只来自当前规范 Prefab，不进入 Luban 或 LevelConfig。
 - 三种 Prefab 的 Animator 使用相同的默认 Move、Attack Trigger 和 Death Trigger 语义；Move Clip 循环，Attack/Death Clip 非循环。每种 Prefab 直接绑定本类型 Controller 或基于公共状态机的预创建 OverrideController。
 - 三种非循环 Attack Clip 都必须包含恰好一个调用 `OnAttackFrame()` 的命中关键帧事件，以及末帧一个调用 `OnAttackAnimationFinished()` 的结束事件。AnimationEvent 只登记请求，实际伤害由 EnemyManager.ResolveAttacks 执行。
 - 三种非循环 Death Clip 的末帧都必须包含一个调用 `OnDeathAnimationFinished()` 的事件。该事件只向 EnemyManager 登记延后回收，不负责减少存活数、发布 `MonsterKilled` 或直接操作对象池。
-- Elite/Boss 的 AttackCollider 可以保持启用作为查询形状；它不参与自动碰撞，只在 ResolveAttacks 消费关键帧请求时执行显式查询。
+- Hen/Rooster 的 AttackCollider 可以保持启用作为查询形状；它不参与自动碰撞，只在 ResolveAttacks 消费关键帧请求时执行显式查询。
 
 ## Gate
 
 ```text
-PF_Gate_Additive [AdditiveGate；Animator]
+PF_Gate_Additive [AdditiveGate；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 
-PF_Gate_Element [ElementGate；Animator]
+PF_Gate_Element [ElementGate；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 ```
 
-- AdditiveGate 显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、`visual`、`animator` 和非负有限 `moveSpeed`；Animator 绑定唯一循环 Clip。
-- ElementGate 显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、`visual`、`animator`、非负有限 `moveSpeed` 和正整数 `contactDamage`；Controller 必须提供整数参数 `ElementType`。
+- AdditiveGate 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、`visual`、`animator` 和非负有限 `moveSpeed`；Animator 绑定唯一循环 Clip。
+- ElementGate 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、`visual`、`animator`、非负有限 `moveSpeed` 和正整数 `contactDamage`；Controller 必须提供整数参数 `ElementType`。
 - ElementGate 仍只有一个规范 Prefab；`Fire=1`、`Ice=2`、`Lightning=3` 在每次借出激活前选择对应循环状态，归还和复用不得残留上一元素动画。
 - Additive 的 StateText 显示当前 GateValue。
 - Element 的 StateText 至少显示 ElementType、`CurrentHp/MaxHp` 和 PostDepletionDamage；排版与最终文案不属于玩法契约。
@@ -122,13 +122,15 @@ PF_Gate_Element [ElementGate；Animator]
 ## Prop
 
 ```text
-PF_Prop_Weapon [WeaponProp]
+PF_Prop_Weapon [WeaponProp；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
 └── DebugText [TMP_Text；可选占位表现]
 ```
 
-- WeaponProp 显式绑定 `bodyCollider`、同节点 `BulletHitProxy` 和视觉引用。
+- WeaponProp 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy` 和视觉引用。
+
+上述六个子弹目标根节点的 Rigidbody2D 固定为 Kinematic、Simulated、关闭 Full Kinematic Contacts、Gravity Scale 0、Discrete、无插值并冻结旋转。BodyCollider 继续为 Trigger，自动碰撞矩阵保持关闭；适配刚体不驱动 Transform、推挤或玩法结算。Bullet Prefab 不挂 Rigidbody2D。
 - 首轮可以使用 DebugText 显示 WeaponId，或使用 Inspector 绑定的简单占位 Sprite；二者都不参与效果选择。
 - MaxHp、ContactDamage、MoveSpeed 和 WeaponId 从 Prop 配置快照注入。
 

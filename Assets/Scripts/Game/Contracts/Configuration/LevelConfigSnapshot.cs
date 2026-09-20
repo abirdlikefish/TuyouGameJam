@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Game.Contracts
 {
@@ -10,9 +9,6 @@ namespace Game.Contracts
             int levelId,
             string displayName,
             IReadOnlyList<int> unlockedLevelIds,
-            float roadWidth,
-            float roadHeight,
-            Vector2 armySpawnPosition,
             float spawnY,
             float enemyApproachY,
             float despawnY,
@@ -24,9 +20,6 @@ namespace Game.Contracts
             LevelId = levelId;
             DisplayName = displayName;
             UnlockedLevelIds = Copy(unlockedLevelIds, nameof(unlockedLevelIds));
-            RoadWidth = roadWidth;
-            RoadHeight = roadHeight;
-            ArmySpawnPosition = armySpawnPosition;
             SpawnY = spawnY;
             EnemyApproachY = enemyApproachY;
             DespawnY = despawnY;
@@ -39,9 +32,6 @@ namespace Game.Contracts
         public int LevelId { get; }
         public string DisplayName { get; }
         public IReadOnlyList<int> UnlockedLevelIds { get; }
-        public float RoadWidth { get; }
-        public float RoadHeight { get; }
-        public Vector2 ArmySpawnPosition { get; }
         public float SpawnY { get; }
         public float EnemyApproachY { get; }
         public float DespawnY { get; }

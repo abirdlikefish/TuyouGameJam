@@ -475,7 +475,6 @@ namespace Game.Foundation
             Dictionary<int, EnemyConfigSnapshot> enemies,
             Dictionary<int, PropConfigSnapshot> props)
         {
-            ValidateRoadConfiguration(levelConfig, source);
             ValidateLevelLines(levelConfig, source);
 
             var unlockedLevelIds = BuildUnlockedLevelIds(levelConfig, source, catalogLevelIds);
@@ -505,9 +504,6 @@ namespace Game.Foundation
                 levelConfig.LevelId,
                 levelConfig.DisplayName,
                 unlockedLevelIds,
-                levelConfig.RoadWidth,
-                levelConfig.RoadHeight,
-                levelConfig.ArmySpawnPosition,
                 levelConfig.SpawnY,
                 levelConfig.EnemyApproachY,
                 levelConfig.DespawnY,
@@ -758,39 +754,6 @@ namespace Game.Foundation
             return snapshots;
         }
 
-        private static void ValidateRoadConfiguration(LevelConfig levelConfig, string source)
-        {
-            var width = levelConfig.RoadWidth;
-            var height = levelConfig.RoadHeight;
-            if (!IsFinite(width) || width <= 0f)
-            {
-                ThrowInvalidLevel($"{source}.roadWidth", "RoadWidth must be finite and greater than zero.");
-            }
-
-            if (!IsFinite(height) || height <= 0f)
-            {
-                ThrowInvalidLevel($"{source}.roadHeight", "RoadHeight must be finite and greater than zero.");
-            }
-
-            var armySpawnPosition = levelConfig.ArmySpawnPosition;
-            if (!IsFinite(armySpawnPosition.x) || !IsFinite(armySpawnPosition.y))
-            {
-                ThrowInvalidLevel(
-                    $"{source}.armySpawnPosition",
-                    "ArmySpawnPosition components must be finite.");
-            }
-
-            var halfWidth = width * 0.5f;
-            var halfHeight = height * 0.5f;
-            if (armySpawnPosition.x < -halfWidth || armySpawnPosition.x > halfWidth ||
-                armySpawnPosition.y < -halfHeight || armySpawnPosition.y > halfHeight)
-            {
-                ThrowInvalidLevel(
-                    $"{source}.armySpawnPosition",
-                    "ArmySpawnPosition must be within the centered road bounds.");
-            }
-        }
-
         private static void ValidateLevelLines(LevelConfig levelConfig, string source)
         {
             var spawnY = levelConfig.SpawnY;
@@ -801,16 +764,12 @@ namespace Game.Foundation
                 ThrowInvalidLevel(source, "SpawnY, EnemyApproachY, and DespawnY must be finite.");
             }
 
-            var armyY = levelConfig.ArmySpawnPosition.y;
-            var bottomBoundary = levelConfig.RoadHeight * -0.5f;
-            var topBoundary = levelConfig.RoadHeight * 0.5f;
-            if (despawnY < bottomBoundary || despawnY >= armyY ||
-                enemyApproachY <= armyY || enemyApproachY >= spawnY ||
-                spawnY > topBoundary)
+            if (despawnY >= enemyApproachY || enemyApproachY >= spawnY)
             {
                 ThrowInvalidLevel(
                     source,
-                    "Level lines must satisfy BottomBoundary <= DespawnY < ArmySpawnPosition.y < EnemyApproachY < SpawnY <= TopBoundary.");
+                    "Level lines must satisfy DespawnY < EnemyApproachY < SpawnY. " +
+                    "Road bounds and the Army spawn point are validated when Gameplay is prepared.");
             }
         }
 
@@ -889,12 +848,12 @@ namespace Game.Foundation
         {
             switch (value)
             {
-                case cfg.game.EnemyType.Normal:
-                    return RuntimeEnemyType.Normal;
-                case cfg.game.EnemyType.Elite:
-                    return RuntimeEnemyType.Elite;
-                case cfg.game.EnemyType.Boss:
-                    return RuntimeEnemyType.Boss;
+                case cfg.game.EnemyType.Chick:
+                    return RuntimeEnemyType.Chick;
+                case cfg.game.EnemyType.Hen:
+                    return RuntimeEnemyType.Hen;
+                case cfg.game.EnemyType.Rooster:
+                    return RuntimeEnemyType.Rooster;
                 default:
                     ThrowInvalidTableValue($"{source}.EnemyType", $"EnemyType value {(int)value} is not supported.");
                     return default;

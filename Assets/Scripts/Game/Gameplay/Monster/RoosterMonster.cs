@@ -1,13 +1,15 @@
 using Game.Contracts;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Gameplay
 {
-    public sealed class EliteMonster : MonsterBase
+    [MovedFrom(true, sourceNamespace: "Game.Gameplay", sourceAssembly: "Assembly-CSharp", sourceClassName: "BossMonster")]
+    public sealed class RoosterMonster : MonsterBase
     {
         [SerializeField] private Collider2D attackCollider;
 
-        public override EnemyType EnemyType => EnemyType.Elite;
+        public override EnemyType EnemyType => EnemyType.Rooster;
         public override AttackType AttackType => AttackType.Area;
         public override Collider2D AttackCollider => attackCollider;
 

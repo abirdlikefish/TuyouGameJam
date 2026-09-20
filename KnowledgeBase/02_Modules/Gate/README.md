@@ -6,12 +6,13 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与接触手测待完成）
 - 依赖：EventBus、Army、Bullet、ObstacleManager、Level
-- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`
+- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`
 
 ## 职责
 
 - 控制加法门和元素门向下移动；移动流程使用 LevelManager 传给 ObstacleManager 的 `Gate` 时间域 delta，一次更新不再读取或叠加 `Gameplay` delta。
 - 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；本帧移动与 Physics2D 同步完成后只对终点姿态执行一次 `OverlapCollider`，不做接触 Cast、扫掠或子步进，也不依赖自动碰撞回调。
+- 两类 Gate 根节点提供 Kinematic Rigidbody2D 查询适配，使无刚体 Bullet 的 Collider Cast 能命中 Gate；该刚体不驱动 Gate 移动，也不改变终点 OverlapCollider 接触规则。
 - 保存门的运行时数字、HP、接触状态和运行时实例 ID。
 - 接收 `BulletDamageContext`；加法门按实际伤害增加数字，元素门扣减 HP 并在 HP 归零后累计额外伤害。
 - 在 Army 首次接触时执行一次判定。
@@ -98,12 +99,12 @@ Assets/Prefabs/Gate/
 首轮 Prefab 使用最小占位层级：
 
 ```text
-PF_Gate_Additive [AdditiveGate；Animator]
+PF_Gate_Additive [AdditiveGate；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 
-PF_Gate_Element [ElementGate；Animator]
+PF_Gate_Element [ElementGate；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
@@ -118,7 +119,7 @@ PF_Gate_Element [ElementGate；Animator]
 | `AdditiveGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`TMP_Text stateText`、视觉引用、Animator | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
 | `ElementGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`ContactDamage`、`TMP_Text stateText`、视觉引用、Animator | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType` 与动画状态、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
 
-Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数；LevelConfig 也不保存两类门的统一速度和元素门统一接触伤害。`InitialValue` 不得为 `int.MinValue`；GateValue 正向累加超过 `int` 范围时饱和到 `int.MaxValue`。必需引用或同节点 BulletHitProxy 缺失、速度非有限/小于 0、元素门接触伤害小于等于 0 时，Gameplay 不得进入 Ready，不能运行时静默补组件或使用默认值。
+Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数；LevelConfig 也不保存两类门的统一速度和元素门统一接触伤害。`InitialValue` 不得为 `int.MinValue`；GateValue 正向累加超过 `int` 范围时饱和到 `int.MaxValue`。必需引用或同节点 BulletHitProxy 缺失、根 Kinematic Rigidbody2D 适配不合法、速度非有限/小于 0、元素门接触伤害小于等于 0 时，Gameplay 不得进入 Ready，不能运行时静默补组件或使用默认值。
 
 表现组件只读取根组件已经结算出的快照或事实事件，不反向修改门值、HP、额外伤害或奖励锁定状态。若后续发现两类门有稳定且足够多的共同生命周期代码，可再提取内部基类；当前文档不要求为了复用少量字段预先建立通用 Gate 框架。
 
@@ -150,6 +151,7 @@ Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数�
 - Gate 根 GameObject 中心满足 `position.y <= RoadLayoutSnapshot.DespawnY` 时离场；不使用 Collider 或 Renderer 下边缘。
 - 接触只使用移动终点的 `OverlapCollider` 结果；MVP 不验收路径中穿过但终点未重叠的接触。
 - Gate 的 BodyCollider 使用 Gate Layer；同一查询返回多个子 Collider 时按运行时实例 ID 去重。
+- 两种 Gate 根节点的 Rigidbody2D 符合 ADR-055，BodyCollider 保持 Trigger；自动碰撞矩阵关闭且不会产生刚体推挤或回调结算。
 - 两种具体 Gate 类型各自只绑定一个规范 Prefab；从类型池取得时未激活，ObstacleManager 完成初始化和登记后才激活，归还前清理运行时状态并主动失活。
 - 加法门持续播放本类型循环 Clip；Fire/Ice/Lightning 元素门按本次 ElementType 播放唯一对应循环 Clip。元素门从池中以不同类型复用时不得残留旧参数、状态、帧或 Sprite。
 - 两种 Gate 在不依赖 HUD 或最终美术的情况下，单个 stateText 能随运行时状态刷新并用于验证结算结果。

@@ -33,7 +33,7 @@
 - `ObstacleManager` 只管理 Gate/Prop 的生成实例、活动登记、查询和回收，不参与门数字、HP 或 Army 效果计算。
 - 配置来源和运行时状态分离，运行时状态不得回写配置资产或 Luban 数据。
 - 纯计算规则优先使用纯 C# 类，便于 EditMode 测试。
-- 玩法碰撞对象统一使用 Inspector 配置的 `Collider2D`；LevelManager 通过同步阶段接口持有核心同帧顺序，各 Manager 执行职责明确的 Cast/Overlap，其中 Gate/Prop 接触固定为移动终点 `OverlapCollider`，不以独立 Update、Dynamic Rigidbody2D 的自动移动、推挤或碰撞回调作为规则来源。
+- 玩法碰撞对象统一使用 Inspector 配置的 `Collider2D`；Enemy、Gate 和 Prop 根节点额外提供只服务于 Collider Cast 的 Kinematic Rigidbody2D 查询适配，Bullet 保持无刚体。LevelManager 通过同步阶段接口持有核心同帧顺序，各 Manager 执行职责明确的 Cast/Overlap，其中 Gate/Prop 接触固定为移动终点 `OverlapCollider`，不以独立 Update、Dynamic Rigidbody2D 的自动移动、推挤或碰撞回调作为规则来源。
 - LevelConfig/LevelCatalog 资产与具体 ConfigService 属于 Foundation；公共契约和 Gameplay 只传递不可变 `LevelConfigSnapshot`，由 Composition 调用具体初始化入口。
 - 碰撞查询必须服从模块的有效 delta 和会话状态；局部时停延后，未来启用时再确认其碰撞语义。
 

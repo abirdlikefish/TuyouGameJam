@@ -27,6 +27,7 @@ namespace Game.Composition
         [SerializeField] private TouchDragInput touchDragInput;
 
         [Header("固定容器")]
+        [SerializeField] private Transform armySpawnPoint;
         [SerializeField] private Transform armyContainer;
         [SerializeField] private Transform bulletRoot;
         [SerializeField] private Transform monsterRoot;
@@ -105,7 +106,8 @@ namespace Game.Composition
                     enemyManager,
                     obstacleManager,
                     inputAdapter,
-                    roadView);
+                    roadView,
+                    armySpawnPoint.position);
                 levelInitialized = true;
                 initialized = true;
                 Debug.Log(
@@ -138,6 +140,7 @@ namespace Game.Composition
             RequireSceneComponent(graphicRaycaster, nameof(graphicRaycaster));
             RequireSceneComponent(eventSystem, nameof(eventSystem));
             RequireSceneComponent(standaloneInputModule, nameof(standaloneInputModule));
+            RequireSceneTransform(armySpawnPoint, nameof(armySpawnPoint));
             RequireSceneTransform(armyContainer, nameof(armyContainer));
             RequireSceneTransform(bulletRoot, nameof(bulletRoot));
             RequireSceneTransform(monsterRoot, nameof(monsterRoot));

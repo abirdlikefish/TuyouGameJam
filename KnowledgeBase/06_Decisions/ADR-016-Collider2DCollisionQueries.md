@@ -10,6 +10,8 @@ Accepted
 
 > ADR-046 将敌人间阻挡收窄为对上一轮同步姿态的离散 Cast：目标 MVP 参数下尽量减少穿透和重叠，但不再保证同帧绝对不重叠，也不执行事后分离。
 
+> ADR-055 将本 ADR 预留的 Kinematic 适配具体化为目标侧规则：Monster、Gate 和 Prop 根节点提供查询适配刚体，Bullet 保持无刚体；移动、阻挡和结算所有权不变。
+
 ## 日期
 
 2026-09-14
@@ -32,7 +34,7 @@ Accepted
 - 敌人范围攻击在 Animator 判定帧使用 `AttackCollider` 执行一次显式重叠查询，对每个有效 Army 槽位最多结算一次，然后立即结束本次攻击查询。
 - Gate/Prop 与 Army 的接触使用显式查询；查询方式已由 ADR-043 收窄为移动终点的一次 `OverlapCollider`，不再使用接触 Cast。对象自身的接触状态机仍是是否允许结算的权威来源。
 - 道路左右边界继续使用 Level 提供的数值边界，不要求用 Collider2D 表达。
-- `Rigidbody2D` 不是公共玩法契约。后续可以按具体对象选择 Kinematic Rigidbody2D 作为 Unity 物理查询适配，但不得改变自定义时间、显式查询和玩法状态机的权威性。
+- `Rigidbody2D` 不进入模块间接口或玩法状态；ADR-055 要求 Enemy、Gate 和 Prop 规范 Prefab 根节点提供固定配置的 Kinematic Rigidbody2D 作为 Unity 2022.3 `Collider2D.Cast` 查询适配，但不得改变自定义时间、显式查询和玩法状态机的权威性。
 
 ## MVP 范围
 

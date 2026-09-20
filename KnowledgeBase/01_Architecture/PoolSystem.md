@@ -18,7 +18,7 @@ ContractReady（设计状态，不代表已有 Unity 实现）
 
 池身份使用准确的具体类型，不使用共同基类、配置 ID 或 Unity 资源键。同一类型以同一 Prefab 重复请求时返回已有池；同一类型绑定不同 Prefab 时报告注册冲突。只有数值或表现资源不同而生命周期一致的对象继续使用同一类型和规范 Prefab，由 Manager 在初始化时传入配置快照。
 
-普通敌人、精英敌人和 Boss 使用 `NormalMonster`、`EliteMonster`、`BossMonster` 三个具体根脚本及三个规范 Prefab；公共移动、生命、目标查询和表现适配能力继续复用，不复制相同实现。
+小鸡敌人、母鸡敌人和公鸡敌人使用 `ChickMonster`、`HenMonster`、`RoosterMonster` 三个具体根脚本及三个规范 Prefab；公共移动、生命、目标查询和表现适配能力继续复用，不复制相同实现。
 
 ## 所有权与 Root
 
@@ -27,9 +27,9 @@ GlobalRoot
 ├── ServiceHost
 │   └── PoolService
 └── PersistentPoolRoot
-    ├── NormalMonster [Inactive]
-    ├── EliteMonster [Inactive]
-    ├── BossMonster [Inactive]
+    ├── ChickMonster [Inactive]
+    ├── HenMonster [Inactive]
+    ├── RoosterMonster [Inactive]
     ├── AdditiveGate [Inactive]
     ├── ElementGate [Inactive]
     ├── WeaponProp [Inactive]

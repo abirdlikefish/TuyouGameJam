@@ -74,8 +74,8 @@
 | `GateValue` | `int` | 加法门当前数字 | 初始值不得为 `int.MinValue`；非负值增员，负数值转换为请求减员伤害；正向累加超过范围时饱和到 `int.MaxValue`，不得回绕 |
 | `BulletDamage` | `int` | 子弹伤害 | 大于 0 |
 | `MoveSpeed` | `float` | 物体移动速度 | 有限且不小于 0，单位为世界单位/秒 |
-| `EnemyType` | `enum` | 敌人类型 | `Normal`、`Elite`、`Boss` |
-| `AttackType` | `enum` | 敌人运行时攻击类型 | 由 `EnemyType` 派生：`Normal` 为 `SingleTarget`，`Elite`/`Boss` 为 `Area`；不单独配置 |
+| `EnemyType` | `enum` | 敌人类型 | `Chick`、`Hen`、`Rooster`，固定值分别为 `0`、`1`、`2` |
+| `AttackType` | `enum` | 敌人运行时攻击类型 | 由 `EnemyType` 派生：`Chick` 为 `SingleTarget`，`Hen`/`Rooster` 为 `Area`；不单独配置 |
 | `AttackPower` | `int` | 敌人每次攻击造成的槽位伤害 | 大于 0 |
 | `AttackStartRange` | `float` | 怪物与锁定槽位目标位置的 XY 欧氏距离小于等于该值时停止接近并开始攻击 | 有限且大于等于 0；距离为 0 的 Army/Enemy 重合状态同样允许攻击 |
 | `AttackCooldown` | `float` | 两次攻击开始之间的冷却时间 | 有限且大于等于 0，单位为秒 |

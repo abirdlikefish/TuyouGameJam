@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Layer 与击破流程手测待完成）
 - 依赖：EventBus、Army、Bullet、ObstacleManager、IPropConfigProvider、Level
-- 决策：`../../06_Decisions/ADR-022-PropBreakEffectBoundary.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
+- 决策：`../../06_Decisions/ADR-022-PropBreakEffectBoundary.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`
 
 ## 玩法定位
 
@@ -24,6 +24,7 @@ Prop 是“可被击破并触发效果的道路对象”，不等同于武器箱
 
 - 控制道具从道路上方生成并向下移动；移动流程使用 LevelManager 传给 ObstacleManager 的 `Gate` 时间域 delta，一次更新不再读取或叠加 `Gameplay` delta。
 - 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；BodyCollider 节点必须绑定同节点 `BulletHitProxy` 并显式引用 WeaponProp 根组件。本帧移动与 Physics2D 同步完成后只对终点姿态执行一次 `OverlapCollider`，不做接触 Cast、扫掠或子步进，也不依赖自动碰撞回调。
+- WeaponProp 根节点提供 Kinematic Rigidbody2D 查询适配，使无刚体 Bullet 的 Collider Cast 能命中 Prop；该刚体不驱动移动、推挤或接触结算。
 - 保存运行时 HP、接触状态、运行时实例 ID 和配置 ID。
 - 接收子弹伤害，并在 `Pending` 状态下 HP 首次清空时触发一次配置的击破效果。
 - 与 Army 接触时只判定一次。
@@ -77,3 +78,4 @@ Pending
 - Army 状态变更完成后才发布对应事实事件；增删其他事件监听者不会改变结算结果。
 - Prop 的 BodyCollider 使用 Prop Layer；同一查询返回多个子 Collider 时按运行时实例 ID 去重。
 - BodyCollider 与 `BulletHitProxy` 必须位于同一节点并显式绑定 WeaponProp；缺失或绑定错误时阻止 Gameplay Ready。
+- WeaponProp 根 Kinematic Rigidbody2D 必须符合 ADR-055 且 BodyCollider 保持 Trigger；缺失或配置错误时阻止 Gameplay Ready。

@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using Game.Contracts;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Game.Gameplay
 {
     public sealed class EnemyManager : MonoBehaviour, IEnemyManager
     {
-        [SerializeField] private NormalMonster normalPrefab;
-        [SerializeField] private EliteMonster elitePrefab;
-        [SerializeField] private BossMonster bossPrefab;
+        [FormerlySerializedAs("normalPrefab")]
+        [SerializeField] private ChickMonster chickPrefab;
+        [FormerlySerializedAs("elitePrefab")]
+        [SerializeField] private HenMonster henPrefab;
+        [FormerlySerializedAs("bossPrefab")]
+        [SerializeField] private RoosterMonster roosterPrefab;
         [SerializeField] private LayerMask enemyBodyLayers;
         [SerializeField] private LayerMask armySlotLayers;
 
@@ -19,9 +23,9 @@ namespace Game.Gameplay
         private readonly Collider2D[] overlapResults = new Collider2D[64];
         private readonly HashSet<int> hitSlotIndices = new HashSet<int>();
 
-        private IComponentPool<NormalMonster> normalPool;
-        private IComponentPool<EliteMonster> elitePool;
-        private IComponentPool<BossMonster> bossPool;
+        private IComponentPool<ChickMonster> chickPool;
+        private IComponentPool<HenMonster> henPool;
+        private IComponentPool<RoosterMonster> roosterPool;
         private IEnemyConfigProvider configProvider;
         private IArmyController army;
         private IEventBus eventBus;
@@ -56,17 +60,17 @@ namespace Game.Gameplay
                 throw new InvalidOperationException(error);
             }
 
-            normalPool = poolService.GetOrCreatePool(normalPrefab);
-            elitePool = poolService.GetOrCreatePool(elitePrefab);
-            bossPool = poolService.GetOrCreatePool(bossPrefab);
+            chickPool = poolService.GetOrCreatePool(chickPrefab);
+            henPool = poolService.GetOrCreatePool(henPrefab);
+            roosterPool = poolService.GetOrCreatePool(roosterPrefab);
             initialized = true;
         }
 
         public bool TryValidate(out string error)
         {
-            if (normalPrefab == null || elitePrefab == null || bossPrefab == null)
+            if (chickPrefab == null || henPrefab == null || roosterPrefab == null)
             {
-                error = $"{name} requires Normal, Elite and Boss prefab bindings.";
+                error = $"{name} requires Chick, Hen and Rooster prefab bindings.";
                 return false;
             }
 
@@ -82,9 +86,9 @@ namespace Game.Gameplay
                 return false;
             }
 
-            return normalPrefab.TryValidate(out error) &&
-                   elitePrefab.TryValidate(out error) &&
-                   bossPrefab.TryValidate(out error);
+            return chickPrefab.TryValidate(out error) &&
+                   henPrefab.TryValidate(out error) &&
+                   roosterPrefab.TryValidate(out error);
         }
 
         public void StartRun(int startedLevelRunId, RoadLayoutSnapshot roadLayout)
@@ -363,12 +367,12 @@ namespace Game.Gameplay
         {
             switch (enemyType)
             {
-                case EnemyType.Normal:
-                    return normalPool.RentInactive();
-                case EnemyType.Elite:
-                    return elitePool.RentInactive();
-                case EnemyType.Boss:
-                    return bossPool.RentInactive();
+                case EnemyType.Chick:
+                    return chickPool.RentInactive();
+                case EnemyType.Hen:
+                    return henPool.RentInactive();
+                case EnemyType.Rooster:
+                    return roosterPool.RentInactive();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(enemyType));
             }
@@ -377,17 +381,17 @@ namespace Game.Gameplay
         private void Return(MonsterBase monster)
         {
             monster.PrepareForPool();
-            if (monster is NormalMonster normal)
+            if (monster is ChickMonster chick)
             {
-                normalPool.Return(normal);
+                chickPool.Return(chick);
             }
-            else if (monster is EliteMonster elite)
+            else if (monster is HenMonster hen)
             {
-                elitePool.Return(elite);
+                henPool.Return(hen);
             }
-            else if (monster is BossMonster boss)
+            else if (monster is RoosterMonster rooster)
             {
-                bossPool.Return(boss);
+                roosterPool.Return(rooster);
             }
             else
             {

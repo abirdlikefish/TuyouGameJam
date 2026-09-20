@@ -10,9 +10,9 @@
 | 弹弓箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |
 | 弓箭箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |
 | 法杖箱 | Sprite | 共用 `WeaponProp` 规范 Prefab 的武器箱表现 | Planned |
-| 普通怪物 | Sprite / Animator / Prefab | Move、Attack、Death；Attack 含攻击帧与结束事件，Death 末帧含回收事件；需要 `BodyCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
-| 精英怪物 | Sprite / Animator / Prefab | Move、Attack、Death；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
-| Boss 怪物 | Sprite / Animator / Prefab | Move、Attack、Death；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
+| 小鸡敌人 | Sprite / Animator / Prefab | Move、Attack、Death；Attack 含攻击帧与结束事件，Death 末帧含回收事件；需要 `BodyCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
+| 母鸡敌人 | Sprite / Animator / Prefab | Move、Attack、Death；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
+| 公鸡敌人 | Sprite / Animator / Prefab | Move、Attack、Death；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
 | 武器箱规范 Prefab | Prefab | 唯一 `WeaponProp` 根类型，按 `WeaponId` 绑定表现 | Planned |
 | 子弹 | Sprite / Animator / Prefab | 唯一 `Bullet` 规范 Prefab；BulletId 0/1/2 各一个循环 Clip | Three Loop Clips Imported |
 | 命中特效 | Particle / Prefab | 子弹反馈 | Planned |
@@ -23,7 +23,7 @@
 - MVP 不在 Luban 表配置 `PrefabKey`。池化规范 Prefab 由对应 Manager 的 Inspector 引用绑定；Army 不入池，由 GameplaySceneEntry 的序列化 ArmyPrefabBinding 按 ArmyId 选择。Sprite、Animator、阵型槽位和发射点通过 Unity Inspector 绑定。MVP 完全无声音，不要求 AudioClip。
 - 正式动画按 [AnimationPipeline](AnimationPipeline.md) 导入：原始导出包保留在 `Reference/AnimationSource`，Unity 只导入 `Assets/Art/Sprites` 中的最终透明帧；Clip/Controller 放入 `Assets/Animations`，不使用 Resources、StreamingAssets 或运行时路径加载。
 - 重复导入通过 `Tools/Game Jam/Sequence Animation Builder` 先扫描再应用；当前已同步 12 个正式 Clip、554 帧，剩余动作仍使用空轨道。
-- `NormalMonster`、`EliteMonster`、`BossMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 各自只对应一个规范 Prefab；同一具体根类型不能绑定第二个 Prefab。
+- `ChickMonster`、`HenMonster`、`RoosterMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 各自只对应一个规范 Prefab；同一具体根类型不能绑定第二个 Prefab。
 - Army 保持唯一 `PF_Army_000`，通过序列化的 WeaponId→AnimatorOverrideController 映射选择三套动作并同步到全部槽位。Bullet 保持唯一 `PF_Bullet` 并按 BulletId 选择循环状态；ElementGate 保持唯一 `PF_Gate_Element` 并按 ElementType 选择循环状态。
 - Gate Prefab 不保存逐门初始数字、元素类型或 MaxHp，也不引用 Gate 配置表。`AdditiveGate` 序列化统一移动速度；`ElementGate` 序列化统一移动速度和接触伤害，逐门参数由 `GateSpawnRequest` 注入。
 - 敌人按 `EnemyType` 选择三个具体类型池；当前三种武器箱共用 `WeaponProp` 类型池并按 `WeaponId` 选择表现，MVP 子弹共用 `Bullet` 类型池并按 `BulletId` 选择数值与表现。
@@ -40,9 +40,9 @@
 | WeaponId 0 Slingshot | Idle、Victory、Attack、MoveLeft、MoveRight | Idle、MoveLeft、MoveRight |
 | WeaponId 1 Bow | Idle、Victory、Attack、MoveLeft、MoveRight | Idle、MoveLeft、MoveRight |
 | WeaponId 2 Staff | Idle、Victory、Attack、MoveLeft、MoveRight | Idle、MoveLeft、MoveRight |
-| EnemyType Normal | Move、Attack、Death | Move |
-| EnemyType Elite | Move、Attack、Death | Move |
-| EnemyType Boss | Move、Attack、Death | Move |
+| EnemyType Chick（动画技术身份 Normal） | Move、Attack、Death | Move |
+| EnemyType Hen（动画技术身份 Elite） | Move、Attack、Death | Move |
+| EnemyType Rooster（动画技术身份 Boss） | Move、Attack、Death | Move |
 | BulletId 0/1/2 | 各一个 Loop | 是 |
 | AdditiveGate | Loop | 是 |
 | ElementType Fire/Ice/Lightning | 各一个 Loop | 是 |

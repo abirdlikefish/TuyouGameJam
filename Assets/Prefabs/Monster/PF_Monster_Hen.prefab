@@ -95,8 +95,9 @@ GameObject:
   - component: {fileID: 1151439511086871530}
   - component: {fileID: 1159017436418322947}
   - component: {fileID: 1212212309880875452}
+  - component: {fileID: 1082120786824108390}
   m_Layer: 0
-  m_Name: PF_Monster_Elite
+  m_Name: PF_Monster_Hen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -158,6 +159,33 @@ MonoBehaviour:
   animator: {fileID: 1159017436418322947}
   blockingGap: 0.05
   attackCollider: {fileID: 3215582281744670673}
+--- !u!50 &1082120786824108390
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6894203279937662367}
+  m_BodyType: 1
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 4
 --- !u!1 &6991630312976878235
 GameObject:
   m_ObjectHideFlags: 0

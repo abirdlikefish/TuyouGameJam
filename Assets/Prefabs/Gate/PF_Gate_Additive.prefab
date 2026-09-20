@@ -266,6 +266,7 @@ GameObject:
   - component: {fileID: 1151439511086871530}
   - component: {fileID: 2647954411640409464}
   - component: {fileID: 8281056331024875097}
+  - component: {fileID: 429198767374649772}
   m_Layer: 0
   m_Name: PF_Gate_Additive
   m_TagString: Untagged
@@ -330,6 +331,33 @@ MonoBehaviour:
   stateText: {fileID: 4976361363353718414}
   visual: {fileID: 8115508436982732681}
   animator: {fileID: 2647954411640409464}
+--- !u!50 &429198767374649772
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6894203279937662367}
+  m_BodyType: 1
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 4
 --- !u!1 &8082142145292096223
 GameObject:
   m_ObjectHideFlags: 0

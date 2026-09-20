@@ -91,9 +91,9 @@ public readonly struct PropConfigSnapshot
 
 public enum EnemyType
 {
-    Normal = 0,
-    Elite = 1,
-    Boss = 2
+    Chick = 0,
+    Hen = 1,
+    Rooster = 2
 }
 
 public enum AttackType
@@ -830,7 +830,7 @@ public readonly struct AppSceneUnloadFailed
 
 所有参与玩法命中、接触、受击或阻挡的运行时对象都必须通过 Inspector 绑定 `Collider2D`。碰撞形状、Layer、查询方向和结算所有权见 `CollisionRules.md`。
 
-核心玩法使用显式 Cast/Overlap 查询，不以 `OnTriggerEnter2D`、`OnCollisionEnter2D` 或 Dynamic Rigidbody2D 的自动移动、推挤作为权威规则。`Rigidbody2D` 仅可作为后续特定对象的 Kinematic 适配，不属于模块间必需接口。
+核心玩法使用显式 Cast/Overlap 查询，不以 `OnTriggerEnter2D`、`OnCollisionEnter2D` 或 Dynamic Rigidbody2D 的自动移动、推挤作为权威规则。按 ADR-055，Enemy、Gate 和 Prop 规范 Prefab 根节点必须提供固定配置的 Kinematic Rigidbody2D 查询适配，Bullet 保持无刚体；该组件不进入模块间接口，也不取得移动、阻挡或结算所有权。
 
 ## 约束
 

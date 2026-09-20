@@ -17,17 +17,17 @@ namespace cfg.game
     public enum EnemyType
     {
         /// <summary>
-        /// 普通敌人
+        /// 小鸡敌人
         /// </summary>
-        Normal = 0,
+        Chick = 0,
         /// <summary>
-        /// 精英敌人
+        /// 母鸡敌人
         /// </summary>
-        Elite = 1,
+        Hen = 1,
         /// <summary>
-        /// 首领敌人
+        /// 公鸡敌人
         /// </summary>
-        Boss = 2,
+        Rooster = 2,
     }
 
 } 

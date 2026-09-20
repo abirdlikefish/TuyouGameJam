@@ -1,5 +1,4 @@
 using System;
-using Game.Contracts;
 using UnityEngine;
 
 namespace Game.Gameplay
@@ -12,6 +11,22 @@ namespace Game.Gameplay
 
         public bool TryValidate(out string error)
         {
+            return TryGetWorldSize(out _, out error);
+        }
+
+        public Vector2 GetWorldSize()
+        {
+            if (!TryGetWorldSize(out var worldSize, out var error))
+            {
+                throw new InvalidOperationException(error);
+            }
+
+            return worldSize;
+        }
+
+        private bool TryGetWorldSize(out Vector2 worldSize, out string error)
+        {
+            worldSize = default(Vector2);
             if (visualRoot == null)
             {
                 error = $"{name}.visualRoot is not assigned.";
@@ -36,65 +51,28 @@ namespace Game.Gameplay
                 return false;
             }
 
-            var spriteSize = visualRenderer.sprite.bounds.size;
-            if (!IsFinite(spriteSize.x) || !IsFinite(spriteSize.y) ||
-                spriteSize.x <= 0f || spriteSize.y <= 0f)
+            // Renderer bounds 已包含 visualRoot 及父级缩放，是道路实际世界尺寸的唯一来源。
+            var visualBounds = visualRenderer.bounds;
+            var visualSize = visualBounds.size;
+            if (!IsFinite(visualSize.x) || !IsFinite(visualSize.y) ||
+                visualSize.x <= 0f || visualSize.y <= 0f)
             {
-                error = $"{name}.visualRenderer.sprite must have positive finite dimensions.";
+                error = $"{name}.visualRoot must have positive finite world dimensions.";
                 return false;
             }
 
-            var parentScale = visualRoot.parent != null
-                ? visualRoot.parent.lossyScale
-                : Vector3.one;
-            if (!IsFinite(parentScale.x) || !IsFinite(parentScale.y) ||
-                Mathf.Approximately(parentScale.x, 0f) || Mathf.Approximately(parentScale.y, 0f))
+            var visualCenter = visualBounds.center;
+            if (!IsFinite(visualCenter.x) || !IsFinite(visualCenter.y) ||
+                !Mathf.Approximately(visualCenter.x, 0f) ||
+                !Mathf.Approximately(visualCenter.y, 0f))
             {
-                error = $"{name}.visualRoot parent scale must be finite and non-zero on X and Y.";
+                error = $"{name}.visualRoot visual bounds must be centered at the world origin.";
                 return false;
             }
 
+            worldSize = new Vector2(visualSize.x, visualSize.y);
             error = string.Empty;
             return true;
-        }
-
-        public void ApplyLayout(RoadLayoutSnapshot layout)
-        {
-            ValidateLayout(layout);
-            if (!TryValidate(out var error))
-            {
-                throw new InvalidOperationException(error);
-            }
-
-            var centerX = (layout.LeftBoundary + layout.RightBoundary) * 0.5f;
-            var centerY = (layout.BottomBoundary + layout.TopBoundary) * 0.5f;
-            var position = visualRoot.position;
-            visualRoot.position = new Vector3(centerX, centerY, position.z);
-
-            var spriteSize = visualRenderer.sprite.bounds.size;
-            var parentScale = visualRoot.parent != null
-                ? visualRoot.parent.lossyScale
-                : Vector3.one;
-            var localScale = visualRoot.localScale;
-            var signX = localScale.x < 0f ? -1f : 1f;
-            var signY = localScale.y < 0f ? -1f : 1f;
-            visualRoot.localScale = new Vector3(
-                signX * layout.Width / (spriteSize.x * Mathf.Abs(parentScale.x)),
-                signY * layout.Height / (spriteSize.y * Mathf.Abs(parentScale.y)),
-                localScale.z);
-        }
-
-        private static void ValidateLayout(RoadLayoutSnapshot layout)
-        {
-            if (!IsFinite(layout.Width) || !IsFinite(layout.Height) ||
-                !IsFinite(layout.LeftBoundary) || !IsFinite(layout.RightBoundary) ||
-                !IsFinite(layout.BottomBoundary) || !IsFinite(layout.TopBoundary) ||
-                layout.Width <= 0f || layout.Height <= 0f ||
-                layout.RightBoundary <= layout.LeftBoundary ||
-                layout.TopBoundary <= layout.BottomBoundary)
-            {
-                throw new ArgumentException("Road layout contains invalid visual bounds.", nameof(layout));
-            }
         }
 
         private static bool IsFinite(float value)

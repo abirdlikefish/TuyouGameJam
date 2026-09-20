@@ -123,6 +123,11 @@ namespace Game.Gameplay
                 return false;
             }
 
+            if (!BulletTargetPhysicsAdapter.TryValidate(bodyCollider, gameObject, out error))
+            {
+                return false;
+            }
+
             return true;
         }
 

@@ -16,6 +16,45 @@ namespace Game.Gameplay
         BulletTargetKind BulletTargetKind { get; }
     }
 
+    internal static class BulletTargetPhysicsAdapter
+    {
+        internal static bool TryValidate(
+            Collider2D bodyCollider,
+            GameObject targetRoot,
+            out string error)
+        {
+            var rigidbody = bodyCollider.attachedRigidbody;
+            if (rigidbody == null || rigidbody.gameObject != targetRoot)
+            {
+                error = $"{targetRoot.name} requires a root Rigidbody2D attached to its body collider.";
+                return false;
+            }
+
+            if (rigidbody.bodyType != RigidbodyType2D.Kinematic ||
+                !rigidbody.simulated ||
+                rigidbody.useFullKinematicContacts ||
+                !Mathf.Approximately(rigidbody.gravityScale, 0f) ||
+                rigidbody.collisionDetectionMode != CollisionDetectionMode2D.Discrete ||
+                rigidbody.interpolation != RigidbodyInterpolation2D.None ||
+                (rigidbody.constraints & RigidbodyConstraints2D.FreezeRotation) == 0)
+            {
+                error = $"{targetRoot.name}.Rigidbody2D must be a simulated Kinematic query adapter " +
+                        "with zero gravity, Discrete detection, no interpolation, frozen rotation and " +
+                        "Full Kinematic Contacts disabled.";
+                return false;
+            }
+
+            if (!bodyCollider.isTrigger)
+            {
+                error = $"{bodyCollider.name} must remain a Trigger collider.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+    }
+
     public sealed class BulletHitProxy : MonoBehaviour
     {
         [SerializeField] private MonoBehaviour target;

@@ -69,6 +69,11 @@ namespace Game.Gameplay
                 return false;
             }
 
+            if (!BulletTargetPhysicsAdapter.TryValidate(bodyCollider, gameObject, out error))
+            {
+                return false;
+            }
+
             if (!IsFinite(moveSpeed) || moveSpeed < 0f)
             {
                 error = $"{name}.moveSpeed must be finite and non-negative.";

@@ -5,6 +5,7 @@
 ## 总体规则
 
 - 所有参与玩法碰撞的对象都通过 Inspector 绑定 `Collider2D`，不在运行时使用 `AddComponent` 补齐缺失引用。
+- Enemy、Gate 和 Prop 的规范 Prefab 根节点必须提供 ADR-055 规定的 Kinematic `Rigidbody2D` 查询适配；Bullet 保持无刚体。该组件只保证现有 `Collider2D.Cast` 能覆盖全部合法子弹目标和 Monster 阻挡目标，不取得移动或结算所有权。
 - LevelManager 在逻辑帧开始从 `TimeService` 读取各域有效 delta，并传给对应 Manager；Collider2D 不负责通过力或自动碰撞响应移动对象。
 - 核心结算由显式 Cast/Overlap 查询触发，不依赖自动碰撞回调的执行顺序。
 - 查询统一使用无分配版本或复用结果缓存，并通过 Layer 和 `ContactFilter2D` 限定目标。
@@ -18,7 +19,7 @@
 |---|---|---|---|---|
 | Bullet | `BodyCollider` | 子弹飞行扫掠 | Collider Cast / CircleCast | Enemy、Gate、Prop 的受击 Collider |
 | Monster | `BodyCollider` | 子弹受击、敌人间阻挡 | Bullet Cast、Monster Body Cast | Bullet、其他存活 Monster |
-| Monster | `AttackCollider` | 精英/Boss 范围攻击 | 判定帧 `OverlapCollider` | Army `SlotCollider` |
+| Monster | `AttackCollider` | 母鸡/公鸡范围攻击 | 判定帧 `OverlapCollider` | Army `SlotCollider` |
 | Army Slot | `SlotCollider` | 接收攻击和道路对象接触 | Monster Attack、Gate/Prop 终点 Overlap | Monster `AttackCollider`、Gate、Prop |
 | Gate | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Gate `OverlapCollider` | Bullet、Army Slot |
 | Prop | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Prop `OverlapCollider` | Bullet、Army Slot |
@@ -70,7 +71,7 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 - MVP 不处理 Enemy `BodyCollider` 与 Army `SlotCollider` 之间的移动碰撞。Monster 移动不查询 `ArmySlot`，Army 横向移动也不查询 `EnemyBody`。
 - Army 槽位与敌人身体允许部分或完全重合；重合不产生接触伤害、推挤、位移修正或额外事件。
 - 怪物是否开始攻击只比较自身世界位置与已锁定 `ArmySlotTarget.WorldPosition` 的 XY 距离；`distanceSquared <= AttackStartRange²` 时进入攻击，距离为 `0` 时同样成立。
-- 普通敌人通过锁定的 `SlotIndex` 结算单体伤害；精英和 Boss 通过 `AttackCollider` 查询 `ArmySlot`。允许重合不能阻止上述两类攻击。
+- 小鸡敌人通过锁定的 `SlotIndex` 结算单体伤害；母鸡和公鸡通过 `AttackCollider` 查询 `ArmySlot`。允许重合不能阻止上述两类攻击。
 - `AttackStartRange` 和范围攻击形状应通过关卡与 Prefab 调参尽量减少不自然重合，但“不重合”不是 MVP 玩法不变量。不处理 Army 与 Enemy 同帧相向快速移动或相对运动扫掠。
 
 ## 范围攻击与道路对象接触
@@ -102,17 +103,19 @@ Layer 只负责过滤候选目标，不替代模块状态检查。道路左右�
 
 当前核心规则不依赖 `OnTriggerEnter2D`、`OnCollisionEnter2D` 或 Rigidbody2D 自动响应，因此上述 Gameplay Layer 之间的自动物理碰撞矩阵默认全部关闭，避免隐式推挤、回调和重复结算。显式查询继续通过 `ContactFilter2D` 或 LayerMask 命中目标，不以矩阵开关代替查询过滤。
 
+ADR-055 的目标侧 Kinematic Rigidbody2D 是 `Collider2D.Cast` 的工程适配，不改变本段规则。六类目标 Prefab 的根 Body 固定为 Kinematic、启用 Simulated、关闭 Full Kinematic Contacts、零重力、Discrete、无插值并冻结旋转；对应 BodyCollider 继续为 Trigger。对象仍由模块写入 Transform，并由 LevelManager 的单次 `Physics2D.SyncTransforms()` 同步后执行查询。
+
 显式查询方向固定为：
 
 | 查询者 | 允许查询目标 | 用途 |
 |---|---|---|
 | Bullet `BodyCollider` | `EnemyBody`、`Gate`、`Prop` | 子弹扫掠命中 |
 | Monster `BodyCollider` | 其他存活 `EnemyBody` | 移动阻挡 |
-| Monster `AttackCollider` | `ArmySlot` | 精英/Boss 攻击判定帧 |
+| Monster `AttackCollider` | `ArmySlot` | 母鸡/公鸡攻击判定帧 |
 | Gate `BodyCollider` | `ArmySlot` | Gate 接触 |
 | Prop `BodyCollider` | `ArmySlot` | Prop 接触 |
 
-`EnemyBody` 与 `ArmySlot` 不建立移动查询或自动物理关系。`EnemyAttack` 与 `EnemyBody`、Gate 与 Prop、Enemy 与 Gate/Prop、ArmySlot 与 ArmySlot 等关系同样保持关闭。若后续启用 Kinematic Rigidbody2D 适配，必须保持上述查询方向和状态机仍为权威，并另行记录需要开启的最小矩阵对。
+`EnemyBody` 与 `ArmySlot` 不建立移动查询或自动物理关系。`EnemyAttack` 与 `EnemyBody`、Gate 与 Prop、Enemy 与 Gate/Prop、ArmySlot 与 ArmySlot 等关系同样保持关闭。现有 Kinematic Rigidbody2D 适配不得开启这些矩阵关系；上述查询方向和状态机仍为权威。
 
 `BulletHitProxy` 和 `ArmySlotHitProxy` 都是查询身份适配，不新增物理关系。Gameplay Preparing 必须验证代理位于对应 Collider 的同一节点、目标引用非空且职责 Layer 正确；查询命中后只读取该节点代理，并按 RuntimeInstanceId 或 SlotIndex 去重。
 

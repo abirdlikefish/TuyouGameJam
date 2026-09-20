@@ -106,9 +106,10 @@
 - [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
 - [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
 - [ ] 三类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。
-- [ ] 子弹、敌人 BodyCollider、Elite/Boss AttackCollider、Army 槽位、Gate 和 Prop 的 Prefab 均配置职责明确的 Collider2D 和 Layer。
+- [ ] 子弹、敌人 BodyCollider、Hen/Rooster AttackCollider、Army 槽位、Gate 和 Prop 的 Prefab 均配置职责明确的 Collider2D 和 Layer。
+- [ ] Chick/Hen/Rooster、Additive/Element Gate 和 WeaponProp 根节点均提供 ADR-055 的 Kinematic Rigidbody2D 查询适配：Simulated、关闭 Full Kinematic Contacts、零重力、Discrete、无插值并冻结旋转；Bullet 保持无 Rigidbody2D，任一目标适配缺失或误配都会阻止 Gameplay Ready。
 - [ ] 子弹沿上一位置到期望位置执行 Collider Cast，在 MVP 约定速度、Collider 尺寸和测试帧率范围内稳定命中且一次只结算一次；不测试双方任意高速相对运动或严重掉帧下的绝对不穿透。
-- [ ] 精英/Boss 的 AttackCollider 只在攻击判定帧执行一次显式重叠查询，每个 Army 槽位最多受击一次。
+- [ ] 母鸡/公鸡的 AttackCollider 只在攻击判定帧执行一次显式重叠查询，每个 Army 槽位最多受击一次。
 - [ ] 三种敌人的非循环 Attack Clip 在命中关键帧恰好调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；AnimationEvent 不直接修改 Army，实际伤害只在 `EnemyManager.ResolveAttacks` 中发生。
 - [ ] AttackCooldown 从每次攻击开始时刻计算且在攻击动画期间继续递减；动画结束时若已到期，下一次 EnemyManager.TickMovement 重新验证成功后立即起攻，不由动画回调直接递归起攻。
 - [ ] 三种非循环 Death Clip 末帧恰好调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期回调不重复计数、发布 MonsterKilled 或归还对象池，StopRun 不等待动画。
@@ -117,7 +118,7 @@
 - [ ] Gate/Prop 在移动并同步 Transform 后只以终点姿态执行一次 `OverlapCollider`；不执行接触 Cast/扫掠，接触状态和运行时 ID 保证一次性结算。
 - [ ] 三种敌人 Prefab 各自提供有限且非负的 `blockingGap`；BodyCollider Cast 只查询上一同步姿态，后方敌人在命中前方敌人时截断位移。在 MVP 参数下验证明显穿透和重叠风险可接受，但不要求同帧移动后的绝对不重叠或事后分离。
 - [ ] Monster 移动不查询 `ArmySlot`，Army 横向移动不查询 `EnemyBody`；士兵与敌人部分或完全重合时不发生推挤、接触伤害或位移修正。
-- [ ] 士兵与敌人重合且目标仍有效时，普通敌人可以对锁定槽位结算伤害，精英/Boss 可以通过 `AttackCollider` 正常命中范围内槽位。
+- [ ] 士兵与敌人重合且目标仍有效时，小鸡敌人可以对锁定槽位结算伤害，母鸡/公鸡可以通过 `AttackCollider` 正常命中范围内槽位。
 - [ ] 敌人进入 Dead 后退出受击和阻挡查询；死亡动画不会阻塞后方敌人。
 - [ ] 首版不会因敌人受阻而执行侧向绕行、通道预留或局部导航。
 - [ ] ArmyRoot 移动受当前激活槽位 AABB 限制，阵型变化后边界更新。
@@ -176,10 +177,10 @@
 - [ ] GameplaySceneEntry 的序列化 ArmyPrefabBinding 包含唯一 ArmyId=0；Prefab 根为 ArmyController，槽位数组非空、无空项或重复引用，SlotCapacity 准确等于数组长度。
 - [ ] MVP Luban 表不要求 `PrefabKey`、`FormationKey`、`SoldierPrefabKey`、`PropType`、`AttackType`、代表人数缩放字段或 `CollisionBehavior`。
 - [ ] 缺少必需的 Unity Prefab、Collider2D、阵型槽位或发射点绑定时阻止进入 Gameplay，并报告稳定来源。
-- [ ] `NormalMonster`、`EliteMonster`、`BossMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
+- [ ] `ChickMonster`、`HenMonster`、`RoosterMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
 - [ ] AdditiveGate Prefab 只提供所有加法门共用的速度；ElementGate Prefab 提供所有元素门共用的速度与接触伤害。逐门初始数字、元素类型和 MaxHp 不重复配置在 Prefab。
 - [ ] AdditiveGate 和 ElementGate 各自只用一个显式绑定的 TMP_Text 显示已结算状态；缺失文本引用时阻止 Gameplay Ready，首轮不依赖 HUD 或最终 Gate 美术。
-- [ ] Normal/Elite/Boss 的阻挡间距只来自各自 Prefab 的 `blockingGap`，不在 TbEnemy 或 LevelConfig 保存第二份数值。
+- [ ] Chick/Hen/Rooster 的阻挡间距只来自各自 Prefab 的 `blockingGap`，不在 TbEnemy 或 LevelConfig 保存第二份数值。
 - [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。
@@ -205,7 +206,7 @@
 - [ ] Manager 归还前先注销活动实例、完成计数和事实事件、调用 `PrepareForPool()` 并主动失活；类型池随后防御性失活并移动到正确的空闲子节点。
 - [ ] 第一次合法归还返回成功；`null`、未知实例、其他类型池实例和重复归还返回失败且不改变池状态。
 - [ ] 池对象不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还自身；失活不会递归归还。
-- [ ] `NormalMonster`、`EliteMonster`、`BossMonster` 使用三个不同具体类型池；共有移动、受伤和目标查询规则的复用不改变类型池身份。
+- [ ] `ChickMonster`、`HenMonster`、`RoosterMonster` 使用三个不同具体类型池；共有移动、受伤和目标查询规则的复用不改变类型池身份。
 - [ ] Gameplay 终局和场景卸载前各 Manager 归还全部活动实例；下一局复用已有 PoolService、PersistentPoolRoot 和类型池，不保留上一局借出状态。
 - [ ] PoolService 懒创建实例，不要求预热、容量配置或公共统计；应用清理时销毁全部已知实例并清除类型注册。
 
@@ -217,6 +218,7 @@
 - [ ] LevelManager 在帧开始读取 Gameplay、Bullet、Gate、Monster delta 并分别传入对应阶段；具体池对象不直接访问 TimeService。
 - [ ] Physics2D Auto Sync Transforms 关闭时，每个 Playing 帧在全部移动后、首次显式查询前由 LevelManager 准确调用一次 SyncTransforms，其他 Manager 不重复调用。
 - [ ] Gameplay Layer 的自动物理矩阵默认全部关闭；目标 Unity 版本中，显式 ContactFilter2D/LayerMask 查询仍只能命中 ADR-037 规定的目标，不产生自动碰撞回调或刚体推挤。
+- [ ] Kinematic 查询适配不通过 Rigidbody2D 速度、MovePosition、力或自动接触推进对象；Monster 阻挡仍只由 ApplyBlockedMovement 的 Cast 距离截断决定，Gate/Prop 接触仍只由终点 OverlapCollider 结算。
 - [ ] `LevelRunStarted` 只让匹配会话进入 Playing，不作为逐帧命令广播；增删事件监听者不改变阶段调用。
 - [ ] Bullet Cast 同距离目标按 `Enemy > Gate > Prop > RuntimeInstanceId` 稳定选择。
 - [ ] EventBus 按注册顺序同步调用；发布期间使用订阅快照，异常隔离，重复订阅独立 Token，取消幂等。

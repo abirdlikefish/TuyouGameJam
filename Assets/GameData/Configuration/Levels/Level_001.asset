@@ -15,16 +15,16 @@ MonoBehaviour:
   levelId: 0
   displayName: "\u7B2C 1 \u5173"
   unlockedLevelIds: 
-  roadWidth: 5
-  roadHeight: 15
-  armySpawnPosition: {x: 0, y: 0}
-  spawnY: 4
-  enemyApproachY: 1
-  despawnY: -2
+  spawnY: 8
+  enemyApproachY: 0
+  despawnY: -9
   elementDurationSecondsPerDamage: 1
   enemySpawns:
   - spawnTime: 1
-    spawnPosition: 0.468
+    spawnPosition: 0
+    configId: 0
+  - spawnTime: 1
+    spawnPosition: 1
     configId: 0
   gateSpawns:
   - spawnTime: 2

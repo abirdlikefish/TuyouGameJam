@@ -40,7 +40,7 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 初始字段：`Id`、`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange`、`AttackCooldown`。
 
-首版 `EnemyType` 为 `Normal`、`Elite`、`Boss`。`MaxHp`、`AttackPower` 必须大于 `0`；`MoveSpeed` 必须有限且大于等于 `0`，单位为世界单位/秒；`AttackStartRange`、`AttackCooldown` 必须有限且大于等于 `0`，冷却单位为秒。攻击类型由敌人类型固定派生：普通敌人为 `SingleTarget`，精英和 Boss 为 `Area`，不重复配置 `AttackType`。`AttackStartRange` 使用怪物与锁定槽位目标位置的 XY 欧氏距离，距离为 `0` 的重合状态同样允许开始攻击，不使用 `TargetSensor`。`AttackCooldown` 表示两次攻击开始之间的最短时间，从每次攻击开始时递减；动画结束时若已到期，可在下一次 EnemyManager Tick 重新验证后起攻。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定 `NormalMonster`、`EliteMonster`、`BossMonster` 三个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。敌人间阻挡安全间距由各规范 Prefab 根脚本的 `blockingGap` 提供，不加入 `TbEnemy` 或 LevelConfig。
+首版 `EnemyType` 为 `Chick`、`Hen`、`Rooster`，固定值分别为 `0`、`1`、`2`。`MaxHp`、`AttackPower` 必须大于 `0`；`MoveSpeed` 必须有限且大于等于 `0`，单位为世界单位/秒；`AttackStartRange`、`AttackCooldown` 必须有限且大于等于 `0`，冷却单位为秒。攻击类型由敌人类型固定派生：小鸡敌人为 `SingleTarget`，母鸡和公鸡为 `Area`，不重复配置 `AttackType`。`AttackStartRange` 使用怪物与锁定槽位目标位置的 XY 欧氏距离，距离为 `0` 的重合状态同样允许开始攻击，不使用 `TargetSensor`。`AttackCooldown` 表示两次攻击开始之间的最短时间，从每次攻击开始时递减；动画结束时若已到期，可在下一次 EnemyManager Tick 重新验证后起攻。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定 `ChickMonster`、`HenMonster`、`RoosterMonster` 三个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。敌人间阻挡安全间距由各规范 Prefab 根脚本的 `blockingGap` 提供，不加入 `TbEnemy` 或 LevelConfig。
 
 ### `TbProp`
 

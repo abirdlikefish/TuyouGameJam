@@ -2,6 +2,8 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 新增 ADR-056，将敌人身份从 Normal/Elite/Boss 统一重命名为 Chick/Hen/Rooster，对应小鸡/母鸡/公鸡；保留枚举值 0/1/2、配置 ID、攻击规则和动画技术资产名称，通过脚本/Prefab GUID、MovedFrom 与 FormerlySerializedAs 保持 Unity 引用兼容 | Monster、Config、Luban、Pool、Prefab、共享契约、测试、资源命名 | Codex |
+| 2026-09-21 | 新增 ADR-055，修复无 Rigidbody2D 的 Collider2D.Cast 无法覆盖子弹目标与怪物阻挡：在三类 Monster、两类 Gate 和 WeaponProp 根节点增加仅作查询适配的 Kinematic Rigidbody2D，Bullet 保持无刚体；补充 Preparing 校验并保持 Trigger、自动碰撞矩阵关闭、自定义 Transform 移动和显式 Cast/Overlap 为权威 | Bullet、Monster、Gate、Prop、Collision、Prefab、测试、ADR-055 | Codex |
 | 2026-09-21 | 新增 ADR-054，将 Gameplay MainCamera 提升为 Bootstrap/GlobalRoot 下的唯一常驻 AppCamera；保留原镜头参数并由 GlobalBootstrap 显式校验 Camera、MainCamera Tag 与同对象 AudioListener，三个应用场景继续使用 Overlay Canvas，避免切换离开 Gameplay 后残留最后一帧 | Bootstrap、Scene、Camera、测试、共享装配 | Codex |
 | 2026-09-21 | 新增 ADR-053，将 LevelSelect 从 RealTime 自动跳过改为动态节点与显式关卡启动；新增运行期解锁查询、LevelSelectView、LevelSelectNodeView 和节点 Prefab，按 LevelDescriptor 生成列表并在点击时复用既有关卡选择/开始命令。当前不修改单关卡配置 | LevelSelect、UI、Application、Scene、共享契约 | Codex |
 | 2026-09-21 | 新增 ADR-052 并实施原点居中道路与可配置 Army 出生坐标：LevelConfig 以 `roadWidth`/`roadHeight` 取代左下角 Rect，RoadLayoutSnapshot 唯一派生对称四边；新增 `armySpawnPosition`，Army 开局精确应用该世界坐标并保持配置 Y，初始阵型越界时 Preparing 失败。第一关迁移为 5×15、Army `(0,0)`，生成时间轴和归一化横向位置保持不变 | Config、Level、Army、Spawn、共享契约、测试、ADR-052 | Codex |

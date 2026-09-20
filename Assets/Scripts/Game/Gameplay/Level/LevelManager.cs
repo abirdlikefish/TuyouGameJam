@@ -44,7 +44,8 @@ namespace Game.Gameplay
             IEnemyManager initializedEnemyManager,
             IObstacleManager initializedObstacleManager,
             IGameplayInputController initializedInputController,
-            RoadView initializedRoadView)
+            RoadView initializedRoadView,
+            Vector3 initializedArmySpawnPosition)
         {
             if (sessionInitialized)
             {
@@ -79,13 +80,12 @@ namespace Game.Gameplay
             levelRunId = initializedLevelRunId;
             elapsedTime = 0f;
             runState = LevelRunState.Preparing;
-            roadLayout = CreateRoadLayout(levelConfig);
+            roadLayout = CreateRoadLayout(levelConfig, roadView, initializedArmySpawnPosition);
             sessionInitialized = true;
 
             try
             {
                 inputController.SetGameplayEnabled(false);
-                roadView.ApplyLayout(roadLayout);
 
                 bulletStarted = true;
                 bulletManager.StartRun(levelRunId, roadLayout);
@@ -276,15 +276,30 @@ namespace Game.Gameplay
             StopRun();
         }
 
-        private static RoadLayoutSnapshot CreateRoadLayout(LevelConfigSnapshot levelConfig)
+        private static RoadLayoutSnapshot CreateRoadLayout(
+            LevelConfigSnapshot levelConfig,
+            RoadView roadView,
+            Vector3 armySpawnPosition)
         {
-            return new RoadLayoutSnapshot(
-                levelConfig.RoadWidth,
-                levelConfig.RoadHeight,
-                levelConfig.ArmySpawnPosition,
+            if (!IsFinite(armySpawnPosition.x) || !IsFinite(armySpawnPosition.y))
+            {
+                throw new ArgumentException(
+                    "Army spawn point must have finite world X and Y coordinates.",
+                    nameof(armySpawnPosition));
+            }
+
+            // 道路尺寸和 Army 出生点属于场景装配数据，不再从 LevelConfig 读取。
+            var roadSize = roadView.GetWorldSize();
+            var layout = new RoadLayoutSnapshot(
+                roadSize.x,
+                roadSize.y,
+                new Vector2(armySpawnPosition.x, armySpawnPosition.y),
                 levelConfig.SpawnY,
                 levelConfig.EnemyApproachY,
                 levelConfig.DespawnY);
+
+            ValidateRoadLayout(layout);
+            return layout;
         }
 
         private static void ValidateSession(
@@ -314,12 +329,35 @@ namespace Game.Gameplay
                     nameof(levelConfig));
             }
 
-            var armySpawnPosition = levelConfig.ArmySpawnPosition;
-            if (!IsFinite(levelConfig.RoadWidth) || !IsFinite(levelConfig.RoadHeight) ||
-                levelConfig.RoadWidth <= 0f || levelConfig.RoadHeight <= 0f ||
-                !IsFinite(armySpawnPosition.x) || !IsFinite(armySpawnPosition.y))
+            if (!IsFinite(levelConfig.SpawnY) ||
+                !IsFinite(levelConfig.EnemyApproachY) ||
+                !IsFinite(levelConfig.DespawnY))
             {
-                throw new ArgumentException("Level config contains invalid road dimensions or Army spawn position.", nameof(levelConfig));
+                throw new ArgumentException("Level config contains invalid vertical lines.", nameof(levelConfig));
+            }
+        }
+
+        private static void ValidateRoadLayout(RoadLayoutSnapshot layout)
+        {
+            var armySpawnPosition = layout.ArmySpawnPosition;
+            if (!IsFinite(layout.Width) || !IsFinite(layout.Height) ||
+                layout.Width <= 0f || layout.Height <= 0f ||
+                !IsFinite(armySpawnPosition.x) || !IsFinite(armySpawnPosition.y) ||
+                armySpawnPosition.x < layout.LeftBoundary ||
+                armySpawnPosition.x > layout.RightBoundary ||
+                armySpawnPosition.y < layout.BottomBoundary ||
+                armySpawnPosition.y > layout.TopBoundary ||
+                layout.DespawnY < layout.BottomBoundary ||
+                layout.DespawnY >= armySpawnPosition.y ||
+                layout.EnemyApproachY <= armySpawnPosition.y ||
+                layout.EnemyApproachY >= layout.SpawnY ||
+                layout.SpawnY > layout.TopBoundary)
+            {
+                throw new ArgumentException(
+                    "Scene layout must satisfy positive centered road dimensions, an Army spawn point inside " +
+                    "the road, and BottomBoundary <= DespawnY < ArmySpawnPoint.y < EnemyApproachY < " +
+                    "SpawnY <= TopBoundary.",
+                    nameof(layout));
             }
         }
 

@@ -41,6 +41,8 @@ Assets/Art/SpriteAtlases/{Army,Monsters,Bullets,Gates}
 
 原始包中的 `original/`、`preview.gif`、`animation.json` 和供应方 `atlases/` 只用于核对，不复制到 `Assets`。只把经过尺寸、透明边缘与命名检查的 `transparent/` 帧复制到对应 Sprite 目录。
 
+敌人领域身份现为 `Chick`、`Hen`、`Rooster`，但本动画管线继续保留 `Normal`、`Elite`、`Boss` 技术身份，映射依次为 Chick→Normal、Hen→Elite、Rooster→Boss。现有 Sprite、Clip、AOC、目录和 Sequence Animation Builder 字符串不随领域命名重构。
+
 ## 命名
 
 ```text

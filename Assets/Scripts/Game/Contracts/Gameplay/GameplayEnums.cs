@@ -4,9 +4,9 @@ namespace Game.Contracts
 {
     public enum EnemyType
     {
-        Normal = 0,
-        Elite = 1,
-        Boss = 2
+        Chick = 0,
+        Hen = 1,
+        Rooster = 2
     }
 
     public enum AttackType
