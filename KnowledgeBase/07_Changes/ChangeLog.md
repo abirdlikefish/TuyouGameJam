@@ -2,6 +2,8 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 将序列帧动画统一调整为 8 FPS；规范化并导入十种武器的 Attack/MoveLeft/MoveRight 新帧，全部 Sprite 设置为 Single、PPU 512，并重建现有怪物与子弹动画。修复整组替换 PNG 后 Unity 近期删除 GUID 被误判为重名的问题。最终 39 个正式 Clip、695 帧全部通过复扫，34 个未到位动作保持空轨道；十种 Army AOC、Bullet 十状态及 Prefab 引用复核通过 | Animation、Army、Monster、Bullet、Sprite 导入、编辑器工具、Codex Skill | Codex |
+| 2026-09-21 | 新增并实施 ADR-057：固定普通法杖及七种元素组合法杖的 WeaponId/BulletId 2～9，实现元素获得与过期时的法杖派生、降级、冷却重置与事件原因；扩展 Luban 武器/子弹表、Bullet Animator、Army AOC/Prefab 映射和 Sequence Animation Builder，创建 42 个待填帧动作骨架。Unity 编译通过，扫描为 12 UpToDate、0 Pending、61 Empty、0 Invalid | Army、Bullet、Config、Animation、Prefab、事件、测试 | Codex |
 | 2026-09-21 | 新增 ADR-056，将敌人身份从 Normal/Elite/Boss 统一重命名为 Chick/Hen/Rooster，对应小鸡/母鸡/公鸡；保留枚举值 0/1/2、配置 ID、攻击规则和动画技术资产名称，通过脚本/Prefab GUID、MovedFrom 与 FormerlySerializedAs 保持 Unity 引用兼容 | Monster、Config、Luban、Pool、Prefab、共享契约、测试、资源命名 | Codex |
 | 2026-09-21 | 新增 ADR-055，修复无 Rigidbody2D 的 Collider2D.Cast 无法覆盖子弹目标与怪物阻挡：在三类 Monster、两类 Gate 和 WeaponProp 根节点增加仅作查询适配的 Kinematic Rigidbody2D，Bullet 保持无刚体；补充 Preparing 校验并保持 Trigger、自动碰撞矩阵关闭、自定义 Transform 移动和显式 Cast/Overlap 为权威 | Bullet、Monster、Gate、Prop、Collision、Prefab、测试、ADR-055 | Codex |
 | 2026-09-21 | 新增 ADR-054，将 Gameplay MainCamera 提升为 Bootstrap/GlobalRoot 下的唯一常驻 AppCamera；保留原镜头参数并由 GlobalBootstrap 显式校验 Camera、MainCamera Tag 与同对象 AudioListener，三个应用场景继续使用 Overlay Canvas，避免切换离开 Gameplay 后残留最后一帧 | Bootstrap、Scene、Camera、测试、共享装配 | Codex |

@@ -12,7 +12,7 @@
 | `ArmyFormationChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、总人数、激活槽位数、槽位代表人数和 HP 快照 |
 | `SoldierHit` | ArmyController | UI、VFX | `LevelRunId`、`ArmyId`、槽位 ID、请求伤害、实际扣除 HP、实际损失人数 |
 | `ArmyReachedZero` | ArmyController | UI | `LevelRunId`、`ArmyReachedZeroReason`；LevelManager 在帧末同步查询 ArmyCount，不由该事件即时终局 |
-| `ArmyWeaponChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、旧 Weapon ID、新 Weapon ID、来源运行时实例 ID |
+| `ArmyWeaponChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、旧 Weapon ID、新 Weapon ID、`ArmyWeaponChangeReason`、可空来源运行时实例 ID；元素自然过期时来源为 null |
 | `ArmyElementDurationChanged` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、`ElementType`、旧剩余时间、本次增加时间、新剩余时间、来源运行时实例 ID |
 | `ArmyElementExpired` | ArmyController | ArmyVisual、UI、VFX | `LevelRunId`、`ArmyId`、刚从有效变为 `0` 的 `ElementType`；同一次有效期只发布一次 |
 | `GateSpawned` | ObstacleManager | UI、VFX | `LevelRunId`、运行时门实例 ID、`SpawnEntryIndex`、门类型、初始数字或元素类型与 MaxHp、位置；Gate 不携带配置表 ID |
@@ -52,6 +52,7 @@
 - `ArmyReachedZero` 和 `MonsterKilled` 不驱动 LevelManager 即时终局；LevelManager 在 ADR-033 的攻击和回收阶段之后统一查询权威状态，保证同帧失败优先级。
 - MVP 所有包含 Army 身份的事件使用固定 `ArmyId = 0`；多 Army 扩展前必须更新契约。
 - 元素剩余时间不通过 EventBus 每帧广播；只在成功增加持续时间和从有效变为过期时发布事实。子弹、受击和击杀事实使用发射瞬间不可变的 `ElementMask`。
+- 元素增加先发布 `ArmyElementDurationChanged`，再发布可能发生的 `ArmyWeaponChanged`；每帧全部元素过期事实发布完成后，至多发布一次最终法杖 `ArmyWeaponChanged`。
 - 配置或必需资源校验失败不通过 EventBus 建立恢复流程。Luban 表、LevelCatalog 或 LevelConfig 数据错误由 ConfigService 输出首个稳定错误并立即退出应用；ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只通过 `Debug.LogWarning` 报告并过滤，不发布事件。Prefab、Collider、Layer 或 Inspector 装配错误由 GlobalBootstrap 或 GameplaySceneEntry 输出错误并阻止对应 Ready。
 - MVP 完全无声音且不初始化 DebugService；事件目录不把 Audio 或通用调试服务列为当前监听者。未来表现模块仍可在不改变核心结果的前提下订阅既有事实事件。
 - 暂停、减速和局部时停延后，当前事件目录不定义 `GamePaused` 或 `GameResumed`。

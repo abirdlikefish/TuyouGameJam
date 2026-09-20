@@ -9504,6 +9504,20 @@ MonoBehaviour:
     controller: {fileID: 22100000, guid: 54ee94749571ab24ea2aee162c915448, type: 2}
   - weaponId: 2
     controller: {fileID: 22100000, guid: 77552c84ed6559f46a449db5bae1327b, type: 2}
+  - weaponId: 3
+    controller: {fileID: 22100000, guid: 86499089ebe50404e86671dcc853e7ba, type: 2}
+  - weaponId: 4
+    controller: {fileID: 22100000, guid: 844ba69d8efba8849b11860e3e64c783, type: 2}
+  - weaponId: 5
+    controller: {fileID: 22100000, guid: 3bd01cac2ba641846aaa7345fa8fcee8, type: 2}
+  - weaponId: 6
+    controller: {fileID: 22100000, guid: f57d60aaf42382c43ada61dc33052bce, type: 2}
+  - weaponId: 7
+    controller: {fileID: 22100000, guid: e4f879180a83f1a4fb5afe2d50ed0349, type: 2}
+  - weaponId: 8
+    controller: {fileID: 22100000, guid: 520555cc19b785841bfe13b44b43dc7b, type: 2}
+  - weaponId: 9
+    controller: {fileID: 22100000, guid: fa6ca478b053a6546b5154af769ffdaa, type: 2}
 --- !u!1 &6895724512734471611
 GameObject:
   m_ObjectHideFlags: 0

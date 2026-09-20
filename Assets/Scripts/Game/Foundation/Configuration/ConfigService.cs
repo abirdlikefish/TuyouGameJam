@@ -336,7 +336,7 @@ namespace Game.Foundation
 
         private static void ValidateFixedWeapons(Dictionary<int, WeaponConfigSnapshot> weapons)
         {
-            for (var weaponId = 0; weaponId <= 2; weaponId++)
+            for (var weaponId = 0; weaponId <= 9; weaponId++)
             {
                 if (!weapons.ContainsKey(weaponId))
                 {

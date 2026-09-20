@@ -9,6 +9,13 @@ namespace Game.Gameplay
         private static readonly int Bullet000LoopState = Animator.StringToHash("Base Layer.Bullet_000_Loop");
         private static readonly int Bullet001LoopState = Animator.StringToHash("Base Layer.Bullet_001_Loop");
         private static readonly int Bullet002LoopState = Animator.StringToHash("Base Layer.Bullet_002_Loop");
+        private static readonly int Bullet003LoopState = Animator.StringToHash("Base Layer.Bullet_003_Loop");
+        private static readonly int Bullet004LoopState = Animator.StringToHash("Base Layer.Bullet_004_Loop");
+        private static readonly int Bullet005LoopState = Animator.StringToHash("Base Layer.Bullet_005_Loop");
+        private static readonly int Bullet006LoopState = Animator.StringToHash("Base Layer.Bullet_006_Loop");
+        private static readonly int Bullet007LoopState = Animator.StringToHash("Base Layer.Bullet_007_Loop");
+        private static readonly int Bullet008LoopState = Animator.StringToHash("Base Layer.Bullet_008_Loop");
+        private static readonly int Bullet009LoopState = Animator.StringToHash("Base Layer.Bullet_009_Loop");
 
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private SpriteRenderer visual;
@@ -189,11 +196,25 @@ namespace Game.Gameplay
                     return Bullet001LoopState;
                 case 2:
                     return Bullet002LoopState;
+                case 3:
+                    return Bullet003LoopState;
+                case 4:
+                    return Bullet004LoopState;
+                case 5:
+                    return Bullet005LoopState;
+                case 6:
+                    return Bullet006LoopState;
+                case 7:
+                    return Bullet007LoopState;
+                case 8:
+                    return Bullet008LoopState;
+                case 9:
+                    return Bullet009LoopState;
                 default:
                     throw new System.ArgumentOutOfRangeException(
                         nameof(initializedBulletId),
                         initializedBulletId,
-                        "Only BulletId 0, 1 and 2 have bound animation states.");
+                        "Only BulletId 0 through 9 have bound animation states.");
             }
         }
 

@@ -77,12 +77,14 @@ namespace Game.Contracts
             int armyId,
             int previousWeaponId,
             int currentWeaponId,
-            int sourceRuntimeInstanceId)
+            ArmyWeaponChangeReason reason,
+            int? sourceRuntimeInstanceId)
         {
             LevelRunId = levelRunId;
             ArmyId = armyId;
             PreviousWeaponId = previousWeaponId;
             CurrentWeaponId = currentWeaponId;
+            Reason = reason;
             SourceRuntimeInstanceId = sourceRuntimeInstanceId;
         }
 
@@ -90,7 +92,8 @@ namespace Game.Contracts
         public int ArmyId { get; }
         public int PreviousWeaponId { get; }
         public int CurrentWeaponId { get; }
-        public int SourceRuntimeInstanceId { get; }
+        public ArmyWeaponChangeReason Reason { get; }
+        public int? SourceRuntimeInstanceId { get; }
     }
 
     public readonly struct ArmyElementDurationChanged

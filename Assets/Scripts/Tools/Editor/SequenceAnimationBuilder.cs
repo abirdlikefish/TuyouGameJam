@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Game.Gameplay;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 
 namespace Game.Tools.Editor
@@ -123,10 +125,66 @@ namespace Game.Tools.Editor
 
     public static class SequenceAnimationBuilder
     {
-        private const int DefaultFrameRate = 24;
+        private const int DefaultFrameRate = 8;
         private const int DefaultMaxTextureSize = 512;
         private const float DefaultPixelsPerUnit = 512f;
         private const string SpritePropertyName = "m_Sprite";
+        private const string ArmyBaseControllerPath =
+            "Assets/Animations/Army/Base/AC_Army_Base.controller";
+        private const string BulletControllerPath =
+            "Assets/Animations/Bullets/Controllers/AC_Bullet.controller";
+        private const string ArmyPrefabPath = "Assets/Prefabs/Army/PF_Army_000.prefab";
+
+        private sealed class WeaponDefinition
+        {
+            public WeaponDefinition(int weaponId, string folder, string shortId, string assetName)
+            {
+                WeaponId = weaponId;
+                Folder = folder;
+                ShortId = shortId;
+                AssetName = assetName;
+            }
+
+            public int WeaponId { get; }
+            public string Folder { get; }
+            public string ShortId { get; }
+            public string AssetName { get; }
+        }
+
+        private sealed class ArmyActionDefinition
+        {
+            public ArmyActionDefinition(string name, bool loop)
+            {
+                Name = name;
+                Loop = loop;
+            }
+
+            public string Name { get; }
+            public bool Loop { get; }
+        }
+
+        private static readonly WeaponDefinition[] Weapons =
+        {
+            new WeaponDefinition(0, "Weapon_000_Slingshot", "W000", "Slingshot"),
+            new WeaponDefinition(1, "Weapon_001_Bow", "W001", "Bow"),
+            new WeaponDefinition(2, "Weapon_002_Staff", "W002", "Staff"),
+            new WeaponDefinition(3, "Weapon_003_FireStaff", "W003", "FireStaff"),
+            new WeaponDefinition(4, "Weapon_004_IceStaff", "W004", "IceStaff"),
+            new WeaponDefinition(5, "Weapon_005_LightningStaff", "W005", "LightningStaff"),
+            new WeaponDefinition(6, "Weapon_006_FireIceStaff", "W006", "FireIceStaff"),
+            new WeaponDefinition(7, "Weapon_007_FireLightningStaff", "W007", "FireLightningStaff"),
+            new WeaponDefinition(8, "Weapon_008_IceLightningStaff", "W008", "IceLightningStaff"),
+            new WeaponDefinition(9, "Weapon_009_FireIceLightningStaff", "W009", "FireIceLightningStaff")
+        };
+
+        private static readonly ArmyActionDefinition[] ArmyActions =
+        {
+            new ArmyActionDefinition("Idle", true),
+            new ArmyActionDefinition("Victory", false),
+            new ArmyActionDefinition("Attack", true),
+            new ArmyActionDefinition("MoveLeft", true),
+            new ArmyActionDefinition("MoveRight", true)
+        };
 
         private static readonly Regex FrameNumberRegex = new Regex(
             @"(\d+)(?=\.png$)",
@@ -242,6 +300,64 @@ namespace Game.Tools.Editor
             Apply(results
                 .Where(result => result.Status == SequenceStatus.Pending)
                 .Select(result => result.Definition.Id));
+        }
+
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Create Missing Registered Assets")]
+        public static void CreateMissingRegisteredAssets()
+        {
+            try
+            {
+                var createdFolderCount = 0;
+                var createdClipCount = 0;
+                var createdControllerCount = 0;
+
+                foreach (var definition in Definitions)
+                {
+                    createdFolderCount += EnsureFolder(definition.SpriteFolder);
+                    createdFolderCount += EnsureFolder(
+                        (Path.GetDirectoryName(definition.ClipPath) ?? string.Empty).Replace('\\', '/'));
+                    if (AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath) == null)
+                    {
+                        CreateEmptyClip(definition);
+                        createdClipCount++;
+                    }
+                }
+
+                var baseController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                    ArmyBaseControllerPath);
+                if (baseController == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Army base controller is missing: {ArmyBaseControllerPath}");
+                }
+
+                foreach (var weapon in Weapons)
+                {
+                    var weaponFolder = $"Assets/Animations/Army/Weapons/{weapon.Folder}";
+                    createdFolderCount += EnsureFolder(weaponFolder);
+                    createdFolderCount += EnsureFolder($"{weaponFolder}/Clips");
+                    var controllerPath =
+                        $"{weaponFolder}/AOC_Army_{weapon.ShortId}_{weapon.AssetName}.overrideController";
+                    if (AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(controllerPath) == null)
+                    {
+                        CreateArmyOverrideController(weapon, baseController, controllerPath);
+                        createdControllerCount++;
+                    }
+                }
+
+                EnsureBulletControllerStates();
+                EnsureArmyPrefabBindings();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log(
+                    $"[SequenceAnimationBuilder] Registered animation assets ready: " +
+                    $"{createdFolderCount} folders, {createdClipCount} clips and " +
+                    $"{createdControllerCount} override controllers created.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
         }
 
         public static List<ScanResult> ScanAll()
@@ -543,7 +659,11 @@ namespace Game.Tools.Editor
             foreach (var frame in renameFrames)
             {
                 var targetPath = $"{definition.SpriteFolder}/{GetExpectedFileName(definition, frame.Number)}";
-                if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(targetPath)))
+                // 默认查询会命中 Unity 为“刚删除资源”保留的 GUID；替换整组序列帧后，
+                // 目标文件虽然已不存在，仍可能因此被误判为重名。
+                if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(
+                        targetPath,
+                        AssetPathToGUIDOptions.OnlyExistingAssets)))
                 {
                     throw new InvalidOperationException($"Rename target already exists: {targetPath}");
                 }
@@ -677,6 +797,227 @@ namespace Game.Tools.Editor
             return binding.type == typeof(SpriteRenderer) && binding.propertyName == SpritePropertyName;
         }
 
+        private static int EnsureFolder(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath))
+            {
+                throw new ArgumentException("Folder path is required.", nameof(folderPath));
+            }
+
+            var normalized = folderPath.Replace('\\', '/').TrimEnd('/');
+            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal) &&
+                !string.Equals(normalized, "Assets", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Folder must be under Assets: {normalized}");
+            }
+
+            if (AssetDatabase.IsValidFolder(normalized))
+            {
+                return 0;
+            }
+
+            var parts = normalized.Split('/');
+            var current = parts[0];
+            var created = 0;
+            for (var index = 1; index < parts.Length; index++)
+            {
+                var next = $"{current}/{parts[index]}";
+                if (!AssetDatabase.IsValidFolder(next))
+                {
+                    var guid = AssetDatabase.CreateFolder(current, parts[index]);
+                    if (string.IsNullOrEmpty(guid))
+                    {
+                        throw new InvalidOperationException($"Failed to create folder: {next}");
+                    }
+
+                    created++;
+                }
+
+                current = next;
+            }
+
+            return created;
+        }
+
+        private static void CreateEmptyClip(SequenceDefinition definition)
+        {
+            var clip = new AnimationClip
+            {
+                name = Path.GetFileNameWithoutExtension(definition.ClipPath),
+                frameRate = definition.FrameRate
+            };
+            var binding = new EditorCurveBinding
+            {
+                path = definition.BindingPath,
+                type = typeof(SpriteRenderer),
+                propertyName = SpritePropertyName
+            };
+            AnimationUtility.SetObjectReferenceCurve(
+                clip,
+                binding,
+                new[]
+                {
+                    new ObjectReferenceKeyframe
+                    {
+                        time = 0f,
+                        value = null
+                    }
+                });
+            AssetDatabase.CreateAsset(clip, definition.ClipPath);
+
+            var serializedClip = new SerializedObject(clip);
+            var clipSettings = serializedClip.FindProperty("m_AnimationClipSettings");
+            clipSettings.FindPropertyRelative("m_StartTime").floatValue = 0f;
+            clipSettings.FindPropertyRelative("m_StopTime").floatValue =
+                1f / definition.FrameRate;
+            clipSettings.FindPropertyRelative("m_LoopTime").boolValue = definition.Loop;
+            serializedClip.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(clip);
+        }
+
+        private static void CreateArmyOverrideController(
+            WeaponDefinition weapon,
+            RuntimeAnimatorController baseController,
+            string controllerPath)
+        {
+            var controller = new AnimatorOverrideController(baseController)
+            {
+                name = Path.GetFileNameWithoutExtension(controllerPath)
+            };
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+            controller.GetOverrides(overrides);
+            for (var index = 0; index < overrides.Count; index++)
+            {
+                var baseClip = overrides[index].Key;
+                var action = ArmyActions.FirstOrDefault(
+                    candidate => baseClip != null &&
+                                 baseClip.name.EndsWith($"_{candidate.Name}", StringComparison.Ordinal));
+                if (action == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot map Army base clip {baseClip?.name ?? "<null>"}.");
+                }
+
+                var clipPath =
+                    $"Assets/Animations/Army/Weapons/{weapon.Folder}/Clips/" +
+                    $"AN_Army_{weapon.ShortId}_{action.Name}.anim";
+                var overrideClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+                if (overrideClip == null)
+                {
+                    throw new InvalidOperationException($"Army override clip is missing: {clipPath}");
+                }
+
+                overrides[index] = new KeyValuePair<AnimationClip, AnimationClip>(
+                    baseClip,
+                    overrideClip);
+            }
+
+            controller.ApplyOverrides(overrides);
+            AssetDatabase.CreateAsset(controller, controllerPath);
+        }
+
+        private static void EnsureBulletControllerStates()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(BulletControllerPath);
+            if (controller == null || controller.layers.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Bullet controller is missing or malformed: {BulletControllerPath}");
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            for (var bulletId = 0; bulletId < Weapons.Length; bulletId++)
+            {
+                var stateName = $"Bullet_{bulletId:000}_Loop";
+                var state = stateMachine.states
+                    .Select(child => child.state)
+                    .FirstOrDefault(candidate => candidate.name == stateName);
+                if (state == null)
+                {
+                    var column = bulletId % 4;
+                    var row = bulletId / 4;
+                    state = stateMachine.AddState(
+                        stateName,
+                        new Vector3(180f + column * 220f, 120f + row * 120f, 0f));
+                }
+
+                var clipPath = $"Assets/Animations/Bullets/Clips/AN_Bullet_{bulletId:000}_Loop.anim";
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+                if (clip == null)
+                {
+                    throw new InvalidOperationException($"Bullet animation clip is missing: {clipPath}");
+                }
+
+                state.motion = clip;
+                state.writeDefaultValues = true;
+                var hasTransition = stateMachine.anyStateTransitions.Any(
+                    transition => transition.destinationState == state &&
+                                  transition.conditions.Any(
+                                      condition => condition.mode == AnimatorConditionMode.Equals &&
+                                                   condition.parameter == "BulletId" &&
+                                                   Mathf.Approximately(condition.threshold, bulletId)));
+                if (!hasTransition)
+                {
+                    var transition = stateMachine.AddAnyStateTransition(state);
+                    transition.duration = 0f;
+                    transition.hasExitTime = false;
+                    transition.canTransitionToSelf = false;
+                    transition.AddCondition(AnimatorConditionMode.Equals, bulletId, "BulletId");
+                }
+            }
+
+            EditorUtility.SetDirty(controller);
+        }
+
+        private static void EnsureArmyPrefabBindings()
+        {
+            var root = PrefabUtility.LoadPrefabContents(ArmyPrefabPath);
+            try
+            {
+                var army = root.GetComponent<ArmyController>();
+                if (army == null)
+                {
+                    throw new InvalidOperationException(
+                        $"ArmyController is missing from prefab root: {ArmyPrefabPath}");
+                }
+
+                var serializedArmy = new SerializedObject(army);
+                var bindings = serializedArmy.FindProperty("weaponAnimatorControllers");
+                if (bindings == null)
+                {
+                    throw new InvalidOperationException(
+                        "ArmyController.weaponAnimatorControllers cannot be serialized.");
+                }
+
+                bindings.arraySize = Weapons.Length;
+                for (var index = 0; index < Weapons.Length; index++)
+                {
+                    var weapon = Weapons[index];
+                    var controllerPath =
+                        $"Assets/Animations/Army/Weapons/{weapon.Folder}/" +
+                        $"AOC_Army_{weapon.ShortId}_{weapon.AssetName}.overrideController";
+                    var controller = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(
+                        controllerPath);
+                    if (controller == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Army override controller is missing: {controllerPath}");
+                    }
+
+                    var binding = bindings.GetArrayElementAtIndex(index);
+                    binding.FindPropertyRelative("weaponId").intValue = weapon.WeaponId;
+                    binding.FindPropertyRelative("controller").objectReferenceValue = controller;
+                }
+
+                serializedArmy.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, ArmyPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
         private static string GetExpectedFileName(SequenceDefinition definition, int frameNumber)
         {
             return $"{definition.SpritePrefix}_{frameNumber:0000}.png";
@@ -694,30 +1035,16 @@ namespace Game.Tools.Editor
         {
             var definitions = new List<SequenceDefinition>();
 
-            var weapons = new[]
+            foreach (var weapon in Weapons)
             {
-                new { Folder = "Weapon_000_Slingshot", Id = "W000" },
-                new { Folder = "Weapon_001_Bow", Id = "W001" },
-                new { Folder = "Weapon_002_Staff", Id = "W002" }
-            };
-            var armyActions = new[]
-            {
-                new { Name = "Idle", Loop = true },
-                new { Name = "Victory", Loop = false },
-                new { Name = "Attack", Loop = true },
-                new { Name = "MoveLeft", Loop = true },
-                new { Name = "MoveRight", Loop = true }
-            };
-            foreach (var weapon in weapons)
-            {
-                foreach (var action in armyActions)
+                foreach (var action in ArmyActions)
                 {
                     definitions.Add(new SequenceDefinition(
-                        $"Army_{weapon.Id}_{action.Name}",
-                        $"Army {weapon.Id} {action.Name}",
+                        $"Army_{weapon.ShortId}_{action.Name}",
+                        $"Army {weapon.ShortId} {action.Name}",
                         $"Assets/Art/Sprites/Army/Weapons/{weapon.Folder}/{action.Name}",
-                        $"Assets/Animations/Army/Weapons/{weapon.Folder}/Clips/AN_Army_{weapon.Id}_{action.Name}.anim",
-                        $"SPR_Army_{weapon.Id}_{action.Name}",
+                        $"Assets/Animations/Army/Weapons/{weapon.Folder}/Clips/AN_Army_{weapon.ShortId}_{action.Name}.anim",
+                        $"SPR_Army_{weapon.ShortId}_{action.Name}",
                         string.Empty,
                         action.Loop));
                 }
@@ -745,7 +1072,7 @@ namespace Game.Tools.Editor
                 }
             }
 
-            for (var bulletId = 0; bulletId <= 2; bulletId++)
+            for (var bulletId = 0; bulletId < Weapons.Length; bulletId++)
             {
                 var formattedId = bulletId.ToString("000");
                 definitions.Add(new SequenceDefinition(

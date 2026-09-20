@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_Army_W008_IceLightningStaff
+  m_Controller: {fileID: 9100000, guid: 66dffb55a9e483c44a3e9d8e895703fb, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: 78420294d026fce4e8cdf592b17f1532, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 2779aca41d29e6241918b705b0ee8695, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 25e1c31db0ac41b40b78284a5c9498e5, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: b3697ba1e439a214ca4181677e30e247, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 6a3c47a351d5ad54f8a08f12cca7af10, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: bc34749dfe589054db8e5732355a2b1c, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: cd2154d73df40c141b68c4870c4815df, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 20da847a797b4cc4694dcccb4258a6e4, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 993037948385c7b42ac6dbaeb7ffbab0, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 3d0806cd0f5c87a4f861bcb9d930dc68, type: 2}

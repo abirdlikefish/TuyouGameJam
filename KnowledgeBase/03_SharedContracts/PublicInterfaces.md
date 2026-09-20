@@ -319,6 +319,13 @@ public enum ElementMask : byte
     Lightning = 1 << 2
 }
 
+public enum ArmyWeaponChangeReason
+{
+    WeaponPickup = 0,
+    ElementActivated = 1,
+    ElementExpired = 2
+}
+
 public interface IHorizontalInputReceiver
 {
     void SetHorizontalInput(float value);
@@ -369,6 +376,8 @@ public interface IGameplayInputController : IGameplayInputGate
 ```
 
 `IHorizontalInputReceiver` 是 Input 所需的最小玩法命令面，ArmyController 通过 `IArmyController` 继承并实现它。GameplayInputAdapter 只接收该最小接口，不取得 Army 的人数、伤害、装备或本局生命周期能力。
+
+`ArmyWeaponChanged` 携带 `ArmyWeaponChangeReason`；`WeaponPickup` 与 `ElementActivated` 的 `SourceRuntimeInstanceId` 有值，`ElementExpired` 为 `null`。元素获得或过期只有在实际 WeaponId 改变时才发布该事件。
 
 `EnterVictoryPresentation(levelRunId)` 只接受当前会话，停止 Army 后续移动、射击和玩法命令，保留活动 SoldierVisual 并播放 Victory。它不发布 Victory 事实、不决定终局，也不替代 `StopRun`；Gameplay 场景卸载或显式清理仍调用 `StopRun` 复位身份、Collider、数值和视觉。GameOver 不调用该入口。
 

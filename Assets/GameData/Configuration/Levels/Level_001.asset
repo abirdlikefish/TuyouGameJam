@@ -20,26 +20,26 @@ MonoBehaviour:
   despawnY: -9
   elementDurationSecondsPerDamage: 1
   enemySpawns:
-  - spawnTime: 1
+  - spawnTime: 16.04
     spawnPosition: 0
     configId: 0
-  - spawnTime: 1
+  - spawnTime: 21.99
     spawnPosition: 1
     configId: 0
   gateSpawns:
   - spawnTime: 2
-    spawnPosition: 0.072
+    spawnPosition: 0.279
     gateType: 0
-    initialValue: -20
+    initialValue: -1
     elementType: 0
     maxHp: 0
-  - spawnTime: 3
-    spawnPosition: 0.072
+  - spawnTime: 8.62
+    spawnPosition: 0.669
     gateType: 1
     initialValue: 0
     elementType: 1
-    maxHp: 20
+    maxHp: 3
   propSpawns:
   - spawnTime: 4
-    spawnPosition: 1
+    spawnPosition: 0.464
     configId: 1

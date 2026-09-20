@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 脚本已实现并通过编译；批次 7 动画表现适配、Prefab/Scene 装配与玩法手测待完成）
 - 依赖：EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager
-- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`
+- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`
 - MVP `ArmyId` 固定为 `0`，同时读取首行 `TbArmy.Id = 0` 并选择序列化 `ArmyPrefabBinding.ArmyId = 0` 的 Prefab。
 
 ## 职责
@@ -23,8 +23,8 @@
 ## 配置输入
 
 - MVP 初始人数固定为 `1`；通过 `IArmyConfigProvider.GetArmyConfig(0)` 必得 ConfigService 已校验并复制的总人数上限、单兵生命值和横向移动速度不可变快照。
-- `TbArmy` 不保存槽位容量、武器或元素。`WeaponId` 是本局运行时唯一武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`；每局从 `0` 开始，并通过 `IWeaponConfigProvider.GetWeaponConfig(WeaponId)` 必得发射间隔和基础子弹 ID。ArmyController 不持有 Luban 生成行，也不处理配置缺失恢复。
-- 当前不建立 `TbElement`。火、冰、雷三种剩余持续时间每局从 `0` 开始，由元素门按类型增加。
+- `TbArmy` 不保存槽位容量、武器或元素。`WeaponId` 是本局运行时唯一武器身份，固定 0/1 为 Slingshot/Bow、2 为普通 Staff、3～9 为七种元素法杖；每局从 `0` 开始，并通过 `IWeaponConfigProvider.GetWeaponConfig(WeaponId)` 必得发射间隔和基础子弹 ID。ArmyController 不持有 Luban 生成行，也不处理配置缺失恢复。
+- 当前不建立 `TbElement`。火、冰、雷三种剩余持续时间每局从 `0` 开始，由元素门按类型增加；当前武器属于法杖家族时，有效元素组合同步派生 WeaponId 2～9。
 - GameplaySceneEntry 通过序列化 `ArmyPrefabBinding` 选择 Army Prefab；ArmyController 通过序列化 `ArmySlotView[] slots` 持有槽位，不通过 Luban 资源键或运行时搜索取得。
 - 当前人数、槽位状态、WeaponId、三元素剩余时间和射击计时都是本局运行时状态，不回写 Luban。
 
@@ -123,7 +123,7 @@ public sealed class ArmyPrefabBinding
 
 - 初始人数固定为 1，初始 WeaponId 为 0，三元素剩余时间均为 0；人数不能低于 0，`ArmyCountLimit = 0` 时不设上限，大于 0 时人数不能超过该上限。
 - 非负门取得 `ArmyAdditionResult`，其中请求增员、受上限约束后的实际增员和结算后总人数可分别验证。
-- `TbArmy.Id = 0`、三个固定武器配置或 ArmyId=0 Prefab 任一缺失时不得进入 Gameplay Ready。
+- `TbArmy.Id = 0`、十个固定武器配置或 ArmyId=0 Prefab 任一缺失时不得进入 Gameplay Ready。
 - 槽位容量准确等于序列化槽位数组长度，不读取或维护第二份 `MaxDeployedSoldiers`。
 - 初始分配采用整数平均、余数按槽位顺序分配；运行时每增加一人都选择 `RepresentedCount` 最少、再按 SlotIndex 最小的槽位，空槽位自然优先重新启用，不保存 `NeedsRefill`。
 - 槽位受击只减少当前槽位人数，不主动将其他槽位人数重新平均。
@@ -143,7 +143,7 @@ public sealed class ArmyPrefabBinding
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
 - `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × gameplayDeltaTime`，该 delta 由 LevelManager 在帧开始读取并传入，同一次更新不得再读取或叠加其他时间域。当前拖拽先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。键盘/手柄输入延后。
-- 三套 WeaponId 动画映射完整且唯一；换武器后所有槽位立即使用新 Controller，随后新增或重新激活的槽位不会显示旧武器。Idle/Attack/左右移动循环、Victory 非循环；状态只在实际变化时重播，动画切换不改变射击调度事实。
+- 十套 WeaponId 动画映射完整且唯一；换武器后所有槽位立即使用新 Controller，随后新增或重新激活的槽位不会显示旧武器。Idle/Attack/左右移动循环、Victory 非循环；状态只在实际变化时重播，动画切换不改变射击调度事实。
 - ArmyRoot 每局准确重置到配置出生坐标，移动期间 Y 保持为配置值；初始阵型在该坐标越界时 Preparing 失败，道路没有 Collider 时仍能用激活槽位合并 AABB 完成后续左右限位。
 
 - 人数、槽位聚合 HP 和元素持续时间使用宽中间类型计算；超过公开存储类型时饱和到最大有限值，不得整数回绕、变负、NaN 或无穷。

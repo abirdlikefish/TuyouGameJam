@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与命中流程手测待完成）
 - 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`
 
 ## 职责
 
@@ -20,7 +20,7 @@
 ## 配置输入
 
 - 通过 `IBulletConfigProvider.GetBulletConfig(BulletId)` 取得 ConfigService 已校验并复制的 `BulletConfigSnapshot`，包含基础伤害和速度；BulletManager 不持有 Luban 生成行。
-- 从 `TbWeapon` 获取发射间隔和基础子弹引用。当前不建立 `TbElement`；火、冰、雷只通过 Army 提交的 ElementMask 记录，具体效果延后设计。
+- 从 `TbWeapon` 获取发射间隔和基础子弹引用。WeaponId 0～9 各自引用独立 BulletId 0～9。当前不建立 `TbElement`；火、冰、雷仍通过 Army 提交的 ElementMask 记录，额外命中机制延后设计。
 - MVP 子弹只有配置与表现资源差异，共用一个 `Bullet` 池化根脚本和一个规范 Prefab；BulletManager 通过 Inspector 绑定该 Prefab，并按 `BulletId` 注入数值与表现。命中首个有效目标后回收是固定规则，不配置资源键或碰撞行为。
 - Army 每个激活槽位提供一个发射点和代表人数；Bullet 不读取 Army 内部状态，只消费生成时的不可变快照。
 - 子弹的发射时机由 Army 运行时逻辑决定，关卡编排不保存子弹实例。
@@ -57,7 +57,7 @@ BulletRoot [BulletManager；序列化唯一 Bullet Prefab]
     └── BodyCollider [Collider2D；Bullet Layer]
 ```
 
-Bullet 根组件显式绑定 `bodyCollider`、视觉引用和 Animator。首轮所有 BulletId 共用该 Prefab，数值从 Bullet 配置快照注入；Controller 通过整数 `BulletId` 参数选择 0/1/2 对应循环 Clip。池对象借出时必须在激活前写入本次 ID 并从目标状态起播，归还时清除表现状态；不通过动画事件处理命中、伤害或回收。Trail 和 VFX 仍可延后。必需引用、Controller、参数或 Layer 非法时直接输出错误并阻止 Gameplay Ready。完整导入与绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md) 和 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)。
+Bullet 根组件显式绑定 `bodyCollider`、视觉引用和 Animator。所有 BulletId 共用该 Prefab，数值从 Bullet 配置快照注入；Controller 通过整数 `BulletId` 参数选择 0～9 各自的循环 Clip。池对象借出时必须在激活前写入本次 ID 并从目标状态起播，归还时清除表现状态；不通过动画事件处理命中、伤害或回收。Trail 和 VFX 仍可延后。必需引用、Controller、参数或 Layer 非法时直接输出错误并阻止 Gameplay Ready。完整导入与绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md) 和 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)。
 
 Bullet 自身不添加 Rigidbody2D，避免高弹量场景为每颗活动子弹增加物理 Body；若任一合法目标缺少 ADR-055 的目标侧 Kinematic 适配，应在 Gameplay Preparing 失败，而不是进入运行态后静默穿透。
 
@@ -77,6 +77,6 @@ Bullet 自身不添加 Rigidbody2D，避免高弹量场景为每颗活动子弹�
 - 同一个 `BulletInstanceId` 不会因多个目标子碰撞体重复结算。
 - 同一 Cast 结果先通过 BulletHitProxy 按 RuntimeInstanceId 去重，再按距离、Enemy > Gate > Prop、RuntimeInstanceId 的稳定优先级选择首个有效目标。
 - `Bullet` 具体类型只绑定一个规范 Prefab 和类型池；类型池返回未激活实例，BulletManager 设置发射父节点、Transform 和快照并登记后才激活。
-- BulletId 0/1/2 分别播放正确的循环 Clip；池化实例从一个 BulletId 回收后以另一个 BulletId 借出时，不残留旧参数、状态、帧或 Sprite。
+- BulletId 0～9 分别播放正确的独立循环 Clip；池化实例从一个 BulletId 回收后以另一个 BulletId 借出时，不残留旧参数、状态、帧或 Sprite。
 - 子弹只请求生成所有者结束实例，不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还；命中或离屏后清理状态、主动失活，再由类型池防御性失活并回收。
 - LevelManager 只在子弹阶段调用一次 `TickMovementAndHits`；Preparing、Completed 和过期 LevelRunId 不移动或命中。

@@ -32,7 +32,7 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 初始字段：`Id`、`FireInterval`、`BulletId`。
 
-`Id` 是唯一的武器身份，MVP 固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`，三行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个激活槽位按对应行的 `FireInterval` 独立发射一枚非负 `BulletId` 对应的子弹；`FireInterval` 必须有限且大于 `0`，单位为秒。槽位激活与实际切换到不同武器后都等待完整间隔，单槽每逻辑帧最多发射一颗且不追赶补发；重复当前 WeaponId 不重置。多弹道、散射和代表人数缩放不属于 MVP。
+`Id` 是唯一的武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`、`3 = FireStaff`、`4 = IceStaff`、`5 = LightningStaff`、`6 = FireIceStaff`、`7 = FireLightningStaff`、`8 = IceLightningStaff`、`9 = FireIceLightningStaff`，十行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个武器引用独立 BulletId。每个激活槽位按对应行的 `FireInterval` 独立发射一枚非负 `BulletId` 对应的子弹；`FireInterval` 必须有限且大于 `0`，单位为秒。槽位激活与实际切换到不同武器后都等待完整间隔，单槽每逻辑帧最多发射一颗且不追赶补发；重复当前 WeaponId 不重置。多弹道、散射和代表人数缩放不属于 MVP。
 
 当前不建立 `TbElement`。火、冰、雷使用固定 `ElementType`，元素门按 LevelConfig 中的关卡系数和 HP 归零后的额外伤害计算持续时间，Army 保存本局剩余时间；具体元素效果进入范围后再决定是否新增元素配置表。
 
@@ -54,7 +54,7 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 初始字段：`Id`、`Damage`、`MoveSpeed`。
 
-每条 `TbBullet` 必须满足 `Damage > 0`，`MoveSpeed` 有限且大于等于 `0`，速度单位为世界单位/秒。MVP 子弹固定为命中首个有效目标后回收，不配置 `CollisionBehavior`。全部 MVP 子弹共用一个 `Bullet` 根类型、规范 Prefab 和类型池；数值与表现按 `BulletId` 初始化，Prefab 与池身份不写入 Luban。
+每条 `TbBullet` 必须满足 `Damage > 0`，`MoveSpeed` 有限且大于等于 `0`，速度单位为世界单位/秒。固定 BulletId 0～9 分别对应十个固定 WeaponId 的独立子弹配置和 Loop 动画。MVP 子弹固定为命中首个有效目标后回收，不配置 `CollisionBehavior`。全部子弹共用一个 `Bullet` 根类型、规范 Prefab 和类型池；数值与表现按 `BulletId` 初始化，Prefab 与池身份不写入 Luban。
 
 实际表不提供绕过上述契约的隐式默认值；非法主键、引用、枚举、整数或浮点值由 ConfigService 在启动时拒绝。
 

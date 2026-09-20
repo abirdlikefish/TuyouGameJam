@@ -11,7 +11,7 @@ IceRemainingDuration
 LightningRemainingDuration
 ```
 
-- WeaponId 唯一确定一条 `TbWeapon` 配置，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`，运行时不维护第二份 WeaponType。
+- WeaponId 唯一确定一条 `TbWeapon` 配置：`0 = Slingshot`、`1 = Bow`、`2 = Staff`，`3..9` 为火、冰、雷的七种非空组合元素法杖；运行时不维护第二份 WeaponType。
 - 当前不建立 `TbElement`。`ElementType.None` 只作为未使用配置字段的空值，Army 只接受火、冰、雷三种可获得元素；具体效果延后设计。
 - 三个元素可以任意组合同时有效；ActiveElements 只从剩余时间是否大于 `0` 派生，不保存第四份可变状态。
 - Bullet 在生成时保存当前 WeaponId 和发射瞬间的 ElementMask，形成不可变运行时快照。
@@ -19,10 +19,11 @@ LightningRemainingDuration
 ## 运行时切换
 
 - 每次 StartRun 把当前武器重置为 `0`，三元素剩余时间全部重置为 `0`。
-- 武器箱通过 WeaponId 更新当前武器，不改变任何元素剩余时间；Army 发布 `ArmyWeaponChanged`。
-- 成功元素门通过 `AddElementDuration(ElementType, duration, sourceRuntimeInstanceId)` 增加对应计时，不改变当前武器或另外两种元素；传入 `None` 必须拒绝。
+- 武器箱通过 WeaponId 更新当前武器，不改变任何元素剩余时间。法杖箱仍提交 `2`；Army 按已有元素解析最终法杖。
+- 成功元素门通过 `AddElementDuration(ElementType, duration, sourceRuntimeInstanceId)` 增加对应计时；传入 `None` 必须拒绝。当前武器属于法杖家族时，Army 按新的有效元素组合切换到对应 WeaponId。
 - 同类型持续时间直接累加，当前不设上限；增加时发布 `ArmyElementDurationChanged`。
-- 某元素从大于 `0` 首次变为 `0` 时发布一次 `ArmyElementExpired`；剩余时间不通过 EventBus 每帧广播。
+- 某元素从大于 `0` 首次变为 `0` 时发布一次 `ArmyElementExpired`；三个计时器均扣减后只派生一次最终法杖，全部元素耗尽时恢复 WeaponId 2。
+- 实际法杖变体切换发布 `ArmyWeaponChanged` 并重置完整射击间隔；重复增加仍有效的元素不切换武器。
 
 ## 元素计时与掩码
 
@@ -40,6 +41,8 @@ if LightningRemainingDuration > 0: ActiveElements |= Lightning
 ```
 
 ElementMask 固定为 `None = 0`、`Fire = 1`、`Ice = 2`、`Lightning = 4`。Gate 接触晚于 Army 发射阶段，因此本帧新获得的元素从下一逻辑帧发射开始生效。子弹生成后不随 Army 的计时器变化。
+
+法杖映射固定为：None→2、Fire→3、Ice→4、Lightning→5、Fire|Ice→6、Fire|Lightning→7、Ice|Lightning→8、Fire|Ice|Lightning→9。
 
 ## MVP 发射规则
 
@@ -60,13 +63,15 @@ WeaponId 对应的基础参数
 
 ## 测试标准
 
-- `TbWeapon` 必须准确包含 0、1、2 三个固定 ID，0 不得被当作未配置值。
+- `TbWeapon` 必须准确包含 0～9 十个固定 ID，0 不得被当作未配置值。
 - 每局以弹弓和三个 0 秒元素计时开始。
 - 武器箱只能通过有效的 WeaponId 更新 Army，换武器不会改变任何元素计时。
 - 本局初始激活槽位、运行中新激活槽位都等待一个完整 FireInterval 后首发；失活后重新激活也重新等待。
 - 实际切换到不同武器时，全部激活槽位按新武器 FireInterval 重置冷却；重复获得当前武器不重置。
 - 每个槽位每逻辑帧最多发射一颗，超长帧不补发跨过的历史射击次数。
 - 火、冰、雷可以同时生效；重复获得同元素累加持续时间，不覆盖另外两种。
+- 七种非空元素组合映射到七种独立元素法杖；元素部分或全部过期时按剩余组合降级。
+- 多个元素同帧过期时只切换一次最终法杖；先获得元素再拾取法杖时直接得到正确组合。
 - 计时只在 Playing 使用传入的 Gameplay delta 扣减且不会小于 0；每次有效期只发布一次过期事实。
 - 相同武器 ID 在不同槽位生成的子弹基础参数一致。
 - 不同武器 ID 即使外观相似，也按独立配置验证和表现。

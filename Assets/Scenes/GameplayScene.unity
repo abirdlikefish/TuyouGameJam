@@ -166,9 +166,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a53ff44c636cb8b4c8a03ee9cd91a526, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  normalPrefab: {fileID: 1309610768443824540, guid: 13ba819940c574c4db65d014273cc25b, type: 3}
-  elitePrefab: {fileID: 1212212309880875452, guid: e441496c41c7a624aad71de69d964a74, type: 3}
-  bossPrefab: {fileID: 8952765051212216555, guid: f621d055ce9ce5d429c7bed30a425472, type: 3}
+  chickPrefab: {fileID: 1309610768443824540, guid: 13ba819940c574c4db65d014273cc25b, type: 3}
+  henPrefab: {fileID: 1212212309880875452, guid: e441496c41c7a624aad71de69d964a74, type: 3}
+  roosterPrefab: {fileID: 8952765051212216555, guid: f621d055ce9ce5d429c7bed30a425472, type: 3}
   enemyBodyLayers:
     serializedVersion: 2
     m_Bits: 128
@@ -982,7 +982,7 @@ Transform:
   m_GameObject: {fileID: 1854113734}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -6.09, z: 0}
+  m_LocalPosition: {x: 0, y: -4.26, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

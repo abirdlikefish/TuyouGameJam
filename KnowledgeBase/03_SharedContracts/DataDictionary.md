@@ -12,7 +12,8 @@
 | `HpPerSoldier` | `int` | 每名代表士兵提供的聚合生命值 | 大于 0 |
 | `SlotCurrentHp` | `int` | 槽位当前聚合生命值 | `0 <= value <= SlotMaxHp` |
 | `SlotMaxHp` | `int` | 槽位最大聚合生命值 | `RepresentedCount × HpPerSoldier` |
-| `WeaponId` | `int` | Army 当前武器配置 ID | 本局运行时状态；`0 = Slingshot`、`1 = Bow`、`2 = Staff`，必须引用 `TbWeapon` |
+| `WeaponId` | `int` | Army 当前实际武器配置 ID | 本局运行时状态；0/1 为 Slingshot/Bow，2 为普通 Staff，3～9 为七种元素法杖，必须引用 `TbWeapon` |
+| `ArmyWeaponChangeReason` | `enum` | 当前武器发生变化的原因 | `WeaponPickup`、`ElementActivated`、`ElementExpired` |
 | `ConfigId` | `int` | 读取 Luban 的对象所引用的配置表 ID | 非负，`0` 合法；Enemy 引用 `TbEnemy`，Prop 引用 `TbProp`；Gate 不使用 ConfigId，也不读表 |
 | `SpawnEntryIndex` | `int` | 生成项在所属 LevelConfig 时间轴列表中的稳定索引 | 大于等于 0；用于 Enemy/Gate/Prop 诊断和事件关联，不是配置表主键，也不能代替 RuntimeInstanceId |
 | `RuntimeInstanceId` | `int` | 道路对象或敌人本次生成的运行时实例 ID | 非负；在对应 Manager 的活动实例中唯一，不能使用配置 ID 代替 |
@@ -79,7 +80,7 @@
 | `AttackPower` | `int` | 敌人每次攻击造成的槽位伤害 | 大于 0 |
 | `AttackStartRange` | `float` | 怪物与锁定槽位目标位置的 XY 欧氏距离小于等于该值时停止接近并开始攻击 | 有限且大于等于 0；距离为 0 的 Army/Enemy 重合状态同样允许攻击 |
 | `AttackCooldown` | `float` | 两次攻击开始之间的冷却时间 | 有限且大于等于 0，单位为秒 |
-| `BulletId` | `int` | 造成伤害的子弹配置 ID | 必须引用 `TbBullet` |
+| `BulletId` | `int` | 造成伤害的子弹配置 ID | 必须引用 `TbBullet`；固定 0～9 与十种武器各自的独立子弹对应 |
 | `BulletInstanceId` | `int` | 本次生成的具体子弹实例 ID | 活动子弹中唯一；用于碰撞去重 |
 | `LevelElapsedTime` | `float` | 本局开始后的关卡运行时间 | `value >= 0`；由 LevelManager 运行时维护 |
 | `SpawnTime` | `float` | 生成项相对本局开始的触发时间 | `value >= 0`；按列表非递减排序 |

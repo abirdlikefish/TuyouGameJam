@@ -9,7 +9,15 @@ namespace Game.Gameplay
     {
         private const int MvpInitialArmyCount = 1;
         private const int InitialWeaponId = 0;
-        private const int MvpWeaponCount = 3;
+        private const int StaffWeaponId = 2;
+        private const int FireStaffWeaponId = 3;
+        private const int IceStaffWeaponId = 4;
+        private const int LightningStaffWeaponId = 5;
+        private const int FireIceStaffWeaponId = 6;
+        private const int FireLightningStaffWeaponId = 7;
+        private const int IceLightningStaffWeaponId = 8;
+        private const int FireIceLightningStaffWeaponId = 9;
+        private const int MvpWeaponCount = 10;
 
         [Serializable]
         private struct WeaponAnimatorControllerBinding
@@ -196,9 +204,24 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException(nameof(gameplayDeltaTime));
             }
 
-            TickElementDuration(ref fireRemainingDuration, ElementType.Fire, gameplayDeltaTime);
-            TickElementDuration(ref iceRemainingDuration, ElementType.Ice, gameplayDeltaTime);
-            TickElementDuration(ref lightningRemainingDuration, ElementType.Lightning, gameplayDeltaTime);
+            var elementExpired = TickElementDuration(
+                ref fireRemainingDuration,
+                ElementType.Fire,
+                gameplayDeltaTime);
+            elementExpired |= TickElementDuration(
+                ref iceRemainingDuration,
+                ElementType.Ice,
+                gameplayDeltaTime);
+            elementExpired |= TickElementDuration(
+                ref lightningRemainingDuration,
+                ElementType.Lightning,
+                gameplayDeltaTime);
+            // 本帧全部过期事实发布后只落一次最终组合，避免经过中间法杖身份。
+            if (elementExpired)
+            {
+                RefreshStaffWeapon(ArmyWeaponChangeReason.ElementExpired, null);
+            }
+
             SetAnimationState(MoveArmy(gameplayDeltaTime));
             TickFire(gameplayDeltaTime);
         }
@@ -442,30 +465,14 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException();
             }
 
-            var nextWeapon = weaponConfigProvider.GetWeaponConfig(weaponId);
-            if (weaponId == currentWeaponId)
-            {
-                return;
-            }
-
-            var previousWeaponId = currentWeaponId;
-            currentWeaponId = weaponId;
-            ApplyWeaponAnimatorController(currentWeaponId);
-            for (var index = 0; index < slots.Length; index++)
-            {
-                if (slots[index].IsActive)
-                {
-                    slots[index].SetFireCooldown(nextWeapon.FireInterval);
-                }
-            }
-
-            eventBus.Publish(
-                new ArmyWeaponChanged(
-                    levelRunId,
-                    armyId,
-                    previousWeaponId,
-                    currentWeaponId,
-                    sourceRuntimeInstanceId));
+            weaponConfigProvider.GetWeaponConfig(weaponId);
+            var targetWeaponId = IsStaffWeapon(weaponId)
+                ? ResolveStaffWeaponId(GetActiveElements())
+                : weaponId;
+            ChangeCurrentWeapon(
+                targetWeaponId,
+                ArmyWeaponChangeReason.WeaponPickup,
+                sourceRuntimeInstanceId);
         }
 
         public ElementDurationChangeResult AddElementDuration(
@@ -502,6 +509,9 @@ namespace Game.Gameplay
                     duration,
                     current,
                     sourceRuntimeInstanceId));
+            RefreshStaffWeapon(
+                ArmyWeaponChangeReason.ElementActivated,
+                sourceRuntimeInstanceId);
             return result;
         }
 
@@ -531,7 +541,7 @@ namespace Game.Gameplay
                 weaponAnimatorControllers.Length != MvpWeaponCount)
             {
                 error = $"{name}.weaponAnimatorControllers must contain exactly " +
-                        $"{MvpWeaponCount} bindings for WeaponId 0, 1 and 2.";
+                        $"{MvpWeaponCount} bindings for WeaponId 0 through 9.";
                 return false;
             }
 
@@ -651,12 +661,15 @@ namespace Game.Gameplay
             }
         }
 
-        private void TickElementDuration(ref float remainingDuration, ElementType elementType, float deltaTime)
+        private bool TickElementDuration(
+            ref float remainingDuration,
+            ElementType elementType,
+            float deltaTime)
         {
             if (remainingDuration <= 0f)
             {
                 remainingDuration = 0f;
-                return;
+                return false;
             }
 
             var previous = remainingDuration;
@@ -664,6 +677,86 @@ namespace Game.Gameplay
             if (previous > 0f && remainingDuration <= 0f)
             {
                 eventBus.Publish(new ArmyElementExpired(levelRunId, armyId, elementType));
+                return true;
+            }
+
+            return false;
+        }
+
+        private void RefreshStaffWeapon(
+            ArmyWeaponChangeReason reason,
+            int? sourceRuntimeInstanceId)
+        {
+            if (!IsStaffWeapon(currentWeaponId))
+            {
+                return;
+            }
+
+            ChangeCurrentWeapon(
+                ResolveStaffWeaponId(GetActiveElements()),
+                reason,
+                sourceRuntimeInstanceId);
+        }
+
+        private void ChangeCurrentWeapon(
+            int targetWeaponId,
+            ArmyWeaponChangeReason reason,
+            int? sourceRuntimeInstanceId)
+        {
+            var nextWeapon = weaponConfigProvider.GetWeaponConfig(targetWeaponId);
+            if (targetWeaponId == currentWeaponId)
+            {
+                return;
+            }
+
+            var previousWeaponId = currentWeaponId;
+            currentWeaponId = targetWeaponId;
+            ApplyWeaponAnimatorController(currentWeaponId);
+            for (var index = 0; index < slots.Length; index++)
+            {
+                if (slots[index].IsActive)
+                {
+                    slots[index].SetFireCooldown(nextWeapon.FireInterval);
+                }
+            }
+
+            eventBus.Publish(
+                new ArmyWeaponChanged(
+                    levelRunId,
+                    armyId,
+                    previousWeaponId,
+                    currentWeaponId,
+                    reason,
+                    sourceRuntimeInstanceId));
+        }
+
+        private static bool IsStaffWeapon(int weaponId)
+        {
+            return weaponId >= StaffWeaponId && weaponId <= FireIceLightningStaffWeaponId;
+        }
+
+        private static int ResolveStaffWeaponId(ElementMask activeElements)
+        {
+            switch (activeElements)
+            {
+                case ElementMask.None:
+                    return StaffWeaponId;
+                case ElementMask.Fire:
+                    return FireStaffWeaponId;
+                case ElementMask.Ice:
+                    return IceStaffWeaponId;
+                case ElementMask.Lightning:
+                    return LightningStaffWeaponId;
+                case ElementMask.Fire | ElementMask.Ice:
+                    return FireIceStaffWeaponId;
+                case ElementMask.Fire | ElementMask.Lightning:
+                    return FireLightningStaffWeaponId;
+                case ElementMask.Ice | ElementMask.Lightning:
+                    return IceLightningStaffWeaponId;
+                case ElementMask.Fire | ElementMask.Ice | ElementMask.Lightning:
+                    return FireIceLightningStaffWeaponId;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(activeElements));
             }
         }
 

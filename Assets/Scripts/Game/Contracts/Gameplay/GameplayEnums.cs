@@ -67,6 +67,13 @@ namespace Game.Contracts
         RemovalRequest = 1
     }
 
+    public enum ArmyWeaponChangeReason
+    {
+        WeaponPickup = 0,
+        ElementActivated = 1,
+        ElementExpired = 2
+    }
+
     public enum ObstacleRecycleReason
     {
         ContactResolved = 0,

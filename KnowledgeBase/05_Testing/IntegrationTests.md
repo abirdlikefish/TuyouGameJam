@@ -56,13 +56,14 @@
 
 - [ ] 原始导出包只保存在 `Reference/AnimationSource`；`Assets/Art/Sprites` 中没有原始绿底帧、预览 GIF、导出 JSON 或供应方 4K 图集。
 - [ ] 所有运行时动画帧使用连续四位编号；同一对象家族的 Texture Type、Alpha、Clamp、Bilinear、MipMap、Read/Write、Max Size、PPU 和 Pivot 设置一致，透明边缘在深浅背景上无明显绿边。
-- [ ] 三个 WeaponId 各有 Idle、Victory、Attack、MoveLeft、MoveRight；Idle/Attack/左右移动循环，Victory 非循环；`AC_Army_Base` 无参数、无自动 Transition，所有 OverrideController 完整覆盖且无 Missing Motion。
-- [ ] WeaponId 从 0 切换到 1、2 时，当前活动和隐藏槽位都更新到对应 Controller；之后增加人数或重新激活槽位不会回到旧武器动画。
+- [ ] 十个 WeaponId 各有 Idle、Victory、Attack、MoveLeft、MoveRight；Idle/Attack/左右移动循环，Victory 非循环；`AC_Army_Base` 无参数、无自动 Transition，所有 OverrideController 完整覆盖且无 Missing Motion。
+- [ ] WeaponId 在 0～9 间实际切换时，当前活动和隐藏槽位都更新到对应 Controller；之后增加人数或重新激活槽位不会回到旧武器动画。
+- [ ] 持有法杖时，火/冰/雷的 7 种非空组合分别映射 WeaponId 3～9；元素结束后直接降级到剩余组合，全部结束后回到 WeaponId 2。同一帧多个元素结束只发生一次最终切换。
 - [ ] Preparing 播放 Idle；Playing 原地持续 Attack，实际左/右位移持续 MoveLeft/MoveRight；道路边缘无实际位移时为 Attack，状态不变时不会每帧重启动画。
 - [ ] Army 持续战斗动画与实际 FireInterval 解耦，AnimationEvent 不生成子弹、不修改 FireInterval、伤害或 WeaponId；Victory 不参与终局判定，请求切换 LevelSelect 前保留士兵，场景卸载时仍完成 StopRun。
 - [ ] Normal、Elite、Boss 各有循环 Move、非循环 Attack 和非循环 Death；Controller 使用既有 Attack/Death Trigger，所有 Motion 引用完整。
 - [ ] 三种 Monster Attack Clip 恰好各有一个 `OnAttackFrame()` 和末帧一个 `OnAttackAnimationFinished()`；Death Clip 末帧恰好一个 `OnDeathAnimationFinished()`。
-- [ ] BulletId 0/1/2 在唯一 `PF_Bullet` 上分别播放正确循环动画；同一池实例以不同 BulletId 复用时不残留旧参数、状态、帧或 Sprite。
+- [ ] BulletId 0～9 在唯一 `PF_Bullet` 上分别播放正确循环动画；同一池实例以不同 BulletId 复用时不残留旧参数、状态、帧或 Sprite。
 - [ ] `PF_Gate_Additive` 播放唯一循环动画；唯一 `PF_Gate_Element` 按 Fire/Ice/Lightning 播放对应循环动画，以不同 ElementType 复用时不残留旧表现。
 - [ ] Army、Bullet、Gate 动画不包含玩法结算事件；所有 Controller、OverrideController 和 ID 映射都由 Inspector 显式绑定，不存在 Resources、StreamingAssets、AssetDatabase 或字符串路径运行时加载。
 - [ ] 当前动画纹理在目标平台记录实际导入尺寸和内存；关闭 Mipmap/ReadWrite，发现超预算时优先降低 Max Size、公共裁切或重新打包，不直接采用供应方稀疏 4K 图集。
@@ -89,7 +90,7 @@
 - [ ] 元素门接触失败后永久锁定奖励；继续受击可以消费子弹和播放表现，但 HP 最低锁在 `1`，不再累计可兑换伤害、不能归零或获得元素。
 - [ ] 门只对 Army 进行一次接触判定；未接触门可以直接从道路下方离场。
 - [ ] Gate/Prop 先通过 `IArmyController` 完成状态变更再发布事实事件；增删 UI 或 VFX 监听者不会改变结算结果。
-- [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。
+- [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。配置保证获得法杖后不再生成其他武器箱，元素法杖 3～9 不作为武器箱直接掉落。
 - [ ] 道具未击破接触时，对每个接触槽位造成相同伤害并继续向下离场。
 - [ ] 怪物从固定出生横线上的配置位置向下移动，到达接近线后向最近的有效士兵槽位移动；初始横向位置不限制后续移动。
 - [ ] 初始总人数为 1，并按配置创建对应的上场槽位。
@@ -171,7 +172,7 @@
 - [ ] `LevelConfig` 引用的敌人和 Prop 配置 ID 全部存在；Gate 生成项不含 ConfigId，并按类型正确填写 InitialValue，或 ElementType 与 MaxHp；EnemyManager 的三个敌人规范 Prefab、ObstacleManager 的 Gate/Prop 规范 Prefab、BulletManager 的子弹规范 Prefab、阵型槽位和发射点绑定完整。
 - [ ] `enemySpawns` 为空时报告 `InvalidLevelConfig` 并退出应用；`gateSpawns` 或 `propSpawns` 为空仍可正常完成配置初始化。
 - [ ] 当前不存在 `TbGate` 或 Gate 配置 Provider；包含元素门时 `elementDurationSecondsPerDamage` 有限且大于 0，不包含元素门时为 0；`TbProp` 的生命值、伤害及武器引用符合配置契约。
-- [ ] `TbArmy`、`TbWeapon`、`TbEnemy`、`TbProp`、`TbBullet` 的首行均为 `Id=0`，固定 `TbWeapon.Id=0/1/2` 均存在且 `TbWeapon.BulletId` 引用有效；当前不建立 TbElement，缺失必需首行、固定行或引用时启动失败。
+- [ ] `TbArmy`、`TbWeapon`、`TbEnemy`、`TbProp`、`TbBullet` 的首行均为 `Id=0`，固定 `TbWeapon.Id=0`～`9` 均存在且同 ID 的 `BulletId` 引用有效；当前不建立 TbElement，缺失必需首行、固定行或引用时启动失败。
 - [ ] `TbArmy.ArmyCountLimit = 0` 时不限制人数，大于 0 时正确应用上限；初始人数始终为固定值 1。
 - [ ] `TbArmy.MoveSpeed` 是 Army 横向基础速度；实际位移按 `horizontalInput × MoveSpeed × 有效玩法 delta` 计算，触屏系数通过输入倍率影响最终速度但不改写配置。
 - [ ] GameplaySceneEntry 的序列化 ArmyPrefabBinding 包含唯一 ArmyId=0；Prefab 根为 ArmyController，槽位数组非空、无空项或重复引用，SlotCapacity 准确等于数组长度。

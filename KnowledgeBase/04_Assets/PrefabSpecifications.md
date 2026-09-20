@@ -50,7 +50,7 @@ PF_Army_000 [ArmyController]
 ```
 
 - ArmyController 显式绑定有序 `ArmySlotView[] slots`。
-- ArmyController 额外显式绑定唯一的 `WeaponId -> AnimatorOverrideController` 数组，固定覆盖 `0 = Slingshot`、`1 = Bow`、`2 = Staff`；ID 不得重复，引用不得为空。
+- ArmyController 额外显式绑定唯一的 `WeaponId -> AnimatorOverrideController` 数组，固定覆盖 WeaponId 0～9；ID 不得重复，引用不得为空。
 - ArmySlotView 显式绑定 `soldierVisual`、`soldierAnimator`、`slotCollider`、`slotHitProxy`、`firePoint`；Animator 必须作用于当前 SoldierVisual 的 SpriteRenderer。
 - `ArmySlotHitProxy` 与 SlotCollider 位于同一 GameObject，并显式绑定当前 ArmySlotView；Army 初始化时注入固定 ArmyId 与数组下标 SlotIndex。
 - 数组顺序就是稳定 SlotIndex；不得运行时扫描或排序。
@@ -67,7 +67,7 @@ PF_Bullet [Bullet；Animator]
 
 - Bullet 根组件显式绑定 `bodyCollider`、`visual` 和 `animator`，Animator Controller 必须提供整数参数 `BulletId`。
 - 首轮所有 BulletId 共用该 Prefab；基础伤害和速度由配置快照注入。
-- `BulletId 0/1/2` 各绑定一个循环 Clip。池对象借出时在激活前写入本次 BulletId 并从对应状态起播；归还和复用不能保留上一实例的参数、状态或帧。
+- `BulletId 0`～`9` 各绑定一个循环 Clip。池对象借出时在激活前写入本次 BulletId 并从对应状态起播；归还和复用不能保留上一实例的参数、状态或帧。
 - Bullet 动画不包含玩法 AnimationEvent；Trail 和命中特效仍可延后。
 
 ## Monster
@@ -158,7 +158,7 @@ PF_UI_TouchDragArea [RectTransform；Image；TouchDragInput]
 ## 首轮校验结果
 
 - 任一必需根脚本、引用、Collider、身份代理、Layer、Animator、Controller、ID 映射或数值非法时直接输出错误并停止 Gameplay Ready。`BulletHitProxy`/`ArmySlotHitProxy` 必须与对应 Collider 位于同一节点并显式绑定目标，不使用父级搜索补齐。
-- 正式 Sprite 尚未到位时允许临时占位 Clip，但 Army 五状态与三套 WeaponId Override、三个 BulletId 循环状态、加法门和三种元素门循环状态、三种 Monster Move/Attack/Death 以及全部必需 Controller/参数必须完整；不得用默认 Sprite 或错误 ID 回退继续 Ready。
+- 正式 Sprite 尚未到位时允许临时占位 Clip，但 Army 五状态与十套 WeaponId Override、十个 BulletId 循环状态、加法门和三种元素门循环状态、三种 Monster Move/Attack/Death 以及全部必需 Controller/参数必须完整；不得用默认 Sprite 或错误 ID 回退继续 Ready。
 - 三种 Monster 的非循环 Attack/Death Clip 及其 `OnAttackFrame()` / `OnAttackAnimationFinished()` / `OnDeathAnimationFinished()` 事件必须完整绑定。
 - 对象池 Prefab 必须保持一个具体根类型对应一个规范 Prefab。
 - 首轮通过合理的速度、Collider 尺寸和关卡编排避免离散阶段模型中的高速穿透，不额外实现相对运动扫掠或子步进。
