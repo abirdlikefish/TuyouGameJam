@@ -9,8 +9,22 @@ namespace Game.Gameplay
     {
         private const int MvpInitialArmyCount = 1;
         private const int InitialWeaponId = 0;
+        private const int MvpWeaponCount = 3;
+
+        [Serializable]
+        private struct WeaponAnimatorControllerBinding
+        {
+            [SerializeField, Min(0)] private int weaponId;
+            [SerializeField] private AnimatorOverrideController controller;
+
+            public int WeaponId => weaponId;
+            public AnimatorOverrideController Controller => controller;
+        }
 
         [SerializeField] private ArmySlotView[] slots = new ArmySlotView[0];
+        [SerializeField]
+        private WeaponAnimatorControllerBinding[] weaponAnimatorControllers =
+            new WeaponAnimatorControllerBinding[0];
 
         private IWeaponConfigProvider weaponConfigProvider;
         private IBulletManager bulletManager;
@@ -25,8 +39,10 @@ namespace Game.Gameplay
         private float fireRemainingDuration;
         private float iceRemainingDuration;
         private float lightningRemainingDuration;
+        private ArmyAnimationState currentAnimationState = ArmyAnimationState.Idle;
         private bool initialized;
         private bool running;
+        private bool victoryPresentation;
 
         public void Initialize(
             int initializedArmyId,
@@ -117,6 +133,11 @@ namespace Game.Gameplay
                 }
             }
 
+            if (!TryValidateWeaponAnimatorControllers(out error))
+            {
+                return false;
+            }
+
             error = string.Empty;
             return true;
         }
@@ -143,9 +164,12 @@ namespace Game.Gameplay
             fireRemainingDuration = 0f;
             iceRemainingDuration = 0f;
             lightningRemainingDuration = 0f;
+            currentAnimationState = ArmyAnimationState.Idle;
+            victoryPresentation = false;
             running = true;
 
             var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
+            ApplyWeaponAnimatorController(currentWeaponId);
             InitializeSlots(MvpInitialArmyCount, weapon.FireInterval);
             ClampRootToRoad();
             PublishCountChanged(MvpInitialArmyCount, ArmyCountChangeReason.Addition);
@@ -159,6 +183,11 @@ namespace Game.Gameplay
                 return;
             }
 
+            if (victoryPresentation)
+            {
+                return;
+            }
+
             if (!IsFinite(gameplayDeltaTime) || gameplayDeltaTime < 0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(gameplayDeltaTime));
@@ -167,8 +196,20 @@ namespace Game.Gameplay
             TickElementDuration(ref fireRemainingDuration, ElementType.Fire, gameplayDeltaTime);
             TickElementDuration(ref iceRemainingDuration, ElementType.Ice, gameplayDeltaTime);
             TickElementDuration(ref lightningRemainingDuration, ElementType.Lightning, gameplayDeltaTime);
-            MoveArmy(gameplayDeltaTime);
+            SetAnimationState(MoveArmy(gameplayDeltaTime));
             TickFire(gameplayDeltaTime);
+        }
+
+        public void EnterVictoryPresentation(int completedLevelRunId)
+        {
+            if (!IsCurrentRun(completedLevelRunId) || victoryPresentation)
+            {
+                return;
+            }
+
+            victoryPresentation = true;
+            horizontalInput = 0f;
+            SetAnimationState(ArmyAnimationState.Victory);
         }
 
         public void StopRun(int stoppedLevelRunId)
@@ -185,6 +226,8 @@ namespace Game.Gameplay
             fireRemainingDuration = 0f;
             iceRemainingDuration = 0f;
             lightningRemainingDuration = 0f;
+            currentAnimationState = ArmyAnimationState.Idle;
+            victoryPresentation = false;
             for (var index = 0; index < slots.Length; index++)
             {
                 slots[index].PrepareForRunStop();
@@ -199,7 +242,7 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException(nameof(value));
             }
 
-            horizontalInput = running ? value : 0f;
+            horizontalInput = running && !victoryPresentation ? value : 0f;
         }
 
         public int GetArmyCount()
@@ -404,6 +447,7 @@ namespace Game.Gameplay
 
             var previousWeaponId = currentWeaponId;
             currentWeaponId = weaponId;
+            ApplyWeaponAnimatorController(currentWeaponId);
             for (var index = 0; index < slots.Length; index++)
             {
                 if (slots[index].IsActive)
@@ -478,6 +522,116 @@ namespace Game.Gameplay
                 GetActiveElements());
         }
 
+        private bool TryValidateWeaponAnimatorControllers(out string error)
+        {
+            if (weaponAnimatorControllers == null ||
+                weaponAnimatorControllers.Length != MvpWeaponCount)
+            {
+                error = $"{name}.weaponAnimatorControllers must contain exactly " +
+                        $"{MvpWeaponCount} bindings for WeaponId 0, 1 and 2.";
+                return false;
+            }
+
+            var foundIds = new bool[MvpWeaponCount];
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+            for (var index = 0; index < weaponAnimatorControllers.Length; index++)
+            {
+                var binding = weaponAnimatorControllers[index];
+                if (binding.WeaponId < 0 || binding.WeaponId >= MvpWeaponCount)
+                {
+                    error = $"{name}.weaponAnimatorControllers[{index}] has unsupported " +
+                            $"WeaponId {binding.WeaponId}.";
+                    return false;
+                }
+
+                if (foundIds[binding.WeaponId])
+                {
+                    error = $"{name}.weaponAnimatorControllers contains duplicate " +
+                            $"WeaponId {binding.WeaponId}.";
+                    return false;
+                }
+
+                var controller = binding.Controller;
+                if (controller == null || controller.runtimeAnimatorController == null)
+                {
+                    error = $"{name}.weaponAnimatorControllers[{index}] requires a valid " +
+                            "AnimatorOverrideController.";
+                    return false;
+                }
+
+                overrides.Clear();
+                controller.GetOverrides(overrides);
+                if (overrides.Count != 5)
+                {
+                    error = $"{name}.weaponAnimatorControllers[{index}] must override " +
+                            "exactly five Army clips.";
+                    return false;
+                }
+
+                for (var overrideIndex = 0; overrideIndex < overrides.Count; overrideIndex++)
+                {
+                    if (overrides[overrideIndex].Key == null || overrides[overrideIndex].Value == null)
+                    {
+                        error = $"{name}.weaponAnimatorControllers[{index}] contains a missing " +
+                                "Army clip override.";
+                        return false;
+                    }
+                }
+
+                foundIds[binding.WeaponId] = true;
+            }
+
+            for (var weaponId = 0; weaponId < foundIds.Length; weaponId++)
+            {
+                if (!foundIds[weaponId])
+                {
+                    error = $"{name}.weaponAnimatorControllers is missing WeaponId {weaponId}.";
+                    return false;
+                }
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private void ApplyWeaponAnimatorController(int weaponId)
+        {
+            AnimatorOverrideController controller = null;
+            for (var index = 0; index < weaponAnimatorControllers.Length; index++)
+            {
+                if (weaponAnimatorControllers[index].WeaponId == weaponId)
+                {
+                    controller = weaponAnimatorControllers[index].Controller;
+                    break;
+                }
+            }
+
+            if (controller == null)
+            {
+                throw new InvalidOperationException(
+                    $"No Army AnimatorOverrideController is bound for WeaponId {weaponId}.");
+            }
+
+            for (var index = 0; index < slots.Length; index++)
+            {
+                slots[index].ApplyAnimatorController(controller, currentAnimationState);
+            }
+        }
+
+        private void SetAnimationState(ArmyAnimationState animationState)
+        {
+            if (currentAnimationState == animationState)
+            {
+                return;
+            }
+
+            currentAnimationState = animationState;
+            for (var index = 0; index < slots.Length; index++)
+            {
+                slots[index].SetAnimationState(animationState);
+            }
+        }
+
         private void InitializeSlots(int initialCount, float fireInterval)
         {
             armyCount = initialCount;
@@ -510,7 +664,7 @@ namespace Game.Gameplay
             }
         }
 
-        private void MoveArmy(float deltaTime)
+        private ArmyAnimationState MoveArmy(float deltaTime)
         {
             var displacement = horizontalInput * armyConfig.MoveSpeed * deltaTime;
             if (!IsFinite(displacement))
@@ -518,12 +672,23 @@ namespace Game.Gameplay
                 throw new InvalidOperationException("Army movement produced a non-finite displacement.");
             }
 
+            var previousX = transform.position.x;
             var position = transform.position;
             position.x += displacement;
             position.y = 0f;
             position.z = 0f;
             transform.position = position;
             ClampRootToRoad();
+
+            var actualDisplacement = transform.position.x - previousX;
+            if (actualDisplacement < 0f)
+            {
+                return ArmyAnimationState.MoveLeft;
+            }
+
+            return actualDisplacement > 0f
+                ? ArmyAnimationState.MoveRight
+                : ArmyAnimationState.Attack;
         }
 
         private void ClampRootToRoad()
@@ -827,9 +992,10 @@ namespace Game.Gameplay
         private void EnsureRunning()
         {
             EnsureInitialized();
-            if (!running)
+            if (!running || victoryPresentation)
             {
-                throw new InvalidOperationException("ArmyController does not have an active run.");
+                throw new InvalidOperationException(
+                    "ArmyController does not have an active gameplay run.");
             }
         }
 

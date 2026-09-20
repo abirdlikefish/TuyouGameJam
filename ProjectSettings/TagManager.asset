@@ -11,12 +11,12 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Bullet
+  - EnemyBody
+  - EnemyAttack
+  - ArmySlot
+  - Gate
+  - Prop
   - 
   - 
   - 

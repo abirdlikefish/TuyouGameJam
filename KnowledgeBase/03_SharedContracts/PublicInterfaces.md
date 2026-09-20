@@ -275,7 +275,7 @@ public interface ISceneService
 }
 ```
 
-`SceneService` 不再次查询或解析关卡配置。调用方必须先通过 `IConfigService.TryGetLevelConfig` 取得已校验的 `LevelConfigSnapshot`，再把同一 `levelId`、快照和新的 `LevelRunId` 传入。三个命令都表示切换目标：如果已有应用场景，SceneService 先清理并异步卸载旧场景，再同步 Additive 加载目标场景、解析固定根 SceneEntry 并显式初始化。SceneService 不推进 `AppFlowState`，也不得在 Entry 未就绪时伪装 Ready。
+`SceneService` 不再次查询或解析关卡配置。调用方必须先通过 `IConfigService.TryGetLevelConfig` 取得已校验的 `LevelConfigSnapshot`，再把同一 `levelId`、快照和新的 `LevelRunId` 传入。三个命令都表示切换目标：如果已有应用场景，SceneService 先清理并异步卸载旧场景，再异步 Additive 加载目标场景；Unity 完成回调后才解析固定根 SceneEntry 并显式初始化。SceneService 不推进 `AppFlowState`，也不得在 Entry 未就绪时伪装 Ready。
 
 ```csharp
 public readonly struct AppSceneReady
@@ -349,6 +349,7 @@ public interface IArmyRunController : IArmyController
 {
     void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
     void TickMovementAndFire(int levelRunId, float gameplayDeltaTime);
+    void EnterVictoryPresentation(int levelRunId);
     void StopRun(int levelRunId);
 }
 
@@ -364,6 +365,8 @@ public interface IGameplayInputController : IGameplayInputGate
 ```
 
 `IHorizontalInputReceiver` 是 Input 所需的最小玩法命令面，ArmyController 通过 `IArmyController` 继承并实现它。GameplayInputAdapter 只接收该最小接口，不取得 Army 的人数、伤害、装备或本局生命周期能力。
+
+`EnterVictoryPresentation(levelRunId)` 只接受当前会话，停止 Army 后续移动、射击和玩法命令，保留活动 SoldierVisual 并播放 Victory。它不发布 Victory 事实、不决定终局，也不替代 `StopRun`；Gameplay 场景卸载或显式清理仍调用 `StopRun` 复位身份、Collider、数值和视觉。GameOver 不调用该入口。
 
 `IGameplayInputController` 由 GameplayInputAdapter 实现并通过 Composition 注入 LevelManager。LevelManager 在每个 Playing 帧、Army 移动与发射之前调用一次 `TickInput(unscaledDeltaTime)`。禁用必须幂等，并立即重置 Pointer 状态、调用当前接收者的 `SetHorizontalInput(0)`；这些接口只控制当前场景输入适配器，不创建全局 InputService。
 

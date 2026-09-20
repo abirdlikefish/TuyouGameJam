@@ -93,9 +93,12 @@ Assets/Scripts/Game/Gameplay/Level/
 ```text
 Assets/Scenes/GameplayScene.unity
 Assets/Prefabs/Level/PF_Road_Default.prefab
-Assets/Configs/Levels/CFG_LevelCatalog.asset
-Assets/Configs/Levels/CFG_Level_001.asset
+Assets/GameData/Configuration/LevelCatalog.asset
+Assets/GameData/Configuration/UnityResourceRegistry.asset
+Assets/GameData/Configuration/Levels/Level_001.asset
 ```
+
+当前资源注册表保持空 `bindings`：池化规范 Prefab、Army Prefab、Road 与输入 UI 均由 Manager、SceneEntry 或 Bootstrap 的 Inspector 直接绑定，不在注册表中重复登记第二套身份映射。
 
 Level 不创建 `PF_LevelManager`。LevelManager 和 SpawnManager 是 GameplayScene 中 `LevelSystems` 下的固定场景组件。`PF_Road_Default` 只包含道路视觉与 RoadView，不包含玩法 Collider。
 

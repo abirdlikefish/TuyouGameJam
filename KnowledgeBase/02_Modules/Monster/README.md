@@ -4,9 +4,9 @@
 
 - ID：`MOD-MONSTER`
 - 层级：Gameplay
-- 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Animator/Layer 与战斗手测待完成）
+- 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator 池复用重置已实现并通过编译；剩余正式动画、Prefab 字段、Layer 与战斗手测待完成）
 - 依赖：Bullet、Army、Level、EventBus、IEnemyConfigProvider、PoolService
-- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
+- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`
 
 ## 职责
 
@@ -100,7 +100,7 @@ PF_Monster_Boss [BossMonster；Animator]
 └── AttackCollider [Collider2D；EnemyAttack Layer]
 ```
 
-三个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Elite/Boss 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。三种非循环 Attack Clip 都必须包含恰好一个 `OnAttackFrame()` AnimationEvent 和末帧一个 `OnAttackAnimationFinished()` AnimationEvent；三种非循环 Death Clip 的末帧都必须包含一个 `OnDeathAnimationFinished()`。首轮允许使用占位 Sprite 和简单序列帧，但缺少代理、Animator、Controller、Attack/Death Clip 或事件绑定时不得进入 Gameplay Ready。完整最小绑定见 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043 和 ADR-046。
+三个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Elite/Boss 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。每种怪物提供循环 Move、非循环 Attack 和非循环 Death；三个 Prefab 使用相同状态/Trigger 语义并分别绑定本类型 Controller 或预创建 OverrideController。池对象每次借出都清除 Attack/Death Trigger 并从 Move 第 0 帧起播，回池时重绑 Animator，不能继承上一实例的 Death 状态、帧或 Sprite。三种非循环 Attack Clip 都必须包含恰好一个 `OnAttackFrame()` AnimationEvent 和末帧一个 `OnAttackAnimationFinished()` AnimationEvent；三种非循环 Death Clip 的末帧都必须包含一个 `OnDeathAnimationFinished()`。首轮允许使用占位 Sprite 和简单序列帧，但缺少代理、Animator、Controller、Move/Attack/Death Clip 或事件绑定时不得进入 Gameplay Ready。完整导入和绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)、[PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043、ADR-046 和 ADR-048。
 
 ## EnemyManager
 
@@ -149,6 +149,7 @@ PF_Monster_Boss [BossMonster；Animator]
 - 普通敌人单体攻击锁定目标；目标在判定帧前变为空时取消攻击并重新选目标。
 - 精英和 Boss 的攻击碰撞体只在攻击判定帧执行一次显式重叠查询，所有命中槽位受到相同伤害且每槽位只结算一次。
 - 三种敌人的非循环 Attack Clip 都由命中关键帧调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；重复攻击帧回调不会造成第二次伤害。
+- 三种敌人的 Move Clip 循环，默认进入 Move；Attack/Death 非循环并使用同名 Trigger，三个 Controller/OverrideController 不出现 Missing Motion。
 - AttackCooldown 从攻击开始时刻计算并在动画期间继续递减；若动画结束时已到期，下一次 TickMovement 满足存活、目标有效且在范围内即可开始下一次攻击。
 - 三种非循环 Death Clip 末帧各调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期事件不重复注销、计数或发布 MonsterKilled，StopRun 不等待该事件。
 - AnimationEvent 发生后但 ResolveAttacks 前死亡、StopRun 或回池时，请求作废；事件在当帧 ResolveAttacks 之后发生时允许顺延到下一逻辑帧结算。

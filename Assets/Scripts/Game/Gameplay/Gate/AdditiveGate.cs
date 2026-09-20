@@ -8,11 +8,14 @@ namespace Game.Gameplay
 {
     public sealed class AdditiveGate : MonoBehaviour, IRuntimeBulletTarget, IRoadObstacleRuntime
     {
+        private static readonly int AdditiveLoopState = Animator.StringToHash("Base Layer.Additive_Loop");
+
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private BulletHitProxy bulletHitProxy;
         [SerializeField, Min(0f)] private float moveSpeed;
         [SerializeField] private TMP_Text stateText;
         [SerializeField] private SpriteRenderer visual;
+        [SerializeField] private Animator animator;
 
         private readonly HashSet<int> consumedBulletIds = new HashSet<int>();
 
@@ -25,6 +28,7 @@ namespace Game.Gameplay
         private int gateValue;
         private GateContactState contactState;
         private bool runtimeActive;
+        private bool animationPrepared;
 
         public int RuntimeInstanceId => runtimeInstanceId;
         int IRoadObstacleRuntime.LevelRunId => levelRunId;
@@ -42,9 +46,16 @@ namespace Game.Gameplay
         public bool TryValidate(out string error)
         {
             error = string.Empty;
-            if (bodyCollider == null || bulletHitProxy == null || stateText == null || visual == null)
+            if (bodyCollider == null || bulletHitProxy == null || stateText == null || visual == null ||
+                animator == null || animator.runtimeAnimatorController == null)
             {
-                error = $"{name} requires bodyCollider, bulletHitProxy, stateText and visual bindings.";
+                error = $"{name} requires bodyCollider, bulletHitProxy, stateText, visual and Animator bindings.";
+                return false;
+            }
+
+            if (!animator.enabled)
+            {
+                error = $"{name}.animator must be enabled.";
                 return false;
             }
 
@@ -95,6 +106,15 @@ namespace Game.Gameplay
             transform.rotation = Quaternion.identity;
             bodyCollider.enabled = true;
             RefreshText();
+            PrepareAnimation();
+        }
+
+        private void OnEnable()
+        {
+            if (runtimeActive && animationPrepared)
+            {
+                PlayAnimation();
+            }
         }
 
         public void ReceiveBulletHit(BulletDamageContext damage)
@@ -187,6 +207,12 @@ namespace Game.Gameplay
         void IRoadObstacleRuntime.PrepareForPool()
         {
             runtimeActive = false;
+            animationPrepared = false;
+            if (animator.gameObject.activeInHierarchy)
+            {
+                animator.Rebind();
+            }
+
             bodyCollider.enabled = false;
             army = null;
             eventBus = null;
@@ -197,6 +223,22 @@ namespace Game.Gameplay
             gateValue = 0;
             consumedBulletIds.Clear();
             gameObject.SetActive(false);
+        }
+
+        private void PrepareAnimation()
+        {
+            animationPrepared = true;
+            if (gameObject.activeInHierarchy)
+            {
+                PlayAnimation();
+            }
+        }
+
+        private void PlayAnimation()
+        {
+            animator.Rebind();
+            animator.Play(AdditiveLoopState, 0, 0f);
+            animator.Update(0f);
         }
 
         private ObstacleState ToObstacleState()

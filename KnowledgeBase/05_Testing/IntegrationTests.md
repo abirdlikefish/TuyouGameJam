@@ -6,11 +6,11 @@
 
 - [ ] BootstrapScene 常驻；MainMenuScene、LevelSelectScene、GameplayScene 都在 Build Settings 中，并按固定根名称各有且只有一个对应 SceneEntry。
 - [ ] 服务完成 Create、Connect 且应用级事件订阅完成后才进入 Start；ConfigService Ready 前不得请求任何应用场景。
-- [ ] 配置初始化成功后请求同步 Additive 加载 MainMenuScene；只有 MainMenuSceneEntry 初始化并发布 `AppSceneReady(MainMenu)` 后才进入 MainMenu。配置数据失败时直接退出应用；MainMenu 场景加载或 Entry 装配失败时不得进入 MainMenu。
+- [ ] 配置初始化成功后请求异步 Additive 加载 MainMenuScene；只有加载完成、MainMenuSceneEntry 初始化并发布 `AppSceneReady(MainMenu)` 后才进入 MainMenu。配置数据失败时直接退出应用；MainMenu 场景加载或 Entry 装配失败时不得进入 MainMenu。
 - [ ] 配置数据非法时日志包含稳定来源、字段或条目索引并立即退出应用；Prefab、Collider、Layer 或必需 Inspector 引用非法时日志包含对象路径并阻止对应 Ready。两者都不使用默认值、自动补组件、降级或重试继续运行。
 - [ ] MainMenu 的 RealTime 1 秒计时从 Scene Ready 后开始；到期后只请求一次 LevelSelect 切换，旧场景异步卸载完成前不加载目标场景。
 - [ ] LevelSelectSceneEntry Ready 后才进入 LevelSelect、选择目录中有效且可选的唯一 `LevelId`，并启动新的 RealTime 1 秒计时。
-- [ ] LevelSelect 计时结束后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 同步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
+- [ ] LevelSelect 计时结束后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 异步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
 - [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
 - [ ] MainMenu、LevelSelect 的场景事实使用 `LevelId = 0`、`LevelRunId = 0`；Gameplay 事实携带当前值，目标不匹配或过期事实不会推进状态。
 - [ ] 根缺失、重名、入口类型错误或 Entry 初始化失败时，失败目标场景先完成清理，再发布 `AppSceneLoadFailed`；不得发布 Ready。
@@ -49,7 +49,31 @@
 - [ ] Input Adapter 初始化时先提交一次 `0`；同一接收者重复初始化幂等，空接收者、初始化前启用/Tick 或尝试替换为不同接收者均被拒绝并阻止错误装配进入 Ready。
 - [ ] `horizontalMultiplier` 非有限或小于 `0`、区域宽度无效、Raycast Target 关闭或必需场景引用缺失时 Gameplay 不进入 Ready；单帧 `unscaledDeltaTime` 无效时只输出 `0` 且不破坏 Pointer 状态；坐标转换失败或局部 x 非有限时不污染累计差值。
 
+## 动画资源与表现绑定
+
+- [ ] 原始导出包只保存在 `Reference/AnimationSource`；`Assets/Art/Sprites` 中没有原始绿底帧、预览 GIF、导出 JSON 或供应方 4K 图集。
+- [ ] 所有运行时动画帧使用连续四位编号；同一对象家族的 Texture Type、Alpha、Clamp、Bilinear、MipMap、Read/Write、Max Size、PPU 和 Pivot 设置一致，透明边缘在深浅背景上无明显绿边。
+- [ ] 三个 WeaponId 各有 Idle、Victory、Attack、MoveLeft、MoveRight；Idle/Attack/左右移动循环，Victory 非循环；`AC_Army_Base` 无参数、无自动 Transition，所有 OverrideController 完整覆盖且无 Missing Motion。
+- [ ] WeaponId 从 0 切换到 1、2 时，当前活动和隐藏槽位都更新到对应 Controller；之后增加人数或重新激活槽位不会回到旧武器动画。
+- [ ] Preparing 播放 Idle；Playing 原地持续 Attack，实际左/右位移持续 MoveLeft/MoveRight；道路边缘无实际位移时为 Attack，状态不变时不会每帧重启动画。
+- [ ] Army 持续战斗动画与实际 FireInterval 解耦，AnimationEvent 不生成子弹、不修改 FireInterval、伤害或 WeaponId；Victory 不参与终局判定，请求切换 LevelSelect 前保留士兵，场景卸载时仍完成 StopRun。
+- [ ] Normal、Elite、Boss 各有循环 Move、非循环 Attack 和非循环 Death；Controller 使用既有 Attack/Death Trigger，所有 Motion 引用完整。
+- [ ] 三种 Monster Attack Clip 恰好各有一个 `OnAttackFrame()` 和末帧一个 `OnAttackAnimationFinished()`；Death Clip 末帧恰好一个 `OnDeathAnimationFinished()`。
+- [ ] BulletId 0/1/2 在唯一 `PF_Bullet` 上分别播放正确循环动画；同一池实例以不同 BulletId 复用时不残留旧参数、状态、帧或 Sprite。
+- [ ] `PF_Gate_Additive` 播放唯一循环动画；唯一 `PF_Gate_Element` 按 Fire/Ice/Lightning 播放对应循环动画，以不同 ElementType 复用时不残留旧表现。
+- [ ] Army、Bullet、Gate 动画不包含玩法结算事件；所有 Controller、OverrideController 和 ID 映射都由 Inspector 显式绑定，不存在 Resources、StreamingAssets、AssetDatabase 或字符串路径运行时加载。
+- [ ] 当前动画纹理在目标平台记录实际导入尺寸和内存；关闭 Mipmap/ReadWrite，发现超预算时优先降低 Max Size、公共裁切或重新打包，不直接采用供应方稀疏 4K 图集。
+
 ## 核心闭环
+
+### 2026-09-21 批次 7.6 动画与输入专项记录
+
+- 通过：现有 12 个已填帧 Clip 与 Importer 一致，0 Pending、0 Invalid；39 Clip、5 Controller、6 AOC、10 个规范 Prefab 均无 Missing Script，运行态 Gameplay 成功进入 Ready。
+- 通过：WeaponId 0/1/2 在活动与隐藏槽位间完整切换；新增槽位继承当前武器；运行态原地 Attack、左右移动 Attack 和 Victory 显式状态正确。Idle 入口已完成代码与状态名检查，Preparing 短窗口尚未截图留证。
+- 通过：Normal/Elite/Boss 的 Attack 命中事件分别位于第 10/17/4 帧，结束事件位于第 22/61/30 帧；三个 Death 回收事件均位于第 3 帧。运行态完成 Move → Attack → Move、Death → 回收，并验证复借后 Trigger 清空。
+- 通过：BulletId 0/1/2 与 Additive/Fire/Ice/Lightning Gate 的 Animator 状态和参数匹配；两轮借还复用了相同 GameObject 实例集合，无旧身份残留。
+- 通过：场景实例 TouchDragInput 必需引用和区域宽度有效；拖动产生有限输入，PointerUp 后读取归零。
+- 待完成：19 个正式 Clip 仍为空占位，不能勾选完整动作视觉验收；当前仅在 `844×529` Game View 验证输入，PlayerSettings 仍为横屏 `1920×1080`/AutoRotation，跨 9:16 分辨率与目标设备验证未完成。
 
 - [ ] Gameplay 会话先进入 Preparing，初始化完成后进入 Playing。
 - [ ] 子弹可以命中怪物并造成伤害。

@@ -29,6 +29,7 @@ namespace Game.Gameplay
     {
         private static readonly int AttackTrigger = Animator.StringToHash("Attack");
         private static readonly int DeathTrigger = Animator.StringToHash("Death");
+        private static readonly int MoveState = Animator.StringToHash("Base Layer.Move");
 
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private SpriteRenderer visual;
@@ -55,6 +56,7 @@ namespace Game.Gameplay
         private bool runtimeActive;
         private bool attackFrameRegistered;
         private bool deathAnimationFinished;
+        private bool animationPrepared;
 
         public abstract EnemyType EnemyType { get; }
         public abstract AttackType AttackType { get; }
@@ -88,6 +90,20 @@ namespace Game.Gameplay
             if (animator == null || animator.runtimeAnimatorController == null)
             {
                 error = $"{name}.animator and its controller are required.";
+                return false;
+            }
+
+            if (!animator.enabled)
+            {
+                error = $"{name}.animator must be enabled.";
+                return false;
+            }
+
+            if (animator.gameObject.activeInHierarchy &&
+                (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
+                 !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger)))
+            {
+                error = $"{name}.animator controller requires Attack and Death Trigger parameters.";
                 return false;
             }
 
@@ -152,6 +168,16 @@ namespace Game.Gameplay
             if (AttackCollider != null)
             {
                 AttackCollider.enabled = true;
+            }
+
+            PrepareMoveAnimation();
+        }
+
+        private void OnEnable()
+        {
+            if (runtimeActive && animationPrepared)
+            {
+                PlayMoveAnimation();
             }
         }
 
@@ -257,6 +283,14 @@ namespace Game.Gameplay
         internal void PrepareForPool()
         {
             runtimeActive = false;
+            animationPrepared = false;
+            if (animator.gameObject.activeInHierarchy)
+            {
+                animator.ResetTrigger(AttackTrigger);
+                animator.ResetTrigger(DeathTrigger);
+                animator.Rebind();
+            }
+
             bodyCollider.enabled = false;
             if (AttackCollider != null)
             {
@@ -274,6 +308,25 @@ namespace Game.Gameplay
             targetSlotIndex = -1;
             pendingAttackSequenceId = -1;
             gameObject.SetActive(false);
+        }
+
+        private void PrepareMoveAnimation()
+        {
+            animationPrepared = true;
+            if (gameObject.activeInHierarchy)
+            {
+                PlayMoveAnimation();
+            }
+        }
+
+        private void PlayMoveAnimation()
+        {
+            animator.Rebind();
+            RequireAnimatorParameters();
+            animator.ResetTrigger(AttackTrigger);
+            animator.ResetTrigger(DeathTrigger);
+            animator.Play(MoveState, 0, 0f);
+            animator.Update(0f);
         }
 
         private void TickMovingDown(float deltaTime, ContactFilter2D enemyBodyFilter)
@@ -375,6 +428,33 @@ namespace Game.Gameplay
         private static bool IsFinite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private static bool HasAnimatorParameter(
+            Animator targetAnimator,
+            int parameterNameHash,
+            AnimatorControllerParameterType parameterType)
+        {
+            var parameters = targetAnimator.parameters;
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                if (parameters[index].nameHash == parameterNameHash && parameters[index].type == parameterType)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RequireAnimatorParameters()
+        {
+            if (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
+                !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger))
+            {
+                throw new InvalidOperationException(
+                    $"{name}.animator controller requires Attack and Death Trigger parameters.");
+            }
         }
     }
 }

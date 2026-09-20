@@ -8,12 +8,18 @@ namespace Game.Gameplay
 {
     public sealed class ElementGate : MonoBehaviour, IRuntimeBulletTarget, IRoadObstacleRuntime
     {
+        private static readonly int ElementTypeParameter = Animator.StringToHash("ElementType");
+        private static readonly int FireLoopState = Animator.StringToHash("Base Layer.Fire_Loop");
+        private static readonly int IceLoopState = Animator.StringToHash("Base Layer.Ice_Loop");
+        private static readonly int LightningLoopState = Animator.StringToHash("Base Layer.Lightning_Loop");
+
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private BulletHitProxy bulletHitProxy;
         [SerializeField, Min(0f)] private float moveSpeed;
         [SerializeField, Min(1)] private int contactDamage = 1;
         [SerializeField] private TMP_Text stateText;
         [SerializeField] private SpriteRenderer visual;
+        [SerializeField] private Animator animator;
 
         private readonly HashSet<int> consumedBulletIds = new HashSet<int>();
 
@@ -31,6 +37,8 @@ namespace Game.Gameplay
         private GateContactState contactState;
         private bool rewardLocked;
         private bool runtimeActive;
+        private bool animationPrepared;
+        private int preparedAnimationState;
 
         public int RuntimeInstanceId => runtimeInstanceId;
         int IRoadObstacleRuntime.LevelRunId => levelRunId;
@@ -49,9 +57,23 @@ namespace Game.Gameplay
         public bool TryValidate(out string error)
         {
             error = string.Empty;
-            if (bodyCollider == null || bulletHitProxy == null || stateText == null || visual == null)
+            if (bodyCollider == null || bulletHitProxy == null || stateText == null || visual == null ||
+                animator == null || animator.runtimeAnimatorController == null)
             {
-                error = $"{name} requires bodyCollider, bulletHitProxy, stateText and visual bindings.";
+                error = $"{name} requires bodyCollider, bulletHitProxy, stateText, visual and Animator bindings.";
+                return false;
+            }
+
+            if (!animator.enabled)
+            {
+                error = $"{name}.animator must be enabled.";
+                return false;
+            }
+
+            if (animator.gameObject.activeInHierarchy &&
+                !HasAnimatorParameter(animator, ElementTypeParameter, AnimatorControllerParameterType.Int))
+            {
+                error = $"{name}.animator controller requires an Int parameter named ElementType.";
                 return false;
             }
 
@@ -96,6 +118,8 @@ namespace Game.Gameplay
                 throw new ArgumentException("Element gate spawn data is invalid.", nameof(request));
             }
 
+            var animationState = GetAnimationState(request.ElementType);
+
             army = armyController ?? throw new ArgumentNullException(nameof(armyController));
             eventBus = initializedEventBus ?? throw new ArgumentNullException(nameof(initializedEventBus));
             recycleCallback = onRecycleRequested ?? throw new ArgumentNullException(nameof(onRecycleRequested));
@@ -116,6 +140,15 @@ namespace Game.Gameplay
             transform.rotation = Quaternion.identity;
             bodyCollider.enabled = true;
             RefreshText();
+            PrepareAnimation(animationState);
+        }
+
+        private void OnEnable()
+        {
+            if (runtimeActive && animationPrepared)
+            {
+                PlayPreparedAnimation();
+            }
         }
 
         public void ReceiveBulletHit(BulletDamageContext damage)
@@ -256,6 +289,14 @@ namespace Game.Gameplay
         void IRoadObstacleRuntime.PrepareForPool()
         {
             runtimeActive = false;
+            animationPrepared = false;
+            preparedAnimationState = 0;
+            if (animator.gameObject.activeInHierarchy)
+            {
+                animator.Rebind();
+                animator.SetInteger(ElementTypeParameter, (int)ElementType.None);
+            }
+
             bodyCollider.enabled = false;
             army = null;
             eventBus = null;
@@ -271,6 +312,69 @@ namespace Game.Gameplay
             rewardLocked = false;
             consumedBulletIds.Clear();
             gameObject.SetActive(false);
+        }
+
+        private void PrepareAnimation(int animationState)
+        {
+            preparedAnimationState = animationState;
+            animationPrepared = true;
+            if (gameObject.activeInHierarchy)
+            {
+                PlayPreparedAnimation();
+            }
+        }
+
+        private void PlayPreparedAnimation()
+        {
+            animator.Rebind();
+            RequireAnimatorParameter();
+            animator.SetInteger(ElementTypeParameter, (int)elementType);
+            animator.Play(preparedAnimationState, 0, 0f);
+            animator.Update(0f);
+        }
+
+        private static int GetAnimationState(ElementType initializedElementType)
+        {
+            switch (initializedElementType)
+            {
+                case ElementType.Fire:
+                    return FireLoopState;
+                case ElementType.Ice:
+                    return IceLoopState;
+                case ElementType.Lightning:
+                    return LightningLoopState;
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(initializedElementType),
+                        initializedElementType,
+                        "Only Fire, Ice and Lightning have bound animation states.");
+            }
+        }
+
+        private static bool HasAnimatorParameter(
+            Animator targetAnimator,
+            int parameterNameHash,
+            AnimatorControllerParameterType parameterType)
+        {
+            var parameters = targetAnimator.parameters;
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                if (parameters[index].nameHash == parameterNameHash && parameters[index].type == parameterType)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RequireAnimatorParameter()
+        {
+            if (!HasAnimatorParameter(animator, ElementTypeParameter, AnimatorControllerParameterType.Int))
+            {
+                throw new InvalidOperationException(
+                    $"{name}.animator controller requires an Int parameter named ElementType.");
+            }
         }
 
         private ObstacleState ToObstacleState()

@@ -66,8 +66,8 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 当所有敌人生成项都已处理且 `AliveEnemyCount == 0` 时胜利；敌人死亡动画尚未回收不影响该条件，符合 EnemyManager 的存活统计规则。
 - Victory 会立即结束当前会话，不等待 Gate/Prop 时间轴派发完成，也不等待仍在道路上的 Gate/Prop 接触或离场；未来条目停止生成，活动道路对象在 StopRun 中清理。这是当前预期规则，不属于内容丢失。
 - 当 Army 总人数小于等于 0 时失败。同一帧同时满足“最后一个敌人死亡”和“Army 归零”时，失败优先。
-- 初始化成功后同步加载 MainMenuScene，固定入口 Ready 后进入主界面并使用 RealTime 等待 1 秒；随后异步卸载旧场景、同步加载 LevelSelectScene，入口 Ready 后进入选关并再等待 1 秒。
-- 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并同步加载 LevelSelectScene；入口 Ready 后再次等待 RealTime 1 秒并开始唯一的当前关卡。
+- 初始化成功后异步加载 MainMenuScene，固定入口 Ready 后进入主界面并使用 RealTime 等待 1 秒；随后异步卸载旧场景、异步加载 LevelSelectScene，入口 Ready 后进入选关并再等待 1 秒。
+- 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并异步加载 LevelSelectScene；入口 Ready 后再次等待 RealTime 1 秒并开始唯一的当前关卡。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
 - 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。槽位激活或实际换武器后等待一个完整 FireInterval，每槽每逻辑帧最多发射一颗且不追赶补发。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
@@ -80,10 +80,11 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 怪物不通过到达道路底部扣除军队人数；首版按 ADR-005 在接近线后向 Army 接近并攻击。
 - 所有参与命中、接触、受击或阻挡的玩法对象（包括子弹）使用 Inspector 绑定的 `Collider2D`；LevelManager 集中读取各时间域 delta，并按移动、子弹、道路接触、敌人攻击、回收和终局的顺序同步驱动对应 Manager。子弹与敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap。
 - 存活敌人的身体 Collider 使用上一同步姿态执行 Cast 阻挡。前方敌人较慢或静止时，后方敌人尽量按安全间距排队；该离散规则在 MVP 参数下减少穿透和重叠，但不保证同帧移动后的绝对不重叠，首版不实现事后分离或侧向绕行。
+- Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，场景卸载时再执行最终 Army StopRun；当前版本仍直接返回 LevelSelect。
 - 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
 - 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
 - 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
-- 首轮表现只要求占位 Sprite 和 Gate 单个调试文本；Gameplay Canvas 只保留拖拽输入所需组件，不实现 HUD。正式 Gate 表现、HUD、动画和 VFX 后续迭代。
+- 批次 7 开始导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本，Gameplay Canvas 只保留拖拽输入所需组件。正式 HUD、胜负面板、VFX 和音频继续延后。
 - Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；ADR-044 明确允许的 `unlockedLevelIds` 目录缺失 ID 是唯一例外，只警告并过滤。Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
 
 ## 非目标

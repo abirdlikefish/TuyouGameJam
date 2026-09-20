@@ -59,7 +59,6 @@ namespace Game.Foundation
             if (disposed || operationState == SceneOperationState.Faulted ||
                 operationState == SceneOperationState.Unloading ||
                 operationState == SceneOperationState.Loading ||
-                operationState == SceneOperationState.InitializingEntry ||
                 operationState == SceneOperationState.CleaningFailedLoad ||
                 (hasCurrentScene && operationState == SceneOperationState.Ready &&
                  currentScene.Matches(request)))
@@ -120,21 +119,30 @@ namespace Game.Foundation
         {
             var request = pendingScene;
             operationState = SceneOperationState.Loading;
-            SceneRuntimeLoadResult result;
             try
             {
-                operationState = SceneOperationState.InitializingEntry;
-                result = runtime.Load(
+                runtime.Load(
                     new SceneRuntimeLoadRequest(
                         request.SceneId,
                         request.LevelId,
                         request.LevelRunId,
-                        request.LevelConfig));
+                        request.LevelConfig),
+                    result => OnSceneLoaded(request, result));
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
-                result = SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, false);
+                OnSceneLoaded(
+                    request,
+                    SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, false));
+            }
+        }
+
+        private void OnSceneLoaded(SceneRequest request, SceneRuntimeLoadResult result)
+        {
+            if (disposed || operationState != SceneOperationState.Loading)
+            {
+                return;
             }
 
             if (result.Succeeded)
@@ -207,10 +215,9 @@ namespace Game.Foundation
             Idle = 0,
             Unloading = 1,
             Loading = 2,
-            InitializingEntry = 3,
-            Ready = 4,
-            CleaningFailedLoad = 5,
-            Faulted = 6
+            Ready = 3,
+            CleaningFailedLoad = 4,
+            Faulted = 5
         }
 
         private readonly struct SceneRequest

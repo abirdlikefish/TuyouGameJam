@@ -16,12 +16,12 @@
 
 | 模块 | 状态 | 设计入口 | 主要依赖 |
 |---|---|---|---|
-| Army | ContractReady | `Army/README.md` | EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager |
-| Gate | ContractReady | `Gate/README.md` | EventBus、Army、Bullet、ObstacleManager、GateSpawnRequest；消费 LevelManager 传入的 Gate delta |
+| Army | InProgress（动画/Prefab 装配中） | `Army/README.md` | EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager |
+| Gate | InProgress（动画/Prefab 装配中） | `Gate/README.md` | EventBus、Army、Bullet、ObstacleManager、GateSpawnRequest；消费 LevelManager 传入的 Gate delta |
 | Prop | ContractReady | `Prop/README.md` | EventBus、Army、Bullet、ObstacleManager、IPropConfigProvider；消费 LevelManager 传入的 Gate delta |
 | Obstacle | ContractReady | `Obstacle/README.md` | IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level |
-| Monster | ContractReady | `Monster/README.md` | Level、Bullet、Army、EventBus、IEnemyConfigProvider、PoolService |
-| Bullet | ContractReady | `Bullet/README.md` | Level、IBulletConfigProvider、PoolService、IBulletHittable |
+| Monster | InProgress（动画/Prefab 装配中） | `Monster/README.md` | Level、Bullet、Army、EventBus、IEnemyConfigProvider、PoolService |
+| Bullet | InProgress（动画/Prefab 装配中） | `Bullet/README.md` | Level、IBulletConfigProvider、PoolService、IBulletHittable |
 | Level | InProgress | `Level/README.md` | GameStateService、TimeService、Spawn、Monster、Army、BulletManager、ObstacleManager、InputGate、EventBus |
 | Spawn | InProgress | `Spawn/README.md` | LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
 | UI | HUD Deferred / Input UI ContractReady | `UI/README.md` | HUD 后续依赖 EventBus、GameStateService；首轮只实现 Input UI |

@@ -2,9 +2,9 @@
 
 ## 当前阶段
 
-- 阶段：工程实现 / 分批代码生成准备完成
-- 工程状态：用户已授权 AI 按 `ImplementationPlan.md` 逐批创建代码与目录；Scene、Prefab、表格、配置资产实例和 ProjectSettings 默认由用户手工完成
-- 目标：保持公共契约稳定，以小批次编译和人工装配检查点逐步完成最小游戏闭环
+- 阶段：工程实现 / 批次 7 资源、动画与场景装配
+- 工程状态：批次 7.5A～7.5C 已完成；批次 7.6 已完成现有素材基线的结构与运行态专项验证。12 个已填帧 Clip（554 帧）、Controller/AOC、Weapon/Enemy/Bullet/Gate 身份映射、Monster AnimationEvent、显式 Army 状态切换及三类池对象复用均通过；19 个未收到素材的正式 Clip 仍为空占位
+- 目标：完成批次 7.6 剩余的竖屏目标分辨率实机验证与 19 个动作素材补齐；之后进入批次 8 完整命中、接触、胜负和重开闭环验收
 
 ## 推荐阅读顺序
 
@@ -14,15 +14,16 @@
 4. `../01_Architecture/SystemOverview.md`：分层和依赖原则。
 5. `../01_Architecture/AssemblyBoundaries.md`：后续程序集划分、依赖倒置和跨层通信边界。
 6. `../01_Architecture/BootstrapAndComposition.md`：GlobalBootstrap 的装配、初始化、失败和清理边界。
-7. `../01_Architecture/ApplicationFlow.md`：GameStateService、SceneService、三个 SceneEntry、同步加载/异步卸载和应用流程。
+7. `../01_Architecture/ApplicationFlow.md`：GameStateService、SceneService、三个 SceneEntry、异步加载/卸载完成边界和应用流程。
 8. `../01_Architecture/ConfigurationSystem.md`：LevelConfig 资产、LevelConfigSnapshot、Luban 与程序集之间的边界和加载流程。
 9. `../01_Architecture/PoolSystem.md`：具体组件类型池、未激活借出、防御性失活和跨场景生命周期契约。
 10. `../02_Modules/README.md`：模块总表、并行认领和模块入口。
 11. 目标模块的 `README.md`：职责、输入、输出、测试标准和已知问题。
 12. `../03_SharedContracts`：接口、事件、配置表、字段、命名规则和 `CollisionRules.md`。
-13. `../04_Assets/PrefabSpecifications.md`：首轮工程切片的最小场景层级、Prefab 结构、序列化引用和校验边界。
-14. `../05_Testing/TestingStrategy.md`：当前无 `.asmdef` 阶段的验证方式与未来自动化优先级。
-15. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
+13. `../04_Assets/AnimationPipeline.md`：批次 7 序列帧的目录、导入、Clip/Controller、Prefab 预绑定与验证流程。
+14. `../04_Assets/PrefabSpecifications.md`：首轮工程切片的最小场景层级、Prefab 结构、序列化引用和校验边界。
+15. `../05_Testing/TestingStrategy.md`：当前无 `.asmdef` 阶段的验证方式与未来自动化优先级。
+16. `../06_Decisions`、`../07_Changes/ChangeLog.md`：已接受决策和近期变更。
 
 ## 按任务选择入口
 
@@ -33,6 +34,7 @@
 | 修改跨模块接口 | `03_SharedContracts`、相关 ADR | 共享契约、ADR、受影响模块 README |
 | 设计架构或服务 | `01_Architecture` | 对应架构文档、ADR |
 | 制定验收标准 | `05_Testing` | 测试清单和关联模块文档 |
+| 导入动画或绑定 Animator | `../04_Assets/AnimationPipeline.md`、`../04_Assets/PrefabSpecifications.md` | `Assets/Art`、`Assets/Animations`、目标 Prefab 与直接相关表现适配记录 |
 | 生成代码或组织并行窗口 | `ImplementationPlan.md`、目标模块 README | 已认领代码目录、直接相关实现记录 |
 
 ## 文档状态说明

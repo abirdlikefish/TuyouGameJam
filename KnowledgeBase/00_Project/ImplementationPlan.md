@@ -2,7 +2,7 @@
 
 ## 当前阶段与授权范围
 
-- 阶段：首轮 MVP 工程实现准备完成，即将按批次进入代码生成。
+- 阶段：批次 1～6 代码已完成并通过阶段性编译，当前进入批次 7 资源、动画与场景装配。
 - 设计基线：核心架构、Gameplay 模块、共享契约和测试清单均已达到 `ContractReady`；实现以已接受 ADR 和 `03_SharedContracts` 为准。
 - AI 默认负责：创建约定内的代码目录和 `.cs` 文件，维护与本批实现直接相关的状态、变更记录和手工装配清单。
 - 用户默认负责：Luban 表格及生成、Scene、Prefab、ScriptableObject 实例、Animator/AnimationClip、Sprite、材质、Layer、Physics2D Matrix、Build Settings 和 Inspector 引用。
@@ -154,17 +154,63 @@ Contracts 和 Foundation 编译稳定后，可以并行生成以下互不重叠�
 - 场景 Ready、卸载、失败和过期回调语义与应用流程契约一致。
 - 在用户创建场景前代码可编译，交付清单列出全部场景根对象和 Inspector 引用。
 
-### 批次 7：用户资源装配
+### 批次 7：用户资源、动画与场景装配
 
-用户根据 `04_Assets/PrefabSpecifications.md` 和各批交付清单手动完成：
+本批以 `../04_Assets/AnimationPipeline.md`、`../04_Assets/PrefabSpecifications.md` 和各批交付清单为执行入口，按以下子步骤顺序推进；前一步未通过时不开始依赖它的后一步。
 
-- 六个 Gameplay Layer 与 Physics2D Matrix。
-- Army、Bullet、三类 Monster、两类 Gate、WeaponProp、Road 和 TouchDragArea Prefab。
-- Collider 身份代理、TMP 调试文本、Animator Controller、Attack/Death Clip 及 AnimationEvent。
-- LevelCatalog、LevelConfig、Prefab 引用和最小关卡数据。
-- Bootstrap、MainMenu、LevelSelect、Gameplay 场景、Build Settings 与 Inspector 绑定。
+#### 7.1 基础工程与 Prefab 骨架
 
-AI 在本批只根据编译错误、日志和用户提供的绑定结果修正代码，不自动创建或改写上述资源。
+- 用户创建六个 Gameplay Layer 与 Physics2D Matrix。
+- 用户创建 Army、Bullet、三类 Monster、两类 Gate、WeaponProp、Road 和 TouchDragArea 规范 Prefab。
+- 用户完成 Collider 身份代理、TMP 调试文本、槽位、发射点和 Manager Prefab 引用。
+
+#### 7.2 动画源资源清点与 Sprite 导入
+
+- 原始导出包归档到 `Reference/AnimationSource`，不直接放入 `Assets`。
+- 用户只把优化后的透明 PNG 帧复制到 `Assets/Art/Sprites` 对应目录；原始绿底帧、预览 GIF、导出 JSON 和供应方 4K 图集不进入运行时资源目录。
+- 用户统一 Sprite 类型、Alpha、Clamp、Bilinear、关闭 Mipmap/ReadWrite、Max Size、PPU、Pivot、帧率和四位帧编号，并检查透明边缘与目标尺寸。
+- Army 每个 WeaponId 准备 Idle、Victory、Attack、MoveLeft、MoveRight；Monster 每种类型准备 Move、Attack、Death；每个 BulletId、加法门和三种元素门准备循环动画。
+
+#### 7.3 Clip、Controller 与 AnimationEvent
+
+- 用户按 `AnimationPipeline.md` 创建 AnimationClip、Animator Controller 和预创建的 AnimatorOverrideController。
+- Army 的 Idle、Attack、左右移动以及 Monster Move、Bullet、Gate 动画循环；Army Victory、Monster Attack/Death 按非循环规则设置。
+- 三种 Monster Attack Clip 各包含恰好一个 `OnAttackFrame()` 和末帧一个 `OnAttackAnimationFinished()`；Death Clip 末帧各包含一个 `OnDeathAnimationFinished()`。
+- Army、Bullet、Gate 的动画事件不承担发射、伤害、接触或奖励结算。
+
+#### 7.4 动画表现适配代码
+
+- Army 表现适配已完成代码部分：`WeaponId -> AnimatorOverrideController` 全槽位切换、依据实际位移显式选择持续 Attack/Move 状态，以及 Victory 表现与最终 StopRun 分离；对应 Prefab 字段留待 7.5 绑定。
+- Bullet、ElementGate、AdditiveGate 与 Monster 表现适配已完成代码部分：池对象在激活前准备本次身份，激活时从对应循环状态或 Monster Move 的第 0 帧显式播放，回池时重绑并清除参数、Trigger、状态与旧 Sprite；Bullet 仅接受 `BulletId 0/1/2`，元素门仅接受 Fire/Ice/Lightning。
+- Animator、Controller 与启用状态进入必需引用校验；由于 Unity 对未激活 Animator 不公开参数列表，参数签名在激活播放时再次严格校验，Prefab/Controller 的离线结构检查留在 7.5 专项验收。
+- 该代码只选择 Prefab 已序列化的资源和写入 Animator 参数，不创建资源加载系统，不更改玩法权威状态或现有 Prefab/类型池身份。
+- 7.4 代码已完成 Unity 刷新编译与真实 Controller 状态冒烟验证；下一步继续 Prefab 最终绑定。
+
+#### 7.5 Prefab、配置与场景最终装配
+
+- 7.5A 已完成：Army、Bullet、三类 Monster、两类 Gate、WeaponProp、Road 和 TouchDragArea 共 10 个规范 Prefab 已补齐根脚本、Collider、身份代理、Animator、SpriteRenderer、TMP、槽位及 ID 映射；用户已把三类 Monster 的 Attack/Death AnimationEvent 绑定到现有回调。
+- 7.5B 已完成：沿用 `Assets/GameData/Configuration` 下现有 LevelCatalog 与 LevelConfig，补齐第一关显示名并创建空绑定的 UnityResourceRegistry；Luban 五张表验证通过，真实 ConfigService 初始化得到单关卡 Ready 快照。
+- 7.5C 已完成：Bootstrap、MainMenu、LevelSelect、Gameplay 四个正式场景已装配，Manager 的规范 Prefab/LayerMask、固定 Root、输入 UI、配置资产和全部 SceneEntry 引用均已绑定；Build Settings 按四场景固定顺序启用。真实 Play Mode 暴露并修正 Unity 加载完成边界，场景 Runtime 改为完成回调，现已通过多轮 Bootstrap → MainMenu → LevelSelect → Gameplay → LevelSelect 闭环。
+
+#### 7.6 批次 7 手工验证门
+
+- Unity 无导入和编译错误，所有必需 Sprite/Clip/Controller/Prefab 引用无 Missing。
+- 三种武器的 Army 五类动作正确；换武器会更新全部槽位，后续激活槽位不会回退到旧武器动画。
+- 三种 Monster 的 Move/Attack/Death 正确，AnimationEvent 数量、位置和回收边界正确。
+- 三个 BulletId 与加法门、Fire/Ice/Lightning 元素门的循环动画和运行时身份一致；对象池复用不残留上一实例的 Animator 状态。
+- 记录纹理导入尺寸和目标平台内存结果；不因图集文件更小就默认采用供应方 4K 图集。
+- Preparing 的 Collider、Layer、Animator、Controller、ID 映射和 Inspector 引用校验全部通过，Gameplay 能进入 Ready。
+
+2026-09-21 已执行的现有素材基线：
+
+- Sequence Animation Builder 复扫得到 `12 UpToDate / 0 Pending / 19 Empty / 0 Invalid`；39 个 Clip、5 个 Controller、6 个 AOC 数量正确，8 个基础 Clip 无曲线，6 个 AOC 无空映射，31 个正式 Clip 的 24 FPS、循环意图与 Sprite 绑定路径正确。
+- 真实 Gameplay 中验证 WeaponId `0/1/2` 会同步更新三个槽位；隐藏槽位激活后继承当前 Controller。运行态已观察 Attack/MoveLeft/MoveRight/Victory，士兵进入 Victory 后保持激活；Idle 入口已完成代码与状态名检查，但尚未在 Preparing 短窗口内截图留证。
+- Normal/Elite/Boss 的 Move、Attack、Death、命中/结束/死亡事件与回收通过；BulletId `0/1/2`、Additive 与 Fire/Ice/Lightning Gate 状态选择通过。Bullet、Monster、Gate 归池再借出复用原 GameObject，Animator 参数、Trigger 和状态均已重置。
+- 554 张现有 Sprite 全部为 Sprite/Single、Clamp、Bilinear、无 Mipmap、Read/Write 关闭、Max Size 512，StandaloneWindows64 Editor 中逐纹理 `Profiler.GetRuntimeMemorySizeLong` 合计约 `156.17 MiB`。这是已加载纹理和编辑器口径，不等同于最终 Player 构建峰值。
+- Gameplay 场景实例的 TouchDragInput 校验通过；当前 `844×529` Game View 中，25% 屏宽到 50% 屏宽的拖动产生有限正输入，抬手后下一次读取为 `0`。独立打开全拉伸 UI Prefab 时因没有父 RectTransform，资产根宽度为 `0`，该离线结果不作为场景装配失败。
+- 尚未通过最终门：19 个空动作没有可做视觉连续性验收；现有 PlayerSettings 为 `1920×1080`、`AutoRotation`，与竖屏项目目标不一致，仍需确定目标设备/窗口基准并进行 9:16、多分辨率和实际 Player 内存验证。完成这两项前不把批次 7.6 或路线图表现项标记为 Done。
+
+Unity 内的 Sprite、Clip、Controller、Prefab、配置资产、Scene、ProjectSettings 和 Inspector 操作默认仍由用户负责；用户明确授权具体资源子步骤时，AI 可以通过 Unity AssetDatabase、Prefab 与 Scene API 在限定范围内实施并验证，不直接编辑 Unity YAML，也不扩展到未授权的相邻资源。
 
 ### 批次 8：集成、验收与修复
 

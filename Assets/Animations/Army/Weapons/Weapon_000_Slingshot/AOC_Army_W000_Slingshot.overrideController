@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_Army_W000_Slingshot
+  m_Controller: {fileID: 9100000, guid: 66dffb55a9e483c44a3e9d8e895703fb, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: 25e1c31db0ac41b40b78284a5c9498e5, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 33091e4faaeea234cb82541c52b327aa, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: cd2154d73df40c141b68c4870c4815df, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 83f7afe1c44045443ad485d0fbe9ac7c, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 993037948385c7b42ac6dbaeb7ffbab0, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 4ef0a5c9e67f66440a0209ee34c9a11d, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 6a3c47a351d5ad54f8a08f12cca7af10, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: a082b4584ee5ebc40a45457024a879cd, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 78420294d026fce4e8cdf592b17f1532, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 72de930aca27320448d58aaaef4eebf0, type: 2}

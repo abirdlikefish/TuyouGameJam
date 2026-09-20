@@ -4,9 +4,9 @@
 
 - ID：`MOD-GATE`
 - 层级：Gameplay
-- 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Layer 与接触手测待完成）
+- 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与接触手测待完成）
 - 依赖：EventBus、Army、Bullet、ObstacleManager、Level
-- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
+- 决策：`../../06_Decisions/ADR-006-AdditiveGateAndContactResolution.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`
 
 ## 职责
 
@@ -98,25 +98,25 @@ Assets/Prefabs/Gate/
 首轮 Prefab 使用最小占位层级：
 
 ```text
-PF_Gate_Additive [AdditiveGate]
+PF_Gate_Additive [AdditiveGate；Animator]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 
-PF_Gate_Element [ElementGate]
+PF_Gate_Element [ElementGate；Animator]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
 └── StateText [TMP_Text]
 ```
 
-加法门的单个 `stateText` 显示当前 GateValue；元素门的单个 `stateText` 至少显示 ElementType、`CurrentHp/MaxHp` 和 PostDepletionDamage。排版、颜色、动画和最终文案不属于当前契约，文本不得反向修改玩法状态。
+加法门的单个 `stateText` 显示当前 GateValue；元素门的单个 `stateText` 至少显示 ElementType、`CurrentHp/MaxHp` 和 PostDepletionDamage。加法门绑定单循环 Clip；元素门保持一个规范 Prefab，并通过 Animator 整数参数 `ElementType` 选择 Fire、Ice、Lightning 循环 Clip。排版和最终文案不属于玩法契约，文本与动画都不得反向修改玩法状态。
 
 两个根组件都由 `ObstacleManager` 驱动移动、接触和回收，不实现独立 `Update`，也不持有 ConfigService、PoolService 或 ArmyController 具体类型。最小序列化/运行时字段分工：
 
 | 根组件 | Inspector 序列化 | 每次生成注入/重置 |
 |---|---|---|
-| `AdditiveGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
-| `ElementGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`ContactDamage`、`TMP_Text stateText`、占位视觉引用 | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType`、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
+| `AdditiveGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`TMP_Text stateText`、视觉引用、Animator | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`InitialValue -> GateValue`、接触状态、位置、结束回调、Army 契约 |
+| `ElementGate` | `BodyCollider`、同节点 `BulletHitProxy`、`MoveSpeed`、`ContactDamage`、`TMP_Text stateText`、视觉引用、Animator | `LevelRunId`、`RuntimeInstanceId`、`SpawnEntryIndex`、`ElementType` 与动画状态、`MaxHp -> CurrentHp`、`elementDurationSecondsPerDamage`、`PostDepletionDamage = 0`、奖励未锁定、接触状态、位置、结束回调、Army 契约 |
 
 Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数；LevelConfig 也不保存两类门的统一速度和元素门统一接触伤害。`InitialValue` 不得为 `int.MinValue`；GateValue 正向累加超过 `int` 范围时饱和到 `int.MaxValue`。必需引用或同节点 BulletHitProxy 缺失、速度非有限/小于 0、元素门接触伤害小于等于 0 时，Gameplay 不得进入 Ready，不能运行时静默补组件或使用默认值。
 
@@ -151,4 +151,5 @@ Prefab 不保存 `InitialValue`、`ElementType`、`MaxHp` 或持续时间系数�
 - 接触只使用移动终点的 `OverlapCollider` 结果；MVP 不验收路径中穿过但终点未重叠的接触。
 - Gate 的 BodyCollider 使用 Gate Layer；同一查询返回多个子 Collider 时按运行时实例 ID 去重。
 - 两种具体 Gate 类型各自只绑定一个规范 Prefab；从类型池取得时未激活，ObstacleManager 完成初始化和登记后才激活，归还前清理运行时状态并主动失活。
+- 加法门持续播放本类型循环 Clip；Fire/Ice/Lightning 元素门按本次 ElementType 播放唯一对应循环 Clip。元素门从池中以不同类型复用时不得残留旧参数、状态、帧或 Sprite。
 - 两种 Gate 在不依赖 HUD 或最终美术的情况下，单个 stateText 能随运行时状态刷新并用于验证结算结果。

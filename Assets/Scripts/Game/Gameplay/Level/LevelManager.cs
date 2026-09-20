@@ -215,12 +215,19 @@ namespace Game.Gameplay
             runState = LevelRunState.Completed;
             completionSubmitted = true;
             inputController.SetGameplayEnabled(false);
-            StopModules();
+            var preserveArmyVisuals = result == LevelResult.Victory && armyStarted;
+            if (preserveArmyVisuals)
+            {
+                // 胜利表现保留到 Gameplay 场景卸载；OnDestroy/显式 StopRun 仍负责最终清理。
+                army.EnterVictoryPresentation(levelRunId);
+            }
+
+            StopModules(preserveArmyVisuals);
             UnsubscribeFromRunStart();
             gameStateService.CompleteGameplay(new LevelCompletion(levelId, levelRunId, result));
         }
 
-        private void StopModules()
+        private void StopModules(bool preserveArmyVisuals = false)
         {
             if (spawnStarted)
             {
@@ -240,7 +247,7 @@ namespace Game.Gameplay
                 enemyStarted = false;
             }
 
-            if (armyStarted)
+            if (armyStarted && !preserveArmyVisuals)
             {
                 army.StopRun(levelRunId);
                 armyStarted = false;

@@ -39,7 +39,7 @@ GlobalBootstrap / Composition Root
 | 服务 | 直接依赖 | 原因 |
 |---|---|---|
 | `GameStateService` | `IConfigService`、`ISceneService`、`ITimeService`、`IEventBus` | 选关校验、场景命令、流程定时和事实发布 |
-| `SceneService` | `IEventBus`、UnitySceneRuntime | 同步加载、固定入口绑定和异步卸载后发布 Ready、Failed、Unloaded 事实；不回调具体 GameState 实现 |
+| `SceneService` | `IEventBus`、UnitySceneRuntime | 异步加载完成后固定入口绑定，异步卸载完成后发布 Ready、Failed、Unloaded 事实；不回调具体 GameState 实现 |
 | `ConfigService` | `LevelCatalog`、`cfg.Tables`、`IResourceRegistry` | 完整校验并复制五类只读快照；失败时记录首个错误、进入 Failed 并立即退出，不依赖 Gameplay 模块或配置失败事件 |
 | `PoolService` | `PersistentPoolRoot`、可选诊断委托 | 按具体类型持有类型池和空闲实例；不依赖资源注册表、SpawnManager 或玩法状态 |
 | `TimeService`、`EventBus` | 无业务服务依赖 | 作为基础叶节点，不反向依赖玩法或表现层 |
@@ -64,7 +64,7 @@ Bootstrap → Create 服务 → Connect 明确依赖 → Start 并注册事件
 - `ConfigService` 初始化失败时使用 `Debug.LogError` 输出首个稳定来源与原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode；不进入 MainMenu，不使用默认值，不自动恢复或重试，也不发布配置失败事件。
 - `GlobalBootstrap` 在确认 `ConfigService.GetConfigLoadState() == Ready` 后调用 `GameStateService.NotifyInitializationReady()`；`GameStateService` 负责后续 `MainMenu`、`LevelSelect` 和 Gameplay 流程推进。
 - MainMenu/LevelSelect 的 RealTime 定时器由 `GameStateService` 持有并在离开状态、加载失败或终局时取消；UI 不直接创建流程定时器。
-- `SceneService` 执行 `SwitchToMainMenu`、`SwitchToLevelSelect`、`SwitchToGameplay`，使用同步 Additive 加载、固定根入口绑定和异步卸载，并通过 `AppSceneReady`、`AppSceneLoadFailed`、`AppSceneUnloaded`、`AppSceneUnloadFailed` 与 `GameStateService` 握手；它不直接修改应用状态。
+- `SceneService` 执行 `SwitchToMainMenu`、`SwitchToLevelSelect`、`SwitchToGameplay`，使用异步 Additive 加载、固定根入口绑定和异步卸载，并通过 `AppSceneReady`、`AppSceneLoadFailed`、`AppSceneUnloaded`、`AppSceneUnloadFailed` 与 `GameStateService` 握手；它不直接修改应用状态。
 - `GameStateService` 不持有具体 SceneEntry；SceneEntry 只负责场景内部装配，不能选择下一场景或推进 `AppFlowState`。
 - `GameStateService` 与 `SceneService` 共同记录在 `ApplicationFlow.md`，但保持独立实现职责；前者拥有状态机，后者只适配 Unity 场景操作。
 - PoolService 以具体池化根组件类型作为池身份；一个类型只绑定一个规范 Prefab。Manager 通过 Inspector 提供 Prefab 并取得类型池，池借出未激活实例，归还时采用防御性失活。
@@ -78,6 +78,7 @@ Bootstrap → Create 服务 → Connect 明确依赖 → Start 并注册事件
 - `../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`
 - `../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`
 - `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`
+- `../06_Decisions/ADR-050-UnitySceneLoadCompletionBoundary.md`
 
 ## 关联文档
 

@@ -12,10 +12,10 @@
 
 ## 阶段 1：核心闭环
 
-- [ ] GlobalBootstrap / Composition Root 与唯一 GlobalRoot
-- [ ] GameStateService、TimeService、EventBus、SceneService、ConfigService，以及按具体根组件类型持有的 PoolService
-- [ ] 服务按 Create、Connect、Start 三阶段装配，全部连接和应用级订阅完成后才启动流程
-- [ ] Bootstrap、MainMenu、LevelSelect、Gameplay 四个场景及固定根 SceneEntry；同步 Additive 加载、异步卸载和结构化日志切换验证
+- [x] GlobalBootstrap / Composition Root 与唯一 GlobalRoot
+- [x] GameStateService、TimeService、EventBus、SceneService、ConfigService，以及按具体根组件类型持有的 PoolService
+- [x] 服务按 Create、Connect、Start 三阶段装配，全部连接和应用级订阅完成后才启动流程
+- [x] Bootstrap、MainMenu、LevelSelect、Gameplay 四个场景及固定根 SceneEntry；异步 Additive 加载/卸载和结构化日志切换验证
 - [ ] 军队人数和自动射击
 - [ ] 军队固定槽位、聚合生命值和横向移动
 - [ ] Gameplay 场景 UI 区域内停手即停的相对拖动输入；设备触屏与 Editor 左键共用 Pointer 路径，键盘/手柄延后
@@ -27,7 +27,7 @@
 - [ ] 敌人 BodyCollider 基于上一同步姿态 Cast；在 MVP 速度、尺寸和帧率下减少穿透并形成排队，不验收同帧绝对不重叠
 - [ ] 唯一数值 `roadBounds`、无道路玩法 Collider、Army 世界原点、出生/接近/离场线和归一化横向出生位置
 - [ ] LevelManager 同步驱动生成、移动、子弹、道路接触、敌人攻击、回收和终局的固定帧阶段
-- [ ] 使用占位 Sprite、Gate 单个 TMP 调试文本和拖拽输入 UI 验证玩法；首轮不建设 HUD 或最终表现
+- [ ] 按 ADR-048 导入 Army、Monster、Bullet 和 Gate 序列帧并完成 Animator/Prefab 预绑定；Gate 保留单个 TMP 调试文本，首轮不建设 HUD、胜负面板或 VFX
 
 ## 阶段 2：关卡化
 
@@ -39,6 +39,7 @@
 
 ## 阶段 3：表现和性能
 
+- [ ] 三套 WeaponId Army 动画、三类 Monster Move/Attack/Death、三个 BulletId 循环动画及四类 Gate 循环动画完成目标平台内存与多实例播放验证
 - [ ] HUD、胜负面板与 UI 完整反馈
 - [ ] 粒子和命中特效
 - [ ] 在目标设备实测子弹、怪物和特效类型池，并按数据决定是否增加预热、容量上限或溢出策略

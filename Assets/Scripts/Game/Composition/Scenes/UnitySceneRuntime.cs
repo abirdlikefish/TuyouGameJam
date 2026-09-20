@@ -28,6 +28,7 @@ namespace Game.Composition
         private int levelSelectBuildIndex = -1;
         private int gameplayBuildIndex = -1;
         private bool connected;
+        private bool loadInProgress;
         private bool unloadInProgress;
 
         public bool TryConnect(SceneRuntimeDependencies runtimeDependencies, out string error)
@@ -43,10 +44,16 @@ namespace Game.Composition
                 return false;
             }
 
-            bootstrapScene = SceneManager.GetSceneByPath(bootstrapScenePath);
-            if (!bootstrapScene.IsValid() || !bootstrapScene.isLoaded)
+            // Connect 发生在 GlobalRoot 移入 DontDestroyOnLoad 场景之前；直接使用
+            // SceneRuntime 自身所属场景，避免依赖全局路径查询的启动时序。
+            bootstrapScene = gameObject.scene;
+            if (!bootstrapScene.IsValid() || !bootstrapScene.isLoaded ||
+                bootstrapScene.path != bootstrapScenePath)
             {
-                error = $"Bootstrap scene '{bootstrapScenePath}' must already be loaded during Connect.";
+                error =
+                    $"UnitySceneRuntime must belong to Bootstrap scene '{bootstrapScenePath}'. " +
+                    $"Actual scene: Name='{bootstrapScene.name}', Path='{bootstrapScene.path}', " +
+                    $"IsValid={bootstrapScene.IsValid()}, IsLoaded={bootstrapScene.isLoaded}.";
                 return false;
             }
 
@@ -63,11 +70,19 @@ namespace Game.Composition
             dependencies = default(SceneRuntimeDependencies);
         }
 
-        public SceneRuntimeLoadResult Load(SceneRuntimeLoadRequest request)
+        public void Load(
+            SceneRuntimeLoadRequest request,
+            Action<SceneRuntimeLoadResult> completed)
         {
-            if (!connected || unloadInProgress || loadedScene.IsValid())
+            if (completed == null)
             {
-                return SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.InvalidRequest, false);
+                throw new ArgumentNullException(nameof(completed));
+            }
+
+            if (!connected || loadInProgress || unloadInProgress || loadedScene.IsValid())
+            {
+                completed(SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.InvalidRequest, false));
+                return;
             }
 
             if (!TryGetSceneDefinition(
@@ -76,54 +91,103 @@ namespace Game.Composition
                     out var rootName,
                     out var expectedEntryType))
             {
-                return SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneNotConfigured, false);
+                completed(SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneNotConfigured, false));
+                return;
             }
 
+            loadedRequest = request;
+            loadInProgress = true;
+            AsyncOperation operation;
             try
             {
-                loadedRequest = request;
-                loadedScene = SceneManager.LoadScene(
+                operation = SceneManager.LoadSceneAsync(
                     buildIndex,
                     new LoadSceneParameters(LoadSceneMode.Additive));
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                loadInProgress = false;
+                ClearLoadedState();
+                completed(SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, false));
+                return;
+            }
+
+            if (operation == null)
+            {
+                loadInProgress = false;
+                ClearLoadedState();
+                completed(SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, false));
+                return;
+            }
+
+            operation.completed += _ => CompleteLoad(
+                request,
+                buildIndex,
+                rootName,
+                expectedEntryType,
+                completed);
+        }
+
+        private void CompleteLoad(
+            SceneRuntimeLoadRequest request,
+            int buildIndex,
+            string rootName,
+            Type expectedEntryType,
+            Action<SceneRuntimeLoadResult> completed)
+        {
+            SceneRuntimeLoadResult result;
+            try
+            {
+                loadedScene = SceneManager.GetSceneByBuildIndex(buildIndex);
                 if (!loadedScene.IsValid() || !loadedScene.isLoaded)
                 {
                     ClearLoadedState();
-                    return SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, false);
+                    result = SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, false);
                 }
-
-                var rootResult = TryResolveRoot(loadedScene, rootName, out var root);
-                if (rootResult.HasValue)
+                else
                 {
-                    return SceneRuntimeLoadResult.Failure(rootResult.Value, true);
+                    var rootResult = TryResolveRoot(loadedScene, rootName, out var root);
+                    if (rootResult.HasValue)
+                    {
+                        result = SceneRuntimeLoadResult.Failure(rootResult.Value, true);
+                    }
+                    else
+                    {
+                        var entryResult = TryResolveEntry(root, expectedEntryType, out loadedEntry);
+                        if (entryResult.HasValue)
+                        {
+                            result = SceneRuntimeLoadResult.Failure(entryResult.Value, true);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                loadedEntry.Initialize(request, dependencies);
+                                if (!SceneManager.SetActiveScene(loadedScene))
+                                {
+                                    result = SceneRuntimeLoadResult.Failure(
+                                        SceneLoadErrorCode.SceneLoadFailed,
+                                        true);
+                                }
+                                else
+                                {
+                                    Debug.Log(
+                                        $"[UnitySceneRuntime] EntryInitialized={request.SceneId}; " +
+                                        $"LevelId={request.LevelId}; LevelRunId={request.LevelRunId}");
+                                    result = SceneRuntimeLoadResult.Success();
+                                }
+                            }
+                            catch (Exception exception)
+                            {
+                                Debug.LogException(exception);
+                                result = SceneRuntimeLoadResult.Failure(
+                                    SceneLoadErrorCode.SceneEntryInitializationFailed,
+                                    true);
+                            }
+                        }
+                    }
                 }
-
-                var entryResult = TryResolveEntry(root, expectedEntryType, out loadedEntry);
-                if (entryResult.HasValue)
-                {
-                    return SceneRuntimeLoadResult.Failure(entryResult.Value, true);
-                }
-
-                try
-                {
-                    loadedEntry.Initialize(request, dependencies);
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogException(exception);
-                    return SceneRuntimeLoadResult.Failure(
-                        SceneLoadErrorCode.SceneEntryInitializationFailed,
-                        true);
-                }
-
-                if (!SceneManager.SetActiveScene(loadedScene))
-                {
-                    return SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, true);
-                }
-
-                Debug.Log(
-                    $"[UnitySceneRuntime] EntryInitialized={request.SceneId}; " +
-                    $"LevelId={request.LevelId}; LevelRunId={request.LevelRunId}");
-                return SceneRuntimeLoadResult.Success();
             }
             catch (Exception exception)
             {
@@ -134,8 +198,13 @@ namespace Game.Composition
                     ClearLoadedState();
                 }
 
-                return SceneRuntimeLoadResult.Failure(SceneLoadErrorCode.SceneLoadFailed, requiresCleanup);
+                result = SceneRuntimeLoadResult.Failure(
+                    SceneLoadErrorCode.SceneLoadFailed,
+                    requiresCleanup);
             }
+
+            loadInProgress = false;
+            completed(result);
         }
 
         public void UnloadCurrent(Action<bool> completed)
@@ -145,7 +214,8 @@ namespace Game.Composition
                 throw new ArgumentNullException(nameof(completed));
             }
 
-            if (!connected || unloadInProgress || !loadedScene.IsValid() || !loadedScene.isLoaded)
+            if (!connected || loadInProgress || unloadInProgress ||
+                !loadedScene.IsValid() || !loadedScene.isLoaded)
             {
                 completed(false);
                 return;

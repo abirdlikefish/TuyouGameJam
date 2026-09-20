@@ -8,10 +8,10 @@
 
 ## 当前验证层级
 
-1. **文件与差异检查**：确认只修改目标目录，没有编辑 Luban 生成文件、场景、Prefab 或未授权配置。
+1. **文件与差异检查**：确认只修改目标目录，没有编辑 Luban 生成文件或未授权配置；动画批次额外检查源包未混入 Assets、运行时 Sprite/Clip/Controller/Prefab 路径和 `.meta` 完整。
 2. **Unity 编译检查**：每批脚本导入后必须无编译错误，再开始下一批依赖代码。
 3. **规则边界验证**：按测试清单使用最小配置、结构化日志、Inspector 状态和可复现操作验证代表性输入、边界值、重复调用与过期会话。
-4. **场景装配验证**：由用户完成 Prefab、Collider、Layer、Animator Event、ScriptableObject 和场景引用后，验证 Preparing/Ready、失败阻断和清理。
+4. **资源与场景装配验证**：由用户完成 Sprite 导入、Clip/Controller、Prefab、Collider、Layer、Animator 参数与 Event、ScriptableObject 和场景引用后，验证 ID 到动画映射、Preparing/Ready、池复用、失败阻断和清理。
 5. **完整游玩闭环**：验证启动、MainMenu、LevelSelect、Gameplay、Victory/GameOver、返回选关和重新开始，且上一局对象与回调不残留。
 
 ## 为未来自动化保留的代码边界
@@ -38,9 +38,11 @@
 - UGUI Pointer、坐标转换、Raycast、禁用与失焦清理。
 - Collider2D Cast/Overlap、LayerMask 和单帧 `Physics2D.SyncTransforms`。
 - Animator 攻击/死亡事件桥接及重复、过期回调。
+- Army 武器 OverrideController 切换、BulletId/ElementType Animator 状态选择以及池复用重置。
 - Additive 场景加载、SceneEntry Ready/清理、失败恢复和完整重开。
 
 ## 关联决策
 
 - [ADR-026：程序集边界与跨层通信](../06_Decisions/ADR-026-AssemblyBoundariesAndCommunication.md)
 - [ADR-045：自动化测试延后至正式程序集阶段](../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md)
+- [ADR-048：序列帧动画资源管线与 Prefab 预绑定](../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md)

@@ -4,9 +4,9 @@
 
 - ID：`MOD-BULLET`
 - 层级：Gameplay
-- 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Layer 与命中流程手测待完成）
+- 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与命中流程手测待完成）
 - 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`
 
 ## 职责
 
@@ -51,12 +51,12 @@
 
 ```text
 BulletRoot [BulletManager；序列化唯一 Bullet Prefab]
-└── PF_Bullet [Bullet；运行时池实例]
+└── PF_Bullet [Bullet；Animator；运行时池实例]
     ├── Visual [SpriteRenderer 或占位视觉]
     └── BodyCollider [Collider2D；Bullet Layer]
 ```
 
-Bullet 根组件显式绑定 `bodyCollider` 和视觉引用。首轮所有 BulletId 共用该 Prefab，数值从 Bullet 配置快照注入；不要求 Animator、Trail、VFX 或不同 BulletId 的最终美术差异。必需引用或 Layer 非法时直接输出错误并阻止 Gameplay Ready。完整最小绑定见 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)。
+Bullet 根组件显式绑定 `bodyCollider`、视觉引用和 Animator。首轮所有 BulletId 共用该 Prefab，数值从 Bullet 配置快照注入；Controller 通过整数 `BulletId` 参数选择 0/1/2 对应循环 Clip。池对象借出时必须在激活前写入本次 ID 并从目标状态起播，归还时清除表现状态；不通过动画事件处理命中、伤害或回收。Trail 和 VFX 仍可延后。必需引用、Controller、参数或 Layer 非法时直接输出错误并阻止 Gameplay Ready。完整导入与绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md) 和 [PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)。
 
 ## 测试标准
 
@@ -73,5 +73,6 @@ Bullet 根组件显式绑定 `bodyCollider` 和视觉引用。首轮所有 Bulle
 - 同一个 `BulletInstanceId` 不会因多个目标子碰撞体重复结算。
 - 同一 Cast 结果先通过 BulletHitProxy 按 RuntimeInstanceId 去重，再按距离、Enemy > Gate > Prop、RuntimeInstanceId 的稳定优先级选择首个有效目标。
 - `Bullet` 具体类型只绑定一个规范 Prefab 和类型池；类型池返回未激活实例，BulletManager 设置发射父节点、Transform 和快照并登记后才激活。
+- BulletId 0/1/2 分别播放正确的循环 Clip；池化实例从一个 BulletId 回收后以另一个 BulletId 借出时，不残留旧参数、状态、帧或 Sprite。
 - 子弹只请求生成所有者结束实例，不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还；命中或离屏后清理状态、主动失活，再由类型池防御性失活并回收。
 - LevelManager 只在子弹阶段调用一次 `TickMovementAndHits`；Preparing、Completed 和过期 LevelRunId 不移动或命中。

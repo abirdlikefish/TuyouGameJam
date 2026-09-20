@@ -5,8 +5,14 @@ namespace Game.Gameplay
 {
     public sealed class Bullet : MonoBehaviour
     {
+        private static readonly int BulletIdParameter = Animator.StringToHash("BulletId");
+        private static readonly int Bullet000LoopState = Animator.StringToHash("Base Layer.Bullet_000_Loop");
+        private static readonly int Bullet001LoopState = Animator.StringToHash("Base Layer.Bullet_001_Loop");
+        private static readonly int Bullet002LoopState = Animator.StringToHash("Base Layer.Bullet_002_Loop");
+
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private SpriteRenderer visual;
+        [SerializeField] private Animator animator;
 
         private int levelRunId;
         private int bulletInstanceId;
@@ -20,6 +26,8 @@ namespace Game.Gameplay
         private Vector2 direction;
         private Vector2 previousPosition;
         private bool active;
+        private bool animationPrepared;
+        private int preparedAnimationState;
 
         public int LevelRunId => levelRunId;
         public int BulletInstanceId => bulletInstanceId;
@@ -40,6 +48,25 @@ namespace Game.Gameplay
                 return false;
             }
 
+            if (animator == null || animator.runtimeAnimatorController == null)
+            {
+                error = $"{name}.animator and its controller are required.";
+                return false;
+            }
+
+            if (!animator.enabled)
+            {
+                error = $"{name}.animator must be enabled.";
+                return false;
+            }
+
+            if (animator.gameObject.activeInHierarchy &&
+                !HasAnimatorParameter(animator, BulletIdParameter, AnimatorControllerParameterType.Int))
+            {
+                error = $"{name}.animator controller requires an Int parameter named BulletId.";
+                return false;
+            }
+
             error = string.Empty;
             return true;
         }
@@ -50,6 +77,7 @@ namespace Game.Gameplay
             int runtimeInstanceId,
             Transform parent)
         {
+            var animationState = GetAnimationState(config.Id);
             levelRunId = request.LevelRunId;
             bulletInstanceId = runtimeInstanceId;
             bulletId = config.Id;
@@ -66,6 +94,15 @@ namespace Game.Gameplay
             transform.SetParent(parent, false);
             transform.position = request.WorldPosition;
             transform.rotation = Quaternion.identity;
+            PrepareAnimation(animationState);
+        }
+
+        private void OnEnable()
+        {
+            if (active && animationPrepared)
+            {
+                PlayPreparedAnimation();
+            }
         }
 
         internal Vector2 GetDesiredPosition(float deltaTime)
@@ -101,6 +138,14 @@ namespace Game.Gameplay
         internal void PrepareForPool()
         {
             active = false;
+            animationPrepared = false;
+            preparedAnimationState = 0;
+            if (animator.gameObject.activeInHierarchy)
+            {
+                animator.Rebind();
+                animator.SetInteger(BulletIdParameter, 0);
+            }
+
             levelRunId = 0;
             bulletInstanceId = -1;
             bulletId = -1;
@@ -113,6 +158,69 @@ namespace Game.Gameplay
             direction = Vector2.zero;
             previousPosition = Vector2.zero;
             gameObject.SetActive(false);
+        }
+
+        private void PrepareAnimation(int animationState)
+        {
+            preparedAnimationState = animationState;
+            animationPrepared = true;
+            if (gameObject.activeInHierarchy)
+            {
+                PlayPreparedAnimation();
+            }
+        }
+
+        private void PlayPreparedAnimation()
+        {
+            animator.Rebind();
+            RequireAnimatorParameter();
+            animator.SetInteger(BulletIdParameter, bulletId);
+            animator.Play(preparedAnimationState, 0, 0f);
+            animator.Update(0f);
+        }
+
+        private static int GetAnimationState(int initializedBulletId)
+        {
+            switch (initializedBulletId)
+            {
+                case 0:
+                    return Bullet000LoopState;
+                case 1:
+                    return Bullet001LoopState;
+                case 2:
+                    return Bullet002LoopState;
+                default:
+                    throw new System.ArgumentOutOfRangeException(
+                        nameof(initializedBulletId),
+                        initializedBulletId,
+                        "Only BulletId 0, 1 and 2 have bound animation states.");
+            }
+        }
+
+        private static bool HasAnimatorParameter(
+            Animator targetAnimator,
+            int parameterNameHash,
+            AnimatorControllerParameterType parameterType)
+        {
+            var parameters = targetAnimator.parameters;
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                if (parameters[index].nameHash == parameterNameHash && parameters[index].type == parameterType)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RequireAnimatorParameter()
+        {
+            if (!HasAnimatorParameter(animator, BulletIdParameter, AnimatorControllerParameterType.Int))
+            {
+                throw new System.InvalidOperationException(
+                    $"{name}.animator controller requires an Int parameter named BulletId.");
+            }
         }
     }
 }

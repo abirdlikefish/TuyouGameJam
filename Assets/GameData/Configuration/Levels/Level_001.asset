@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_001
   m_EditorClassIdentifier: 
   levelId: 0
-  displayName: 
+  displayName: "\u7B2C 1 \u5173"
   unlockedLevelIds: 
   roadBounds:
     serializedVersion: 2

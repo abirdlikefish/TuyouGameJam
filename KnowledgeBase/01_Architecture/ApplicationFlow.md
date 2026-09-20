@@ -2,14 +2,14 @@
 
 ## 状态
 
-InProgress（批次 6 脚本已实现；实际场景、Build Settings、Inspector 装配与完整流程联调待批次 7/8）
+Integration（批次 7.5C 已完成实际场景、Build Settings、Inspector 装配和多轮流程冒烟；专项手工验收待 7.6）
 
 ## 目标与边界
 
 本文件是 `GameStateService`、`SceneService` 与三个应用场景入口的应用流程活文档：
 
 - `GameStateService` 拥有 `AppFlowState`、关卡选择、`LevelRunId`、流程定时器、待切换目标和结果推进。
-- `SceneService` 协调 MainMenu、LevelSelect、Gameplay 三个应用场景的同步 Additive 加载、固定入口绑定和异步卸载，并发布场景事实。
+- `SceneService` 协调 MainMenu、LevelSelect、Gameplay 三个应用场景的异步 Additive 加载、固定入口绑定和异步卸载，并发布场景事实。
 - `MainMenuSceneEntry`、`LevelSelectSceneEntry`、`GameplaySceneEntry` 只负责各自场景内装配和清理，不选择下一场景或推进应用状态。
 - `GlobalBootstrap` 只按 Create、Connect、Start 三阶段创建并连接服务；`LevelManager` 只管理当前 Gameplay 会话。
 
@@ -102,9 +102,9 @@ GameplayScene/GameplayRoot       [GameplaySceneEntry]
 ## 加载与卸载策略
 
 - `BootstrapScene` 始终保留；MainMenu、LevelSelect、Gameplay 使用 Additive 模式。
-- 目标场景使用同步加载。`LoadScene` 返回只说明 Unity 已加载场景，不代表 Entry Ready。
-- 从已有应用场景切换时，先清理并异步卸载旧场景，卸载完成后再同步加载目标场景；不得同时保留两个 Ready 的应用场景。
-- SceneService 内部使用 `Idle`、`Unloading`、`Loading`、`InitializingEntry`、`Ready`、`CleaningFailedLoad` 拒绝冲突请求；这些状态不进入公共 `AppFlowState`。
+- 目标场景使用 `LoadSceneAsync` Additive 加载；只有 AsyncOperation 完成、固定根解析和 Entry 初始化全部成功后才发布 Ready。
+- 从已有应用场景切换时，先清理并异步卸载旧场景，卸载完成后再异步加载目标场景；不得同时保留两个 Ready 的应用场景。
+- SceneService 内部使用 `Idle`、`Unloading`、`Loading`、`Ready`、`CleaningFailedLoad`、`Faulted` 拒绝冲突请求；这些状态不进入公共 `AppFlowState`。
 - 目标加载或 Entry 初始化失败时先异步清理失败场景，再发布 `AppSceneLoadFailed`。卸载失败发布 `AppSceneUnloadFailed`，不得继续加载目标场景。
 - 目标 Entry Ready 后可把目标场景设为 Active Scene；卸载当前应用场景前先把 Active Scene 恢复为 BootstrapScene。
 
@@ -117,11 +117,11 @@ GlobalBootstrap 完成 Create 与 Connect
 → ConfigService Ready
 → GameStateService.NotifyInitializationReady()
 → SceneService.SwitchToMainMenu()
-→ 同步加载 MainMenuScene，初始化 MainMenuSceneEntry
+→ 异步加载 MainMenuScene，完成后初始化 MainMenuSceneEntry
 → AppSceneReady(MainMenu)
 → GameStateService 进入 MainMenu，启动 RealTime 1 秒定时器
 → SceneService 异步卸载 MainMenuScene
-→ 同步加载 LevelSelectScene，初始化 LevelSelectSceneEntry
+→ 异步加载 LevelSelectScene，完成后初始化 LevelSelectSceneEntry
 → AppSceneReady(LevelSelect)
 → GameStateService 进入 LevelSelect、选择唯一关卡并启动 RealTime 1 秒定时器
 ```
@@ -136,7 +136,7 @@ LevelSelect 定时器到期
 → GameplayLoading
 → SceneService.SwitchToGameplay(levelId, levelConfigSnapshot, levelRunId)
 → 异步卸载 LevelSelectScene
-→ 同步加载 GameplayScene
+→ 异步加载 GameplayScene
 → GameplaySceneEntry 注入依赖并完成 LevelManager.Preparing
 → AppSceneReady(Gameplay, levelId, levelRunId)
 → GameStateService 校验 pending target 和 LevelRunId
@@ -156,7 +156,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 → SceneService.SwitchToLevelSelect()
 → GameplaySceneEntry 清理当前会话
 → 异步卸载 GameplayScene
-→ 同步加载并初始化 LevelSelectSceneEntry
+→ 异步加载并初始化 LevelSelectSceneEntry
 → AppSceneReady(LevelSelect)
 → GameStateService 清除当前会话并进入 LevelSelect
 → 启动新的 RealTime 1 秒定时器
@@ -187,5 +187,5 @@ LevelManager 完成当前会话并停止玩法逻辑
 - 事实事件：`../03_SharedContracts/EventCatalog.md`
 - 场景层级：`SceneStructure.md`
 - 验收清单：`../05_Testing/IntegrationTests.md` 的“应用流程”部分
-- 决策依据：`../06_Decisions/ADR-019-ApplicationFlowContract.md`、`../06_Decisions/ADR-027-MvpGlobalServiceScope.md`、`../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`
+- 决策依据：`../06_Decisions/ADR-019-ApplicationFlowContract.md`、`../06_Decisions/ADR-027-MvpGlobalServiceScope.md`、`../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`、`../06_Decisions/ADR-050-UnitySceneLoadCompletionBoundary.md`
 - 当前测试策略：`../05_Testing/TestingStrategy.md`、`../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md`

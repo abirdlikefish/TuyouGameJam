@@ -51,9 +51,31 @@ namespace Game.Composition
             try
             {
                 ValidateSerializedBindings();
-                DontDestroyOnLoad(gameObject);
                 CreateServices();
+            }
+            catch (Exception exception)
+            {
+                FailStartup(exception);
+            }
+        }
+
+        private System.Collections.IEnumerator Start()
+        {
+            // 让 Unity 完成首场景的加载提交；首个 Start 帧内调用 LoadScene(Additive)
+            // 仍可能把目标场景留到下一帧才标记为 isLoaded。
+            yield return null;
+
+            if (!ownsActiveInstance || shuttingDown || !created)
+            {
+                yield break;
+            }
+
+            try
+            {
+                // Unity 2022 在首场景 Awake 阶段尚未稳定报告 Scene.isLoaded；
+                // Connect 与首次 Additive 加载延后到 Start，保留严格场景校验。
                 ConnectServices();
+                DontDestroyOnLoad(gameObject);
                 StartServices();
             }
             catch (Exception exception)

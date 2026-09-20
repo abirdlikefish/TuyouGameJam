@@ -92,13 +92,13 @@ Gameplay Canvas 必须持有 GraphicRaycaster；GameplayScene 中恰好一个 Ev
 ```text
 BootstrapScene 创建 GlobalRoot
 → GlobalBootstrap 按 Create、Connect、Start 初始化全局服务
-→ SceneService 同步 Additive 加载 MainMenuScene，MainMenuSceneEntry Ready
-→ 异步卸载 MainMenuScene，再同步加载 LevelSelectScene，LevelSelectSceneEntry Ready
-→ 异步卸载 LevelSelectScene，再同步加载 GameplayScene
+→ SceneService 异步 Additive 加载 MainMenuScene，MainMenuSceneEntry Ready
+→ 异步卸载 MainMenuScene，再异步加载 LevelSelectScene，LevelSelectSceneEntry Ready
+→ 异步卸载 LevelSelectScene，再异步加载 GameplayScene
 → GameplaySceneEntry 完成 LevelManager.Preparing
 → AppSceneReady(Gameplay) 后 GameStateService 发布 LevelRunStarted 并进入单局
 → 单局完成并清理 GameplayRoot 下的运行时对象
-→ SceneService 异步卸载 GameplayScene，再同步加载 LevelSelectScene
+→ SceneService 异步卸载 GameplayScene，再异步加载 LevelSelectScene
 → GlobalRoot 与全局服务继续保留
 ```
 

@@ -61,6 +61,7 @@
 | DES-047 | Gate 配置来源、伤害驱动数值与元素奖励结算 | Accepted | Level、Spawn、Obstacle、Gate、Bullet、Army、Config、事件、测试 | 见 ADR-038、ADR-046；仅保留加法门和元素门，Gate 不读表；逐门初始值、元素类型与 MaxHp 位于 LevelConfig，Prefab 提供同类共用速度/接触伤害；加法门按实际伤害累加，元素门只用 Pending 状态下 HP 归零后的额外伤害乘关卡系数兑换持续时间，Failed 后锁血 1 且永久锁定奖励 |
 | DES-048 | LevelConfig 资产、运行时快照与程序集依赖闭合 | Accepted | Contracts、ConfigGenerated、Foundation、Composition、Scene、Level、Spawn | 见 ADR-042；LevelConfig 资产及转换归 Foundation，Luban 代码归生成程序集，Contracts 定义不可变 LevelConfigSnapshot，IConfigService 只保留查询，具体初始化由 Composition 调用 |
 | DES-049 | 槽位射击、攻击冷却、死亡动画与道路接触/阈值语义 | Accepted | Army、Bullet、Monster、Gate、Prop、Obstacle、Level、Animation、测试 | 见 ADR-043；激活/换武器后等待完整射击间隔，每槽每帧最多一弹；攻击冷却从起攻计算，Death 末帧登记回收；Gate/Prop 只做终点 Overlap，纵向阈值按根中心判定 |
+| DES-050 | 正式序列帧的导入目录、Prefab 数量与 ID 到 Animator 的预绑定方式 | Accepted | Army、Bullet、Monster、Gate、资源、Prefab、测试 | 见 ADR-048、ADR-049；源包留在 Reference，运行时只导入透明 Sprite；保持单 Army、单 Bullet、单 ElementGate 与三类 Monster Prefab。Army 通过预绑定 AOC 与代码显式状态选择，Bullet/ElementGate 使用 Animator 参数，不运行时按路径加载 |
 
 ## 已接受决策
 
@@ -76,6 +77,9 @@
 - `../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`：关闭 DES-045；`unlockedLevelIds` 的重复 ID 和自引用为致命配置错误，目录缺失 ID 只警告并从运行时快照中过滤，空列表合法。
 - `../06_Decisions/ADR-045-DeferAutomatedTestsUntilAssemblyDefinitions.md`：当前不创建测试程序集或自动测试代码，首轮按测试清单执行编译、结构化日志、Inspector 与可复现手工验证，正式程序集阶段再迁移高价值自动化用例。
 - `../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`：收口首轮玩法实现契约，包括非负且允许 0 的配置 ID、void 槽位伤害命令、Collider 身份代理、Failed 对象锁血 1、敌人上一同步姿态近似阻挡以及生成诊断字段。
+- `../06_Decisions/ADR-047-StagedCodeGenerationAndParallelOwnership.md`：定案分批代码生成、用户资源装配边界、唯一执行顺序、并行所有权和每批验证门。
+- `../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`：补齐批次 7 的正式序列帧目录、导入设置、动画资产矩阵、Prefab 预绑定、表现适配代码和验证边界。
+- `../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`：将 Army 改为代码显式选择的持续战斗动画，并把 Victory 表现与场景卸载时的最终清理分离。
 - `../06_Decisions/ADR-007-WeaponIdentity.md`：定案使用 `WeaponId` 作为唯一武器身份。
 - `../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`：定案 Army 配置快照与 Prefab 绑定、槽位容量、固定武器、三元素计时、子弹 ElementMask 和负数门最低 HP 减员。
 - `../06_Decisions/ADR-008-ObstacleManager.md`：定案由 `ObstacleManager` 管理道路上的 Gate/Prop 实例。

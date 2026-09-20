@@ -2,7 +2,7 @@
 
 ## 状态
 
-InProgress（批次 6 脚本已实现；GlobalRoot、场景资产、资源注册表实例与 Inspector 装配待批次 7/8）
+Integration（批次 7.5C 已完成 GlobalRoot、场景资产、资源注册表和 Inspector 装配；专项手工验收待 7.6）
 
 ## 职责
 
@@ -69,7 +69,7 @@ Start
 
 具体 `LevelConfig` 资产在全局初始化时由 ConfigService 校验并复制为 `LevelConfigSnapshot`；LevelSelect 确定关卡后只查询快照，再经 SceneService 注入 Gameplay。`GlobalBootstrap` 直接调用具体 `ConfigService.Initialize(...)`，该初始化入口不属于 `IConfigService`。
 
-纯 C# 服务仍优先在 Create 阶段使用构造注入；Connect 只处理 SceneEntry 装配桥接等构造时尚不可闭合的跨模块依赖，不把所有服务强制改为可变的 Setter 注入。不是每个服务都必须实现统一的三阶段生命周期接口。EventBus 等没有跨服务连接需求的对象可以在构造后使用；三阶段是 Composition Root 的装配屏障。清理按 Start、Connect、Create 的逆序进行，并且只回滚本入口已完成的阶段。
+纯 C# 服务仍优先在 Create 阶段使用构造注入；Connect 只处理 SceneEntry 装配桥接等构造时尚不可闭合的跨模块依赖，不把所有服务强制改为可变的 Setter 注入。不是每个服务都必须实现统一的三阶段生命周期接口。EventBus 等没有跨服务连接需求的对象可以在构造后使用；三阶段是 Composition Root 的装配屏障。Unity 2022 的首场景 `Awake` 尚未稳定提交 `Scene.isLoaded`，因此 GlobalBootstrap 在 Awake 完成 Validate/Create，在 Start 协程等待一帧后执行 Connect、常驻化和 Start。清理按 Start、Connect、Create 的逆序进行，并且只回滚本入口已完成的阶段。
 
 ## 失败与幂等
 

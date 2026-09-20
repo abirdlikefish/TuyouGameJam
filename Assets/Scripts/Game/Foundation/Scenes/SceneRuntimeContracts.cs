@@ -77,7 +77,7 @@ namespace Game.Foundation
 
     public interface ISceneRuntime
     {
-        SceneRuntimeLoadResult Load(SceneRuntimeLoadRequest request);
+        void Load(SceneRuntimeLoadRequest request, Action<SceneRuntimeLoadResult> completed);
         void UnloadCurrent(Action<bool> completed);
     }
 }
