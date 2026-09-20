@@ -14,7 +14,7 @@
 - 保存军队逻辑总人数、总人数上限（如启用）和上场槽位状态。
 - 根据所选 Army Prefab 的序列化固定槽位生成/隐藏士兵表现，并维护每个槽位的代表人数、整数聚合生命值、碰撞体和子弹生成点；`SlotCapacity = slots.Length` 是最大可见士兵数的唯一来源。
 - 向 Monster 提供有士兵槽位的只读位置和索引查询，不暴露槽位内部对象。
-- 控制 ArmyRoot 的整体横向移动；每局开始时重置到世界原点 `(0,0,0)` 并保持世界 y=0，移动范围受 RoadLayoutSnapshot 左右边界和当前激活槽位 AABB 共同限制，位移使用 LevelManager 传入的 `Gameplay` delta。
+- 控制 ArmyRoot 的整体横向移动；每局开始时重置到 `RoadLayoutSnapshot.ArmySpawnPosition` 并保持配置的世界 Y，移动范围受道路左右边界和当前激活槽位 AABB 共同限制，位移使用 LevelManager 传入的 `Gameplay` delta。
 - 按当前激活槽位自动发射子弹；当前武器为本局运行时 `WeaponId`，火、冰、雷分别保存剩余持续时间，发射瞬间派生不可变 `ElementMask`。
 - 通过 `IArmyController` 的同步命令接口接收增员、请求减员、指定槽位伤害、元素持续时间和武器变化，不订阅接触/击破事实事件重复结算。
 - 负数加法门只提交正的请求减员人数；Army 将其换算为伤害并按当前 HP 最少、槽位索引最小的顺序承担。未来道具效果的 Army 命令边界需在 DES-031 定案，不能由 Prop 直接写入 Army 私有状态。
@@ -144,7 +144,7 @@ public sealed class ArmyPrefabBinding
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
 - `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × gameplayDeltaTime`，该 delta 由 LevelManager 在帧开始读取并传入，同一次更新不得再读取或叠加其他时间域。当前拖拽先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。键盘/手柄输入延后。
 - 三套 WeaponId 动画映射完整且唯一；换武器后所有槽位立即使用新 Controller，随后新增或重新激活的槽位不会显示旧武器。Idle/Attack/左右移动循环、Victory 非循环；状态只在实际变化时重播，动画切换不改变射击调度事实。
-- ArmyRoot 每局准确重置到世界原点，移动期间 y 保持为 0；道路没有 Collider 时仍能用激活槽位合并 AABB 完成左右限位。
+- ArmyRoot 每局准确重置到配置出生坐标，移动期间 Y 保持为配置值；初始阵型在该坐标越界时 Preparing 失败，道路没有 Collider 时仍能用激活槽位合并 AABB 完成后续左右限位。
 
 - 人数、槽位聚合 HP 和元素持续时间使用宽中间类型计算；超过公开存储类型时饱和到最大有限值，不得整数回绕、变负、NaN 或无穷。
 

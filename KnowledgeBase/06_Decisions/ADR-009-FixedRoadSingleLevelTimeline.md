@@ -12,7 +12,7 @@ Accepted（生成位置部分由 ADR-023 替代）
 
 本 ADR 原定的左、中、右三个生成点、`spawnPoint` 编号和初始车道语义已由 ADR-023 替代。现行规则是在固定 `SpawnY` 横线上使用 `[0,1]` 的 `spawnPosition` 计算对象中心点；下文对应内容仅保留为历史决策背景。固定道路、无波次三类时间轴、敌人接近逻辑和终局判定仍然有效。
 
-道路字段已由 ADR-034 收敛为唯一 `roadBounds`，宽高和四边均由它派生；ArmyRoot 每局从世界原点开始，道路不设置玩法 Collider。下文重复宽高/边界的表述按该后续决策理解。
+道路字段已由 ADR-052 收敛为原点居中的 `roadWidth`、`roadHeight`，四边由半宽和半高派生；ArmyRoot 每局从 `armySpawnPosition` 开始，道路不设置玩法 Collider。下文重复宽高/边界的表述按该后续决策理解。
 
 ## 背景
 

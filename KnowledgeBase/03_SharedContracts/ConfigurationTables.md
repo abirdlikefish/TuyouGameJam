@@ -95,12 +95,12 @@ entries[].initiallyUnlocked bool
 
 - 关卡 ID 和展示信息。
 - 通关后应解锁的关卡 ID 列表 `unlockedLevelIds`；首版不执行下一关跳转。它不是当前玩家已解锁状态。空列表合法；重复 ID 或当前 `levelId` 自引用按 `InvalidLevelConfig` 致命失败；当前 LevelCatalog 中不存在的未来关卡 ID 使用 `Debug.LogWarning` 后忽略。ConfigService 保持其余有效 ID 的原始顺序并只把过滤后的防御性副本写入 `LevelConfigSnapshot.UnlockedLevelIds`。
-- 固定道路唯一的世界坐标 `roadBounds: Rect`；宽度、高度和上下左右边界均从该 Rect 派生，不重复序列化。
+- 固定道路只配置 `roadWidth`、`roadHeight`，中心永久为世界原点，四边由半宽和半高派生；ArmyRoot 初始世界坐标使用 `armySpawnPosition: Vector2`。
 - `spawnY`、`enemyApproachY`、`despawnY` 等关卡空间参数。
 - 本关元素门统一使用的 `elementDurationSecondsPerDamage`。
 - `enemySpawns`、`gateSpawns`、`propSpawns` 三个按本局开始时间编排的列表。
 
-`levelId` 必须为非负整数且在目录中唯一。`roadBounds` 必须是有限且宽高大于 0 的 Rect，并包含世界原点。ArmyRoot 每局从 `(0,0,0)` 开始且只沿世界 X 轴移动。MVP 的 Y 顺序固定为 `roadBounds.yMin <= despawnY < 0 < enemyApproachY < spawnY <= roadBounds.yMax`。道路只提供数值边界与视觉，不设置玩法 Collider。
+`levelId` 必须为非负整数且在目录中唯一。`roadWidth`、`roadHeight` 必须有限且大于 0，`armySpawnPosition` 分量必须有限且位于派生道路边界内。ArmyRoot 每局从该坐标开始且只沿世界 X 轴移动。MVP 的 Y 顺序固定为 `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary`。道路只提供数值边界与视觉，不设置玩法 Collider。
 
 所有生成项包含：
 
@@ -122,7 +122,7 @@ Additive 条目的 `elementType = None`、`maxHp = 0`；Element 条目的 `initi
 
 Additive 条目的 `initialValue` 不得为 `int.MinValue`，避免负数门请求减员取绝对值时越界。运行时门值正向累加及 Army 人数、槽位聚合 HP、元素持续时间的计算必须使用足够宽的中间类型，并在超过公开存储类型时饱和到最大有限值，不能发生整数回绕、NaN 或无穷值。
 
-生成列表按 `spawnTime` 非递减排序；同一时间按列表顺序处理。每条敌人、Gate、Prop 生成项都必须提供有限且位于 `[0,1]` 的 `spawnPosition`，越界、NaN 或无穷值以 `InvalidLevelConfig` 报错并退出应用。SpawnManager 使用 LevelManager 从 `roadBounds` 构建的 RoadLayoutSnapshot，按左右边界线性计算 `x`，使用固定 `spawnY` 作为 `y`；坐标以对象中心点为准，不考虑 Collider、Renderer 或 Prefab 尺寸。该值不约束对象生成后的移动路径。MVP 的 `enemySpawns` 至少包含一个条目；`gateSpawns` 和 `propSpawns` 可以为空。
+生成列表按 `spawnTime` 非递减排序；同一时间按列表顺序处理。每条敌人、Gate、Prop 生成项都必须提供有限且位于 `[0,1]` 的 `spawnPosition`，越界、NaN 或无穷值以 `InvalidLevelConfig` 报错并退出应用。SpawnManager 使用 LevelManager 从道路宽高构建的 RoadLayoutSnapshot，按左右边界线性计算 `x`，使用固定 `spawnY` 作为 `y`；坐标以对象中心点为准，不考虑 Collider、Renderer 或 Prefab 尺寸。该值不约束对象生成后的移动路径。MVP 的 `enemySpawns` 至少包含一个条目；`gateSpawns` 和 `propSpawns` 可以为空。
 
 LevelConfig 不保存敌人 HP、子弹伤害等表驱动的复用数值。Gate 是例外：每条门生成项直接保存初始数字、元素类型和元素门 MaxHp；加法门统一速度来自 AdditiveGate Prefab，元素门统一速度和接触伤害来自 ElementGate Prefab。当前门数字、当前 HP 和 HP 归零后的额外伤害仍属于运行时状态。
 

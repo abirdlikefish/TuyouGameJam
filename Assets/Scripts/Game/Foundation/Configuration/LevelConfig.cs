@@ -20,26 +20,28 @@ namespace Game.Foundation
         private int[] unlockedLevelIds = new int[0];
 
         [Header("道路与纵向判定")]
+        [SerializeField, Min(0f)]
+        [Tooltip("道路宽度，单位是 Unity 世界单位，必须大于 0。道路中心固定为世界原点，左右边界为 ±Road Width / 2。")]
+        private float roadWidth;
+
+        [SerializeField, Min(0f)]
+        [Tooltip("道路高度，单位是 Unity 世界单位，必须大于 0。道路中心固定为世界原点，上下边界为 ±Road Height / 2。")]
+        private float roadHeight;
+
         [SerializeField]
-        [Tooltip(
-            "道路在世界坐标中的唯一矩形边界，单位是 Unity 世界单位，不是图片像素。\n" +
-            "X：道路左边界的世界 X 坐标，即 xMin。\n" +
-            "Y：道路下边界的世界 Y 坐标，即 yMin；X、Y 表示左下角，不是中心点。\n" +
-            "W：道路宽度，必须大于 0；右边界 xMax = X + W。它决定 Army 的横向活动范围和 Spawn Position 的横向映射范围。\n" +
-            "H：道路高度，必须大于 0；上边界 yMax = Y + H。它决定出生线、接近线和离场线可使用的纵向范围。\n" +
-            "矩形必须包含世界原点 (0, 0)，中心点为 (X + W / 2, Y + H / 2)。")]
-        private Rect roadBounds;
+        [Tooltip("ArmyRoot 每局开始时使用的世界 XY 坐标。根坐标必须位于道路内；本局只沿世界 X 移动并保持这里配置的 Y。")]
+        private Vector2 armySpawnPosition;
 
         [SerializeField]
         [Tooltip("敌人、Gate 和 Prop 共用的世界坐标出生 Y；以生成对象根节点中心为准。必须位于道路上边界内。")]
         private float spawnY;
 
         [SerializeField]
-        [Tooltip("敌人向下移动到达此世界 Y 后，开始转向最近的有效士兵槽位。必须满足 0 < Enemy Approach Y < Spawn Y。")]
+        [Tooltip("敌人向下移动到达此世界 Y 后，开始转向最近的有效士兵槽位。必须满足 Army Spawn Position Y < Enemy Approach Y < Spawn Y。")]
         private float enemyApproachY;
 
         [SerializeField]
-        [Tooltip("对象根节点中心到达或低于此世界 Y 时按离场处理。必须满足道路下边界 <= Despawn Y < 0。")]
+        [Tooltip("对象根节点中心到达或低于此世界 Y 时按离场处理。必须满足道路下边界 <= Despawn Y < Army Spawn Position Y。")]
         private float despawnY;
 
         [Header("元素门奖励")]
@@ -63,7 +65,9 @@ namespace Game.Foundation
         public int LevelId => levelId;
         public string DisplayName => displayName;
         public IReadOnlyList<int> UnlockedLevelIds => unlockedLevelIds;
-        public Rect RoadBounds => roadBounds;
+        public float RoadWidth => roadWidth;
+        public float RoadHeight => roadHeight;
+        public Vector2 ArmySpawnPosition => armySpawnPosition;
         public float SpawnY => spawnY;
         public float EnemyApproachY => enemyApproachY;
         public float DespawnY => despawnY;

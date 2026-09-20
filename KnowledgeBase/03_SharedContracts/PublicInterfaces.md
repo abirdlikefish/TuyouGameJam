@@ -205,7 +205,9 @@ public sealed class LevelConfigSnapshot
     public int LevelId { get; }
     public string DisplayName { get; }
     public IReadOnlyList<int> UnlockedLevelIds { get; }
-    public Rect RoadBounds { get; }
+    public float RoadWidth { get; }
+    public float RoadHeight { get; }
+    public Vector2 ArmySpawnPosition { get; }
     public float SpawnY { get; }
     public float EnemyApproachY { get; }
     public float DespawnY { get; }
@@ -253,13 +255,14 @@ public interface IGameStateService
     int GetSelectedLevelId();
     int GetCurrentLevelRunId();
     void NotifyInitializationReady();
+    bool TryEnterLevelSelect();
     bool TrySelectLevel(int levelId);
     bool TryStartSelectedGameplay();
     void CompleteGameplay(LevelCompletion completion);
 }
 ```
 
-`GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
+`GameStateService` 是 `AppFlowState` 的唯一推进者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
 `CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
@@ -565,6 +568,7 @@ public readonly struct RoadLayoutSnapshot
     public float RightBoundary { get; }
     public float BottomBoundary { get; }
     public float TopBoundary { get; }
+    public Vector2 ArmySpawnPosition { get; }
     public float SpawnY { get; }
     public float EnemyApproachY { get; }
     public float DespawnY { get; }
@@ -572,9 +576,9 @@ public readonly struct RoadLayoutSnapshot
 
 ```
 
-道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadBounds` 是唯一序列化来源，启动时复制为 `LevelConfigSnapshot.RoadBounds`，宽高和四边均由快照值派生；ArmyRoot 每局从世界原点 `(0,0,0)` 开始且世界 y 固定为 `0`。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。SpawnY、EnemyApproachY、DespawnY 和子弹 TopBoundary 都比较根 GameObject 中心，不考虑 Collider、Renderer 或 Prefab 尺寸；Army 横向合并 AABB 是明确例外。
+道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadWidth`、`roadHeight` 是唯一序列化道路尺寸，中心固定为世界原点，四边由半宽和半高派生；ArmyRoot 每局从 `ArmySpawnPosition` 开始且世界 Y 固定为该配置值。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。SpawnY、EnemyApproachY、DespawnY 和子弹 TopBoundary 都比较根 GameObject 中心，不考虑 Collider、Renderer 或 Prefab 尺寸；Army 横向合并 AABB 是明确例外。
 
-配置校验必须满足 `BottomBoundary <= DespawnY < 0 < EnemyApproachY < SpawnY <= TopBoundary`，且左右边界和上下边界包含世界原点；无效值不得在运行时 Clamp 或回退到场景 Renderer Bounds。
+配置校验必须满足 Army 根坐标位于道路内，且 `BottomBoundary <= DespawnY < ArmySpawnPosition.y < EnemyApproachY < SpawnY <= TopBoundary`；无效值不得在运行时 Clamp 或回退到场景 Renderer Bounds。依赖 Prefab Collider 的初始阵型 AABB 若越过左右边界，则在 Preparing 失败。
 
 ## 时间接口
 
@@ -596,7 +600,7 @@ MVP 中所有时间域倍率固定为 `1`。当前公共契约不包含倍率查
 
 `TimeDomain` 是一次移动、计时或调度所选择的时间策略，不是对象可以同时加入的标签集合。每次操作只选择一个最具体的域，不把 `Gameplay` delta 与 `Bullet`、`Gate`、`Monster` 或 `VFX` delta 重复累计。MVP 归属固定为：
 
-- MainMenu、LevelSelect 和不依赖 Gameplay 推进的流程等待使用 `RealTime`。
+- LevelSelect 和不依赖 Gameplay 推进的流程等待使用 `RealTime`；MainMenu 改为按钮驱动后不再创建自动等待计时器。
 - LevelManager 在逻辑帧开始集中读取 `Gameplay`、`Bullet`、`Gate` 和 `Monster` delta。Army 与未细分玩法消费传入的 `Gameplay` delta；SpawnManager 只消费 LevelManager 累计的 `elapsedTime`。
 - BulletManager 消费传入的 `Bullet` delta；EnemyManager 消费传入的 `Monster` delta；ObstacleManager 及 Gate/Prop 消费传入的 `Gate` delta。具体池对象不直接访问 `ITimeService`。
 - `VFX` 只表示跟随 Gameplay 世界推进的视觉特效；UI 动画和应用流程表现不使用该域。

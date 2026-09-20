@@ -2,7 +2,7 @@
 
 | 资源 | 类型 | 用途 | 状态 |
 |---|---|---|---|
-| 道路背景 | Sprite / `PF_Road_Default` Prefab | RoadView 根据 `roadBounds` 调整视觉；不配置玩法 Collider | Planned |
+| 道路背景 | Sprite / `PF_Road_Default` Prefab | RoadView 根据原点居中的道路宽高调整视觉；不配置玩法 Collider | Planned |
 | 军队 | Sprite / Animator | 三个 WeaponId 各一套 Idle、Victory、Attack、MoveLeft、MoveRight；由唯一 `PF_Army_000` 预绑定选择 | Attack Imported / Other Actions Pending |
 | Army 规范 Prefab | Prefab | `PF_Army_000` 根挂 ArmyController，序列化槽位数组决定 SlotCapacity；GameplaySceneEntry 以 ArmyId=0 绑定 | Planned |
 | 加法门 | Sprite / Animator / `PF_Gate_Additive` Prefab | 单循环动画；TMP_Text 显示 GateValue，Inspector 配置统一移动速度 | DirectoryReady / AssetsPending |
@@ -29,7 +29,7 @@
 - 敌人按 `EnemyType` 选择三个具体类型池；当前三种武器箱共用 `WeaponProp` 类型池并按 `WeaponId` 选择表现，MVP 子弹共用 `Bullet` 类型池并按 `BulletId` 选择数值与表现。
 - 资源注册表键仍使用大小写敏感的 ASCII `类别/身份` 格式且不使用绝对路径或 Luban 资源键，但不作为对象池身份或 PoolService 的 Prefab 选择入口。
 - 进入 Gameplay 前验证本关使用的资源绑定、Collider2D 和 Layer；缺失时报告配置或资源来源，不静默创建替代对象。
-- `PF_Road_Default` 只提供 SpriteRenderer/Transform 和 RoadView，不参与 PoolService，也不设置玩法 Collider；道路四边以 LevelConfig 的数值 `roadBounds` 为权威。
+- `PF_Road_Default` 只提供 SpriteRenderer/Transform 和 RoadView，不参与 PoolService，也不设置玩法 Collider；道路四边以 LevelConfig 的 `roadWidth`、`roadHeight` 派生值为权威。
 - `Assets/Prefabs/UI/PF_UI_TouchDragArea.prefab` 根对象名为 `TouchDragArea`，默认相对 Gameplay Canvas 全屏拉伸；根同时持有透明 Image 和 TouchDragInput。`TouchDragInput.touchArea` 显式绑定根 RectTransform，`raycastGraphic` 显式绑定根 Image，`horizontalMultiplier` 默认值为 `1`。Prefab 不包含 Canvas、GraphicRaycaster、EventSystem、StandaloneInputModule、Input Adapter 或 Army 引用；GameplaySceneEntry 校验场景组件并由独立 GameplayInputAdapter 绑定 `IHorizontalInputReceiver`。
 - 正式动画未全部到位前可以使用占位 Sprite/Clip，但 Controller、参数、ID 映射和 Monster AnimationEvent 必须完整；HUD、VFX、音频和最终 UI 仍不属于本轮。最小层级与字段见 [PrefabSpecifications](PrefabSpecifications.md)。
 

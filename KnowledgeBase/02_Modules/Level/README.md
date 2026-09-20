@@ -7,7 +7,7 @@
 - 状态：`InProgress`（批次 5 脚本已实现；Road Prefab、GameplayScene 装配与完整玩法手测待完成）
 - 依赖：IGameStateService、ITimeService、IEventBus、ISpawnManager、IArmyRunController、IBulletManager、IEnemyManager、IObstacleManager、IGameplayInputController
 - 被依赖模块：Army、Spawn、Monster、GameplaySceneEntry、Input、UI
-- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
+- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-052-CenteredRoadAndConfigurableArmySpawn.md`
 
 ## 模块目标
 
@@ -16,7 +16,7 @@
 ## 职责范围
 
 - 接收由 ConfigService 从关卡资产校验并复制、经 SceneService 和 GameplaySceneEntry 注入的 `LevelConfigSnapshot`、`LevelId`、`LevelRunId`。
-- 从唯一 `roadBounds` 派生道路宽高与上下左右边界，构建只读 `RoadLayoutSnapshot`。
+- 从 `roadWidth`、`roadHeight` 派生原点居中的上下左右边界，构建只读 `RoadLayoutSnapshot`。
 - 记录本局 `LevelRunState`、`elapsedTime` 和唯一终局结果。
 - 在 `Preparing` 阶段按顺序启动 Army、BulletManager、EnemyManager、ObstacleManager 和 SpawnManager；全部就绪后才允许 GameplaySceneEntry 报告 Ready。
 - 订阅匹配的 `LevelRunStarted`，从 `Preparing` 进入 `Playing`。启动事件不直接驱动其他 Manager 的逐帧逻辑。
@@ -50,7 +50,9 @@
 levelId
 displayName
 unlockedLevelIds
-roadBounds: Rect
+roadWidth: float
+roadHeight: float
+armySpawnPosition: Vector2
 spawnY
 enemyApproachY
 despawnY
@@ -60,7 +62,7 @@ propSpawns
 elementDurationSecondsPerDamage
 ```
 
-`roadBounds` 是道路空间的唯一序列化边界。宽度、高度、左右边界和上下边界全部派生，不重复保存。ArmyRoot 每局开始时重置到世界坐标 `(0,0,0)`，世界 y 保持为 `0`。
+`roadWidth` 与 `roadHeight` 是道路空间的唯一序列化尺寸，道路中心固定为世界原点，四边由半宽和半高派生。ArmyRoot 每局开始时重置到 `armySpawnPosition`，只沿世界 X 移动并保持配置的世界 Y。
 
 所有生成列表每项包含有限且非负的 `spawnTime` 和闭区间 `[0,1]` 的 `spawnPosition`。Enemy/Prop 条目另外包含对应表的稳定 `configId`；Gate 条目不使用配置 ID，而是包含 `GateType`、Additive 的 `InitialValue`，或 Element 的 `ElementType + MaxHp`。`enemySpawns` 不得为空，Gate/Prop 列表可以为空。
 
@@ -112,7 +114,7 @@ GameplaySceneEntry 通过 Inspector 持有 LevelManager、SpawnManager、ArmyPre
 GameplayRoot [GameplaySceneEntry]
 ├── Road [RoadView；PF_Road_Default 实例]
 ├── ArmyContainer
-│   └── ArmyRoot [ArmyController；PF_Army_000 运行时实例；开始时世界原点]
+│   └── ArmyRoot [ArmyController；PF_Army_000 运行时实例；开始时使用 armySpawnPosition]
 ├── LevelSystems
 │   ├── LevelManager
 │   └── SpawnManager
@@ -152,10 +154,10 @@ GameplaySceneEntry 注入 LevelConfigSnapshot、LevelId、LevelRunId 和接口
 → 读取 TbArmy.Id=0 与固定 TbWeapon 快照
 → 从序列化 ArmyPrefabBinding 取得 ArmyId=0 Prefab，在 ArmyContainer 下实例化并校验槽位数组
 → LevelManager 校验会话参数与固定引用
-→ 从 roadBounds 构建 RoadLayoutSnapshot，RoadView 应用视觉
+→ 从 roadWidth、roadHeight 构建 RoadLayoutSnapshot，RoadView 应用视觉
 → 集中校验本局配置、Manager Prefab、Collider、Layer、Input 和全部必需 Inspector 引用
 → BulletManager.StartRun
-→ ArmyRunController.StartRun（重置 ArmyRoot 到原点）
+→ ArmyRunController.StartRun（重置 ArmyRoot 到配置出生坐标）
 → EnemyManager.StartRun
 → ObstacleManager.StartRun
 → SpawnManager.StartRun（最后启动，确保生成接收者就绪）
@@ -219,11 +221,11 @@ ConfigService 在应用启动初始化中验证目录内全部关卡：
 
 ```text
 levelId 有效且与目录唯一条目一致
-roadBounds 及三条 Y 线均为有限值
-roadBounds.width > 0 且 height > 0
-roadBounds 包含世界原点
-roadBounds.yMin <= despawnY < 0
-0 < enemyApproachY < spawnY <= roadBounds.yMax
+roadWidth、roadHeight、armySpawnPosition 及三条 Y 线均为有限值
+roadWidth > 0 且 roadHeight > 0
+ArmySpawnPosition 位于派生道路边界内
+BottomBoundary <= despawnY < armySpawnPosition.y
+armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary
 enemySpawns 非空
 三个生成列表按 spawnTime 非递减
 spawnTime >= 0 且为有限值
@@ -240,9 +242,9 @@ unlockedLevelIds 中当前目录不存在的未来关卡 ID 记录 Debug.LogWarn
 
 ## 测试标准
 
-- RoadLayoutSnapshot 的宽高与四条边界只由 roadBounds 派生，永远互相一致。
+- RoadLayoutSnapshot 的四条边界只由 roadWidth、roadHeight 派生，永远关于世界原点对称。
 - 道路没有玩法 Collider 时，Army 限位、归一化生成、接近和离场仍正常。
-- ArmyRoot 每个新会话从 `(0,0,0)` 开始并保持 y=0，激活槽位合并 AABB 不越过左右边界。
+- ArmyRoot 每个新会话从 `armySpawnPosition` 开始并保持配置 Y，初始激活槽位合并 AABB 必须完整位于左右边界内。
 - ArmyId=0 的配置或 Prefab 绑定缺失、重复、Prefab 根类型错误或槽位数组无效时 Preparing 失败且不发布 Ready。
 - `LevelRunStarted` 只让匹配会话进入 Playing；重复、过期或参数不匹配的事件无副作用。
 - `spawnTime == 0` 的条目在首帧移动前只生成一次。

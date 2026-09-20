@@ -65,7 +65,6 @@ namespace Game.Composition
             {
                 armyInstance = Instantiate(armyPrefab, armyContainer, false);
                 armyInstance.name = armyPrefab.name;
-                armyInstance.transform.position = Vector3.zero;
                 armyInstance.transform.rotation = Quaternion.identity;
 
                 if (!armyInstance.TryValidate(out var armyError))

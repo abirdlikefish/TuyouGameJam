@@ -24,7 +24,7 @@
 `LevelConfigSnapshot` 至少包含：
 
 - `LevelId`、`DisplayName`、`UnlockedLevelIds`；
-- `RoadBounds`、`SpawnY`、`EnemyApproachY`、`DespawnY`；
+- `RoadWidth`、`RoadHeight`、`ArmySpawnPosition`、`SpawnY`、`EnemyApproachY`、`DespawnY`；
 - `EnemySpawns`、`GateSpawns`、`PropSpawns`；
 - `ElementDurationSecondsPerDamage`。
 

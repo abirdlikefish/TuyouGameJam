@@ -9,7 +9,7 @@
 | 内容 | 权威来源 | 典型消费者 |
 |---|---|---|
 | 可用关卡目录和首次运行默认解锁状态 | `LevelCatalog` ScriptableObject | ConfigService、GameStateService、UI |
-| 关卡元数据、唯一 `roadBounds`、出生/接近/离场横线、归一化横向出生位置、生成时间轴和出现顺序 | `LevelConfig` ScriptableObject | Level、Spawn |
+| 关卡元数据、原点居中的道路宽高、Army 出生坐标、出生/接近/离场横线、归一化横向出生位置、生成时间轴和出现顺序 | `LevelConfig` ScriptableObject | Level、Army、Spawn |
 | 角色/军队基础属性 | Luban `TbArmy` | Army |
 | 武器发射属性 | Luban `TbWeapon` | Army、Bullet |
 | 元素类型、元素门 HP 与持续时间换算 | `LevelConfig.gateSpawns`、`elementDurationSecondsPerDamage` | Gate、Army、Bullet；当前不建立 `TbElement` 或 `TbGate` |
@@ -103,7 +103,7 @@ LevelManager → Initialize(levelConfigSnapshot, levelRunId)
 ### 修改关卡编排
 
 1. 打开 `LevelCatalog` 确认关卡条目和默认解锁标记。
-2. 打开对应 `LevelConfig` 资产，修改唯一 `roadBounds`、三条 Y 线、各生成项的 `spawnPosition`、生成时间轴、Enemy/Prop 配置 ID、Gate 内联字段或元素持续时间换算系数。
+2. 打开对应 `LevelConfig` 资产，修改 `roadWidth`、`roadHeight`、`armySpawnPosition`、三条 Y 线、各生成项的 `spawnPosition`、生成时间轴、Enemy/Prop 配置 ID、Gate 内联字段或元素持续时间换算系数。
 3. 确认 `levelId` 唯一，引用的 `TbEnemy`、`TbProp` 存在，Gate 条件字段通过校验，且本关需要的 Unity 资源绑定完整。
 4. 运行目录加载、选定关卡注入、时间轴顺序和终局重开测试。
 
@@ -116,7 +116,7 @@ LevelManager → Initialize(levelConfigSnapshot, levelRunId)
 - Unity 资源注册表如使用字符串键，键只属于 Unity 资源侧，不构成 Luban 表字段。
 - LevelConfig 只描述本关卡如何编排，不复制敌人、军队和门的数值。
 - LevelConfig、LevelCatalog 和生成条目资产结构属于 Foundation 配置实现；Contracts 与 Gameplay 只接收不可变 LevelConfigSnapshot，不暴露 ScriptableObject 或 Luban 生成类型。
-- LevelConfig 不重复保存道路宽高和四边；这些值由唯一 `roadBounds` 派生。道路不通过 Collider 提供玩法边界。
+- LevelConfig 只保存道路宽高，不保存道路中心或四边；道路中心固定为世界原点，四边由半宽和半高派生。道路不通过 Collider 提供玩法边界。
 - Luban 表只描述可复用的数据，不承担场景对象的生命周期。
 - 配置错误采用 ADR-041 的单点 Fail-Fast：ConfigService 在启动初始化中遇到第一个 Luban 表、LevelCatalog、LevelConfig 或必需引用错误时，通过 `Debug.LogError` 报告 `ConfigErrorCode`、稳定来源、字段或条目索引和原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode。唯一例外是 ADR-044 的 `unlockedLevelIds` 目录缺失 ID，它使用 `Debug.LogWarning` 并过滤，不视为配置失败。
 - 配置失败不发布项目事件、不聚合第二套错误结果、不重试；GlobalBootstrap 不调用 `NotifyInitializationReady`，Gameplay Manager 不重复记录或恢复同一错误。

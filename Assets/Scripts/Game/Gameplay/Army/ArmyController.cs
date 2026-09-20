@@ -158,7 +158,10 @@ namespace Game.Gameplay
             ValidateRoadLayout(layout);
             levelRunId = startedLevelRunId;
             roadLayout = layout;
-            transform.position = Vector3.zero;
+            transform.position = new Vector3(
+                layout.ArmySpawnPosition.x,
+                layout.ArmySpawnPosition.y,
+                0f);
             horizontalInput = 0f;
             currentWeaponId = InitialWeaponId;
             fireRemainingDuration = 0f;
@@ -171,7 +174,7 @@ namespace Game.Gameplay
             var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
             ApplyWeaponAnimatorController(currentWeaponId);
             InitializeSlots(MvpInitialArmyCount, weapon.FireInterval);
-            ClampRootToRoad();
+            ValidateInitialSpawnPosition();
             PublishCountChanged(MvpInitialArmyCount, ArmyCountChangeReason.Addition);
             PublishFormationChanged();
         }
@@ -675,7 +678,7 @@ namespace Game.Gameplay
             var previousX = transform.position.x;
             var position = transform.position;
             position.x += displacement;
-            position.y = 0f;
+            position.y = roadLayout.ArmySpawnPosition.y;
             position.z = 0f;
             transform.position = position;
             ClampRootToRoad();
@@ -710,9 +713,24 @@ namespace Game.Gameplay
 
             var position = transform.position;
             position.x = Mathf.Clamp(position.x, minimumRootX, maximumRootX);
-            position.y = 0f;
+            position.y = roadLayout.ArmySpawnPosition.y;
             position.z = 0f;
             transform.position = position;
+        }
+
+        private void ValidateInitialSpawnPosition()
+        {
+            if (!TryGetActiveBounds(out var bounds))
+            {
+                throw new InvalidOperationException(
+                    "The initial Army formation does not contain an active slot collider.");
+            }
+
+            if (bounds.min.x < roadLayout.LeftBoundary || bounds.max.x > roadLayout.RightBoundary)
+            {
+                throw new InvalidOperationException(
+                    "The configured Army spawn position places the initial formation outside the road bounds.");
+            }
         }
 
         private bool TryGetActiveBounds(out Bounds bounds)
@@ -1002,9 +1020,16 @@ namespace Game.Gameplay
         private static void ValidateRoadLayout(RoadLayoutSnapshot layout)
         {
             if (!IsFinite(layout.LeftBoundary) || !IsFinite(layout.RightBoundary) ||
-                layout.LeftBoundary >= layout.RightBoundary)
+                !IsFinite(layout.BottomBoundary) || !IsFinite(layout.TopBoundary) ||
+                !IsFinite(layout.ArmySpawnPosition.x) || !IsFinite(layout.ArmySpawnPosition.y) ||
+                layout.LeftBoundary >= layout.RightBoundary ||
+                layout.BottomBoundary >= layout.TopBoundary ||
+                layout.ArmySpawnPosition.x < layout.LeftBoundary ||
+                layout.ArmySpawnPosition.x > layout.RightBoundary ||
+                layout.ArmySpawnPosition.y < layout.BottomBoundary ||
+                layout.ArmySpawnPosition.y > layout.TopBoundary)
             {
-                throw new ArgumentException("Road layout horizontal bounds are invalid.", nameof(layout));
+                throw new ArgumentException("Road layout or Army spawn position is invalid.", nameof(layout));
             }
         }
 

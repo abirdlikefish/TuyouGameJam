@@ -475,7 +475,7 @@ namespace Game.Foundation
             Dictionary<int, EnemyConfigSnapshot> enemies,
             Dictionary<int, PropConfigSnapshot> props)
         {
-            ValidateRoadBounds(levelConfig.RoadBounds, $"{source}.roadBounds");
+            ValidateRoadConfiguration(levelConfig, source);
             ValidateLevelLines(levelConfig, source);
 
             var unlockedLevelIds = BuildUnlockedLevelIds(levelConfig, source, catalogLevelIds);
@@ -505,7 +505,9 @@ namespace Game.Foundation
                 levelConfig.LevelId,
                 levelConfig.DisplayName,
                 unlockedLevelIds,
-                levelConfig.RoadBounds,
+                levelConfig.RoadWidth,
+                levelConfig.RoadHeight,
+                levelConfig.ArmySpawnPosition,
                 levelConfig.SpawnY,
                 levelConfig.EnemyApproachY,
                 levelConfig.DespawnY,
@@ -756,18 +758,36 @@ namespace Game.Foundation
             return snapshots;
         }
 
-        private static void ValidateRoadBounds(Rect bounds, string source)
+        private static void ValidateRoadConfiguration(LevelConfig levelConfig, string source)
         {
-            if (!IsFinite(bounds.x) || !IsFinite(bounds.y) ||
-                !IsFinite(bounds.width) || !IsFinite(bounds.height) ||
-                bounds.width <= 0f || bounds.height <= 0f)
+            var width = levelConfig.RoadWidth;
+            var height = levelConfig.RoadHeight;
+            if (!IsFinite(width) || width <= 0f)
             {
-                ThrowInvalidLevel(source, "RoadBounds must be finite and have positive width and height.");
+                ThrowInvalidLevel($"{source}.roadWidth", "RoadWidth must be finite and greater than zero.");
             }
 
-            if (bounds.xMin > 0f || bounds.xMax < 0f || bounds.yMin > 0f || bounds.yMax < 0f)
+            if (!IsFinite(height) || height <= 0f)
             {
-                ThrowInvalidLevel(source, "RoadBounds must contain the world origin.");
+                ThrowInvalidLevel($"{source}.roadHeight", "RoadHeight must be finite and greater than zero.");
+            }
+
+            var armySpawnPosition = levelConfig.ArmySpawnPosition;
+            if (!IsFinite(armySpawnPosition.x) || !IsFinite(armySpawnPosition.y))
+            {
+                ThrowInvalidLevel(
+                    $"{source}.armySpawnPosition",
+                    "ArmySpawnPosition components must be finite.");
+            }
+
+            var halfWidth = width * 0.5f;
+            var halfHeight = height * 0.5f;
+            if (armySpawnPosition.x < -halfWidth || armySpawnPosition.x > halfWidth ||
+                armySpawnPosition.y < -halfHeight || armySpawnPosition.y > halfHeight)
+            {
+                ThrowInvalidLevel(
+                    $"{source}.armySpawnPosition",
+                    "ArmySpawnPosition must be within the centered road bounds.");
             }
         }
 
@@ -781,14 +801,16 @@ namespace Game.Foundation
                 ThrowInvalidLevel(source, "SpawnY, EnemyApproachY, and DespawnY must be finite.");
             }
 
-            var bounds = levelConfig.RoadBounds;
-            if (despawnY < bounds.yMin || despawnY >= 0f ||
-                enemyApproachY <= 0f || enemyApproachY >= spawnY ||
-                spawnY > bounds.yMax)
+            var armyY = levelConfig.ArmySpawnPosition.y;
+            var bottomBoundary = levelConfig.RoadHeight * -0.5f;
+            var topBoundary = levelConfig.RoadHeight * 0.5f;
+            if (despawnY < bottomBoundary || despawnY >= armyY ||
+                enemyApproachY <= armyY || enemyApproachY >= spawnY ||
+                spawnY > topBoundary)
             {
                 ThrowInvalidLevel(
                     source,
-                    "Level lines must satisfy roadBounds.yMin <= despawnY < 0 < enemyApproachY < spawnY <= roadBounds.yMax.");
+                    "Level lines must satisfy BottomBoundary <= DespawnY < ArmySpawnPosition.y < EnemyApproachY < SpawnY <= TopBoundary.");
             }
         }
 

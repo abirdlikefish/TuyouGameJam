@@ -12,7 +12,7 @@
 
 - 按 `LevelConfig` 的时间轴安排敌人、Gate 和 Prop 的生成。
 - 唯一维护 `enemySpawns`、`gateSpawns`、`propSpawns` 的游标。
-- `StartRun` 接收 LevelManager 从唯一 `roadBounds` 构建的 RoadLayoutSnapshot；接受当前 `LevelRunId` 和 `elapsedTime`，在每次 `Tick` 中消费到时条目并拒绝过期会话。
+- `StartRun` 接收 LevelManager 从 `roadWidth`、`roadHeight` 构建的原点居中 RoadLayoutSnapshot；接受当前 `LevelRunId` 和 `elapsedTime`，在每次 `Tick` 中消费到时条目并拒绝过期会话。
 - 不直接读取 TimeService；生成时间轴通过 LevelManager 使用 `Gameplay` 时间域累计的 `elapsedTime` 间接遵循玩法时间。
 - 将每条生成项的 `[0,1]` 归一化横向出生位置解析为生成请求；Enemy/Prop 携带配置 ID，Gate 携带 LevelConfig 内联的门类型和条件字段。
 - 向 EnemyManager 发送敌人生成请求，向 ObstacleManager 发送 Gate/Prop 生成请求。

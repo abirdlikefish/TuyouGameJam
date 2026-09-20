@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Game.Contracts
 {
     public interface ILevelRuntime
@@ -13,20 +15,20 @@ namespace Game.Contracts
         public RoadLayoutSnapshot(
             float width,
             float height,
-            float leftBoundary,
-            float rightBoundary,
-            float bottomBoundary,
-            float topBoundary,
+            Vector2 armySpawnPosition,
             float spawnY,
             float enemyApproachY,
             float despawnY)
         {
             Width = width;
             Height = height;
-            LeftBoundary = leftBoundary;
-            RightBoundary = rightBoundary;
-            BottomBoundary = bottomBoundary;
-            TopBoundary = topBoundary;
+            var halfWidth = width * 0.5f;
+            var halfHeight = height * 0.5f;
+            LeftBoundary = -halfWidth;
+            RightBoundary = halfWidth;
+            BottomBoundary = -halfHeight;
+            TopBoundary = halfHeight;
+            ArmySpawnPosition = armySpawnPosition;
             SpawnY = spawnY;
             EnemyApproachY = enemyApproachY;
             DespawnY = despawnY;
@@ -38,6 +40,7 @@ namespace Game.Contracts
         public float RightBoundary { get; }
         public float BottomBoundary { get; }
         public float TopBoundary { get; }
+        public Vector2 ArmySpawnPosition { get; }
         public float SpawnY { get; }
         public float EnemyApproachY { get; }
         public float DespawnY { get; }

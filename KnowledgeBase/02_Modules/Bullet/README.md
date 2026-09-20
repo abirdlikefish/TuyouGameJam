@@ -28,7 +28,7 @@
 ## 规则
 
 - 子弹命中后立即回收。
-- 子弹根 GameObject 中心的世界坐标满足 `position.y > RoadLayoutSnapshot.TopBoundary`（`roadBounds.yMax`）时回收；不使用 Renderer、Collider 或摄像机视口边缘。
+- 子弹根 GameObject 中心的世界坐标满足 `position.y > RoadLayoutSnapshot.TopBoundary` 时回收；不使用 Renderer、Collider 或摄像机视口边缘。
 - 命中 Collider 节点必须存在已在 Preparing 验证的同节点 `BulletHitProxy`；代理显式绑定实现 `IBulletHittable` 的 Enemy/Gate/Prop 根组件，并提供对象类别和 RuntimeInstanceId。候选还必须满足 `CanReceiveBulletHit = true`；BulletManager 不通过父级搜索或 HP 推断目标。
 - HP 已归零但仍处于 `Pending` 的元素门保持 `CanReceiveBulletHit = true`，命中后子弹照常消费，伤害交由 Gate 累计为可兑换额外伤害。Failed 元素门和 Prop 仍保持可命中，子弹照常消费，但目标 HP 最低锁在 `1`，不再产生奖励、击破或伤害回收。
 - 移动使用 LevelManager 在帧开始读取并传入的 Bullet 时间域 delta；Bullet 和 BulletManager 不自行再次读取 TimeService。
@@ -66,7 +66,7 @@ Bullet 根组件显式绑定 `bodyCollider`、视觉引用和 Animator。首轮�
 - ElementMask 能表达 None 和三元素的全部组合；Army 后续元素获得或过期不修改飞行中的子弹。
 - 改变代表人数不会改变单次发射数量、伤害或速度；发射源数量只取决于激活槽位数。
 - 子弹命中目标后只结算一次伤害并回收。
-- 子弹中心等于 TopBoundary 时仍保留，严格大于 `roadBounds.yMax` 后回收；不同 Collider 或 Sprite 尺寸不改变阈值。
+- 子弹中心等于 TopBoundary 时仍保留，严格大于派生上边界后回收；不同 Collider 或 Sprite 尺寸不改变阈值。
 - 加法门没有 HP 仍可合法消费子弹并按实际 `BulletDamageContext.Damage` 增加门值；零 HP、待接触的元素门也仍可合法消费子弹并累计额外伤害。
 - 子弹 Collider Cast 覆盖 Bullet 自身在一个逻辑帧内从上一位置到期望位置的位移；在 MVP 约定速度、Collider 尺寸和测试帧率范围内可以稳定命中目标。首轮不验收双方高速相对运动或严重掉帧下的绝对不穿透。
 - 子弹与怪物、Gate 或 Prop 的受击碰撞体碰撞时只生成一次伤害上下文并回收；攻击碰撞体不作为子弹目标。

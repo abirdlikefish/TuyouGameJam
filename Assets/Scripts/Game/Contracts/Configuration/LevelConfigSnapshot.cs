@@ -10,7 +10,9 @@ namespace Game.Contracts
             int levelId,
             string displayName,
             IReadOnlyList<int> unlockedLevelIds,
-            Rect roadBounds,
+            float roadWidth,
+            float roadHeight,
+            Vector2 armySpawnPosition,
             float spawnY,
             float enemyApproachY,
             float despawnY,
@@ -22,7 +24,9 @@ namespace Game.Contracts
             LevelId = levelId;
             DisplayName = displayName;
             UnlockedLevelIds = Copy(unlockedLevelIds, nameof(unlockedLevelIds));
-            RoadBounds = roadBounds;
+            RoadWidth = roadWidth;
+            RoadHeight = roadHeight;
+            ArmySpawnPosition = armySpawnPosition;
             SpawnY = spawnY;
             EnemyApproachY = enemyApproachY;
             DespawnY = despawnY;
@@ -35,7 +39,9 @@ namespace Game.Contracts
         public int LevelId { get; }
         public string DisplayName { get; }
         public IReadOnlyList<int> UnlockedLevelIds { get; }
-        public Rect RoadBounds { get; }
+        public float RoadWidth { get; }
+        public float RoadHeight { get; }
+        public Vector2 ArmySpawnPosition { get; }
         public float SpawnY { get; }
         public float EnemyApproachY { get; }
         public float DespawnY { get; }

@@ -28,7 +28,7 @@
 - 必须的反向能力使用依赖倒置接口并由 Composition 注入，不使用请求型事件规避依赖规则。
 - 后续只读 HUD 和特效只监听事实事件，不参与核心数值计算；首轮玩法验证不创建 HUD。Gameplay 拖拽控件属于 Input Adapter 的采集端，通过 `IHorizontalInputReceiver` 类型化同步命令提交唯一横向倍率，但不得直接修改玩法对象字段。音频后续接入时遵守只响应事实的约束。
 - 本地存档和设置是可选旁路扩展，不是表现层的下游层；实现前必须单独确认持久化数据契约和生命周期。
-- 关卡唯一 `roadBounds`、固定出生/接近/离场线和按时间轴的生成编排放入 `LevelConfig` ScriptableObject；道路宽高与四边从 Rect 派生，ArmyRoot 每局从世界原点开始，道路不设置玩法 Collider；每条生成项使用 `[0,1]` 的归一化横向出生位置。
+- 关卡道路宽高、Army 出生坐标、固定出生/接近/离场线和按时间轴的生成编排放入 `LevelConfig` ScriptableObject；道路固定以世界原点为中心，四边从半宽和半高派生，ArmyRoot 每局从配置坐标开始，道路不设置玩法 Collider；每条生成项使用 `[0,1]` 的归一化横向出生位置。
 - 角色/军队、敌人、Prop 和子弹的可复用玩法数值由 Luban 表提供。Gate 不读表：逐门类型、初始数字、元素类型和 MaxHp 来自 LevelConfig，关卡统一的持续时间换算系数也来自 LevelConfig，同类共用速度及元素门接触伤害来自对应规范 Prefab Inspector。当前不建立独立的全局平衡参数表，Unity 资源引用通过 Inspector 或资源侧稳定键绑定。
 - `ObstacleManager` 只管理 Gate/Prop 的生成实例、活动登记、查询和回收，不参与门数字、HP 或 Army 效果计算。
 - 配置来源和运行时状态分离，运行时状态不得回写配置资产或 Luban 数据。

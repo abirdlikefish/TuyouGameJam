@@ -8,7 +8,8 @@
 - [ ] 服务完成 Create、Connect 且应用级事件订阅完成后才进入 Start；ConfigService Ready 前不得请求任何应用场景。
 - [ ] 配置初始化成功后请求异步 Additive 加载 MainMenuScene；只有加载完成、MainMenuSceneEntry 初始化并发布 `AppSceneReady(MainMenu)` 后才进入 MainMenu。配置数据失败时直接退出应用；MainMenu 场景加载或 Entry 装配失败时不得进入 MainMenu。
 - [ ] 配置数据非法时日志包含稳定来源、字段或条目索引并立即退出应用；Prefab、Collider、Layer 或必需 Inspector 引用非法时日志包含对象路径并阻止对应 Ready。两者都不使用默认值、自动补组件、降级或重试继续运行。
-- [ ] MainMenu 的 RealTime 1 秒计时从 Scene Ready 后开始；到期后只请求一次 LevelSelect 切换，旧场景异步卸载完成前不加载目标场景。
+- [ ] MainMenu Scene Ready 后持续停留且不创建自动计时；开始按钮只请求一次 LevelSelect 切换，快速重复点击无重复请求，旧场景异步卸载完成前不加载目标场景。
+- [ ] MainMenu 退出按钮在 Editor 停止 Play Mode，在 Player 退出应用；开始或退出请求接受后两个按钮立即不可交互。
 - [ ] LevelSelectSceneEntry Ready 后才进入 LevelSelect、选择目录中有效且可选的唯一 `LevelId`，并启动新的 RealTime 1 秒计时。
 - [ ] LevelSelect 计时结束后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 异步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
 - [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
@@ -119,12 +120,12 @@
 - [ ] 首版不会因敌人受阻而执行侧向绕行、通道预留或局部导航。
 - [ ] ArmyRoot 移动受当前激活槽位 AABB 限制，阵型变化后边界更新。
 - [ ] ArmyRoot 的可移动范围同时受固定道路左右边界限制，任何激活槽位都不能越过道路边界。
-- [ ] LevelConfig 只序列化一个有限且包含世界原点的 `roadBounds`；宽高与四边均从它派生，道路没有玩法 Collider。
-- [ ] ArmyRoot 每局准确重置到世界原点并保持 y=0；无道路 Collider 时仍能用槽位合并 AABB 完成左右限位。
+- [ ] LevelConfig 只序列化有限且大于 0 的 `roadWidth`、`roadHeight`；道路中心固定为世界原点，四边由半宽和半高派生，道路没有玩法 Collider。
+- [ ] ArmyRoot 每局准确重置到 `armySpawnPosition` 并保持配置 Y；初始阵型越界时 Preparing 失败，无道路 Collider 时仍能用槽位合并 AABB 完成后续左右限位。
 - [ ] 多个槽位同时接触同一门时只应用一次门接触结果。
 - [ ] `ObstacleManager` 能登记、查询、注销和回收 Gate/Prop，且相同生成参数的多个 Gate 或相同配置的多个 Prop 拥有不同运行时 ID。
 - [ ] Gate/Prop 根中心 `y <= DespawnY` 时离场，Collider/Renderer 尺寸不改变阈值；离场对象不再结算接触。
-- [ ] 子弹根中心严格大于 `roadBounds.yMax` 时回收；等于上边界时不因 Sprite 或 Collider 边缘提前回收。
+- [ ] 子弹根中心严格大于派生 `TopBoundary` 时回收；等于上边界时不因 Sprite 或 Collider 边缘提前回收。
 - [ ] 军队人数为 0 时进入 GameOver。
 - [ ] 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后进入 Victory。
 - [ ] Victory 不等待 Gate/Prop 时间轴或活动实例完成；未来 Gate/Prop 停止生成，活动对象在 StopRun 中回收，且不会补发接触、击破或奖励效果。
@@ -180,7 +181,7 @@
 - [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。
-- [ ] `roadBounds.yMin <= despawnY < 0 < enemyApproachY < spawnY <= roadBounds.yMax`；无效 Rect、未包含原点或 Y 线顺序错误时报告 `InvalidLevelConfig` 并退出应用。
+- [ ] `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary`；无效宽高、非有限或越界 Army 坐标、Y 线顺序错误时报告 `InvalidLevelConfig` 并退出应用。
 - [ ] 相同 `spawnPosition` 的不同尺寸敌人、Gate 和 Prop 使用相同中心点坐标，不按碰撞体或渲染尺寸内缩。
 - [ ] 任一生成项的 `spawnPosition` 越界、为 NaN 或无穷值时报告 `InvalidLevelConfig` 并退出应用。
 - [ ] 配置源不被运行时人数、生命值、门数字、道具 HP、生成游标或关卡计时覆盖。

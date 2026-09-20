@@ -6,7 +6,7 @@ Accepted（Pool 公共契约由 ADR-031 修订为具体组件类型池；Gate/Pr
 
 > ADR-027 已从当前 MVP 公共契约移除 `PauseToken` 和倍率修改能力；本 ADR 对其他接口、请求、事件和会话 ID 的决策继续有效。
 
-> ADR-033 已新增 Army 本局接口、BulletManager、InputGate 和 Manager 阶段方法；ADR-034 已把 RoadLayoutSnapshot 扩展为从唯一 `roadBounds` 派生的完整四边。
+> ADR-033 已新增 Army 本局接口、BulletManager、InputGate 和 Manager 阶段方法；ADR-052 已把 RoadLayoutSnapshot 更新为从原点居中的道路宽高派生完整四边并携带 Army 出生坐标。
 
 > ADR-038 已用 `GateSpawnRequest` 与 `PropSpawnRequest` 取代统一 `ObstacleSpawnRequest`，并以 `IBulletHittable` 表达无 HP 或 HP 归零后仍可接收子弹的目标。下文旧名称只保留决策演进背景。
 

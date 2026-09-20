@@ -132,7 +132,7 @@ PF_Road_Default [RoadView]
 ```
 
 - RoadView 显式绑定视觉节点，并根据 RoadLayoutSnapshot 调整显示范围。
-- Road 不包含玩法 Collider；`roadBounds` 始终是唯一玩法边界。
+- Road 不包含玩法 Collider；LevelConfig 的 `roadWidth`、`roadHeight` 及其派生四边始终是唯一玩法边界。
 
 ## Input UI
 

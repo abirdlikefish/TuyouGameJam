@@ -278,14 +278,10 @@ namespace Game.Gameplay
 
         private static RoadLayoutSnapshot CreateRoadLayout(LevelConfigSnapshot levelConfig)
         {
-            var bounds = levelConfig.RoadBounds;
             return new RoadLayoutSnapshot(
-                bounds.width,
-                bounds.height,
-                bounds.xMin,
-                bounds.xMax,
-                bounds.yMin,
-                bounds.yMax,
+                levelConfig.RoadWidth,
+                levelConfig.RoadHeight,
+                levelConfig.ArmySpawnPosition,
                 levelConfig.SpawnY,
                 levelConfig.EnemyApproachY,
                 levelConfig.DespawnY);
@@ -318,12 +314,12 @@ namespace Game.Gameplay
                     nameof(levelConfig));
             }
 
-            var bounds = levelConfig.RoadBounds;
-            if (!IsFinite(bounds.x) || !IsFinite(bounds.y) ||
-                !IsFinite(bounds.width) || !IsFinite(bounds.height) ||
-                bounds.width <= 0f || bounds.height <= 0f)
+            var armySpawnPosition = levelConfig.ArmySpawnPosition;
+            if (!IsFinite(levelConfig.RoadWidth) || !IsFinite(levelConfig.RoadHeight) ||
+                levelConfig.RoadWidth <= 0f || levelConfig.RoadHeight <= 0f ||
+                !IsFinite(armySpawnPosition.x) || !IsFinite(armySpawnPosition.y))
             {
-                throw new ArgumentException("Level config contains invalid road bounds.", nameof(levelConfig));
+                throw new ArgumentException("Level config contains invalid road dimensions or Army spawn position.", nameof(levelConfig));
             }
         }
 

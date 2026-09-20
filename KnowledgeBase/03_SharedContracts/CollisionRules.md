@@ -23,7 +23,7 @@
 | Gate | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Gate `OverlapCollider` | Bullet、Army Slot |
 | Prop | `BodyCollider` | 子弹命中和 Army 接触 | Bullet Cast、Prop `OverlapCollider` | Bullet、Army Slot |
 
-道路四边、生成线、接近线和离场线全部来自 `RoadLayoutSnapshot` 的数值；道路不设置玩法 Collider。ArmyRoot 从世界原点开始，其激活槽位合并 AABB 使用 LeftBoundary/RightBoundary 做横向限制。
+道路四边、Army 出生坐标、生成线、接近线和离场线全部来自 `RoadLayoutSnapshot` 的数值；道路不设置玩法 Collider。ArmyRoot 从配置坐标开始，其激活槽位合并 AABB 使用 LeftBoundary/RightBoundary 做横向限制。
 
 ## 查询与结算顺序
 
@@ -96,7 +96,7 @@ Prop
 
 Layer 只负责过滤候选目标，不替代模块状态检查。道路左右边界、生成线、接近线和离场线均使用数值，不建立 Collider 或 Layer。
 
-所有纵向数值线以池化实例根 GameObject 的 `transform.position` 为准：出生使用中心落在 `SpawnY`；怪物中心到达 `EnemyApproachY` 后切换接近 Army；Gate/Prop 中心满足 `y <= DespawnY` 时离场；子弹中心满足 `y > TopBoundary`（即 `roadBounds.yMax`）时回收。不得改用 Collider 或 Renderer 边缘。Army 横向边界使用激活槽位合并 AABB，是唯一明确例外。
+所有纵向数值线以池化实例根 GameObject 的 `transform.position` 为准：出生使用中心落在 `SpawnY`；怪物中心到达 `EnemyApproachY` 后切换接近 Army；Gate/Prop 中心满足 `y <= DespawnY` 时离场；子弹中心满足 `y > TopBoundary` 时回收。不得改用 Collider 或 Renderer 边缘。Army 横向边界使用激活槽位合并 AABB，是唯一明确例外。
 
 ## Layer Collision Matrix（DES-030）
 

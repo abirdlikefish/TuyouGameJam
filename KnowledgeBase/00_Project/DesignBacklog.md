@@ -26,7 +26,7 @@
 | DES-012 | 门/道具接触失败后，后续子弹命中是否仍发放成功奖励 | Accepted | Gate、Prop、Bullet、Army | 见 ADR-006、ADR-046；失败状态锁定奖励并将 HP 最低锁在 1，后续仍受击和消费子弹，但不会击破或发放元素、武器效果 |
 | DES-013 | 武器身份使用 `WeaponId`，不维护第二份 `WeaponType` 身份 | Accepted | Army、Prop、Bullet、Config | 见 ADR-007、ADR-035；固定 `0=Slingshot`、`1=Bow`、`2=Staff` |
 | DES-014 | Gate/Prop 的道路实例由统一 ObstacleManager 管理 | Accepted | Obstacle、Gate、Prop、Spawn、Scene | 见 ADR-008；补充运行时实例查询和回收测试 |
-| DES-015 | 初始化、主界面、选关与游玩会话的流程边界 | Accepted | GlobalServices、Level、Scene、Config、UI | 见 ADR-011、ADR-019；主界面和选关暂时各等待 1 秒，终局回到选关并重新开始同一关 |
+| DES-015 | 初始化、主界面、选关与游玩会话的流程边界 | Accepted | GlobalServices、Level、Scene、Config、UI | 见 ADR-011、ADR-019、ADR-051；主界面等待玩家点击开始，选关暂时等待 1 秒，终局回到选关并重新开始同一关 |
 | DES-016 | LevelCatalog、LevelConfig 与配置初始化/注入边界 | Accepted | Config、GlobalServices、Scene、Level | 见 ADR-012；初始化加载目录，选关后按 LevelId 注入 Gameplay |
 | DES-017 | 三类生成时间轴的游标所有权和调度接口 | Accepted | Level、Spawn、Monster、Obstacle | 见 ADR-013；游标只由 SpawnManager 持有，LevelManager 只传入时间并查询结果 |
 | DES-018 | Config、Scene、Spawn、Manager、EventBus、Time 和 Pool 公共契约基线 | Accepted | 架构、全部 Gameplay 模块 | 见 ADR-014；Pool 的原始 `GameObject + string key` 契约已由 ADR-031 修订为具体组件类型池 |
@@ -52,7 +52,7 @@
 | DES-038 | 类型对象池身份、激活顺序与归还语义 | Accepted | Pool、Composition、Monster、Obstacle、Bullet、VFX、测试 | 见 ADR-031；一个具体池化根类型对应一个规范 Prefab 和一个类型池，Manager 负责 Transform、初始化与主动激活/失活，类型池借出未激活实例并在归还时防御性失活 |
 | DES-039 | MainMenu/LevelSelect 实际场景、固定 SceneEntry、场景切换与服务分阶段初始化 | Accepted | 应用流程、场景、Composition、全局服务、事件、测试 | 见 ADR-032；三个稳定页面使用实际 Additive 场景和固定根入口，GameState 只命令 SceneService，加载同步、卸载异步，服务按 Create/Connect/Start 装配 |
 | DES-040 | Gameplay 同帧阶段顺序的执行所有者 | Accepted | Level、Army、Bullet、Monster、Obstacle、Spawn、Input、Time、测试 | 见 ADR-033；LevelRunStarted 只启动会话，LevelManager 通过同步阶段接口依次驱动生成、移动、命中、接触、攻击、回收和终局判断 |
-| DES-041 | 道路边界权威字段与 Army 初始坐标 | Accepted | Level、Army、Spawn、Monster、Gate、Prop、Config、Scene | 见 ADR-034；LevelConfig 使用唯一 `roadBounds` 派生宽高和四边，ArmyRoot 每局从世界原点开始，道路不使用玩法 Collider |
+| DES-041 | 道路边界权威字段与 Army 初始坐标 | Accepted | Level、Army、Spawn、Monster、Gate、Prop、Config、Scene | 见 ADR-052；LevelConfig 使用 `roadWidth`、`roadHeight` 派生原点居中的四边，ArmyRoot 每局从 `armySpawnPosition` 开始，道路不使用玩法 Collider |
 | DES-042 | Gameplay 数值配置的类型化查询与只读快照 | Accepted | Config、Army、Bullet、Monster、Prop、Composition | 见 ADR-041；五类表分别通过最小类型化 Provider 返回不可变快照，ConfigService 启动时完整校验并复制，表错误单点报错后立即退出 |
 | DES-043 | Animator 攻击判定与确定性敌人攻击阶段的衔接 | Accepted | Monster、Level、Animation、测试 | 见 ADR-040；非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记一次请求，末帧调用结束通知，实际伤害只在 `ResolveAttacks` 中校验并结算 |
 | DES-044 | Gameplay Manager StartRun/StopRun 的失败语义 | Accepted | Level、Composition、Army、Bullet、Monster、Obstacle、Spawn、应用流程 | 见 ADR-039；配置与绑定在 StartRun 前集中校验，错误直接记录并阻止 Ready，接口保持 void，不建设通用 Result、降级或恢复状态机；意外异常只做必要清理并停止进入可玩状态 |
@@ -110,4 +110,4 @@
 - `../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`：定案具体类型到规范 Prefab 的唯一池身份、全局类型池所有权、Manager 初始化与归还顺序、未激活借出和防御性失活。
 - `../06_Decisions/ADR-032-AppScenesEntriesAndStagedInitialization.md`：定案 MainMenu、LevelSelect、Gameplay 实际场景、固定根 SceneEntry、应用场景级握手、同步加载/异步卸载、服务三阶段初始化和首轮日志验收。
 - `../06_Decisions/ADR-033-LevelManagerFramePipeline.md`：定案 LevelManager 持有 Gameplay 逻辑帧阶段顺序，启动事件不替代逐帧同步协调，并补齐 Manager 阶段与生命周期边界。
-- `../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`：定案道路使用唯一数值 Rect、ArmyRoot 世界原点、三条 Y 线和无道路玩法 Collider 的空间契约。
+- `../06_Decisions/ADR-052-CenteredRoadAndConfigurableArmySpawn.md`：取代 ADR-034 的道路 Rect 与 Army 世界原点规则，定案原点居中道路尺寸、可配置 Army 出生坐标、三条 Y 线和无道路玩法 Collider 的空间契约。

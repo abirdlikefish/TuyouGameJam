@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted
+Superseded by [ADR-052](ADR-052-CenteredRoadAndConfigurableArmySpawn.md)
 
 ## 日期
 

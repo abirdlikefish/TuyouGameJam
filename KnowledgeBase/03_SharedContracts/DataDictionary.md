@@ -39,14 +39,13 @@
 | `AppFlowState` | `enum` | 应用级流程状态；`GameplayLoading` 仅为内部过渡，不是用户可见页面 | `Initializing`、`MainMenu`、`LevelSelect`、`GameplayLoading`、`Gameplay` |
 | `LevelRunState` | `enum` | 单局游玩状态 | `Preparing`、`Playing`、`Completed` |
 | `LevelResult` | `enum` | 单局结束结果 | `Victory`、`GameOver` |
-| `RoadBounds` | `Rect` | LevelConfig 唯一序列化的固定道路世界坐标边界 | 所有分量有限，宽高大于 0，且包含世界原点 |
-| `RoadWidth` | `float` | 固定道路宽度 | 由 `RoadBounds.width` 派生，大于 0，不单独序列化 |
-| `RoadHeight` | `float` | 固定道路高度 | 由 `RoadBounds.height` 派生，大于 0，不单独序列化 |
-| `LeftBoundary` | `float` | Army 可移动道路左边界 | 由 `RoadBounds.xMin` 派生，`value <= 0` |
-| `RightBoundary` | `float` | Army 可移动道路右边界 | 由 `RoadBounds.xMax` 派生，`value >= 0` 且大于左边界 |
-| `BottomBoundary` | `float` | 道路下边界 | 由 `RoadBounds.yMin` 派生，`value <= 0` |
-| `TopBoundary` | `float` | 道路上边界 | 由 `RoadBounds.yMax` 派生；子弹根 GameObject 中心严格大于该值时回收 |
-| `ArmyStartPosition` | `Vector3` | ArmyRoot 每局初始世界坐标 | MVP 固定为 `(0,0,0)`，不作为配置字段；运行中世界 y 保持为 0 |
+| `RoadWidth` | `float` | LevelConfig 序列化的固定道路宽度 | 有限且大于 0；左右边界为 `±value/2` |
+| `RoadHeight` | `float` | LevelConfig 序列化的固定道路高度 | 有限且大于 0；上下边界为 `±value/2` |
+| `LeftBoundary` | `float` | Army 可移动道路左边界 | 由 `-RoadWidth/2` 派生 |
+| `RightBoundary` | `float` | Army 可移动道路右边界 | 由 `RoadWidth/2` 派生 |
+| `BottomBoundary` | `float` | 道路下边界 | 由 `-RoadHeight/2` 派生 |
+| `TopBoundary` | `float` | 道路上边界 | 由 `RoadHeight/2` 派生；子弹根 GameObject 中心严格大于该值时回收 |
+| `ArmySpawnPosition` | `Vector2` | ArmyRoot 每局初始世界 XY 坐标 | 分量有限且根坐标位于道路内；运行中世界 Y 保持该配置值 |
 | `SpawnY` | `float` | 敌人、Gate、Prop 根 GameObject 中心共用的固定出生横线高度 | `0 < EnemyApproachY < SpawnY <= TopBoundary` |
 | `EnemyApproachY` | `float` | 敌人根 GameObject 中心结束垂直下移、开始接近 Army 的高度 | `0 < value < SpawnY` |
 | `DespawnY` | `float` | Gate/Prop 根 GameObject 中心离开道路并触发离场处理的高度 | `BottomBoundary <= value < 0`；`position.y <= value` 时离场 |

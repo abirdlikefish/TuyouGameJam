@@ -107,4 +107,4 @@ ArmyRoot 作为唯一移动对象。移动边界使用当前激活槽位碰撞�
 - 每个 ArmySlotView 必须绑定 SoldierVisual、SlotCollider 和 FirePoint。
 - 每个 SlotCollider 节点必须绑定 `ArmySlotHitProxy`，代理显式引用对应 ArmySlotView；初始化时注入 ArmyId 和数组下标 SlotIndex。
 - SlotCollider 使用 ArmySlot Layer；空槽位只禁用表现、Collider 和发射资格，SlotIndex 与局部位置保持不变。
-- Prefab 在 ArmyRoot 位于世界原点时的最大激活槽位合并宽度必须能放入道路宽度，否则 Gameplay Preparing 失败。
+- Prefab 的初始激活槽位合并 AABB 必须能在关卡配置的 ArmyRoot 出生坐标处完整落入道路左右边界，否则 Gameplay Preparing 失败。

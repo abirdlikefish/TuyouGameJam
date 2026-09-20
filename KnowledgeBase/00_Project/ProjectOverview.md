@@ -48,30 +48,30 @@
 ## 当前临时应用流程
 
 ```text
-初始化 → 加载 MainMenuScene 并等待 1 秒 → 切换 LevelSelectScene 并等待 1 秒
+初始化 → 加载 MainMenuScene 并等待玩家点击开始 → 切换 LevelSelectScene 并等待 1 秒
 → 切换 GameplayScene → 胜利或失败 → 清理并卸载本局 → 切换回 LevelSelectScene
 → 等待 1 秒后重新开始当前唯一关卡
 ```
 
-MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固定根 SceneEntry；前两个场景仍没有正式 UI，只用 RealTime 自动跳过与结构化日志验证场景切换。该流程是正式 UI 接入前的场景骨架，不是游戏的核心循环；后续页面交互可以替换自动等待，而不改变上述核心玩法循环。
+MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固定根 SceneEntry。MainMenu 已接入开始与退出按钮并停留等待输入；LevelSelect 仍没有正式 UI，继续用 RealTime 自动跳过与结构化日志验证场景切换。该流程不是游戏的核心循环；后续选关交互可以替换剩余自动等待，而不改变上述核心玩法循环。
 
 ## MVP 基线
 
 - 首版只使用一个关卡和一个 `LevelConfig` ScriptableObject；`unlockedLevelIds` 仅记录通关后应解锁的关卡 ID，当前不实现下一关跳转。空列表合法；重复 ID 或自引用是致命配置错误，当前目录中尚不存在的未来关卡 ID 只记录 `Debug.LogWarning` 并从运行时快照中过滤。
 - Gameplay 当前只实现指定 UI 区域内的相对横向拖动；设备触屏与 Editor 左键共用 UGUI Pointer 路径，键盘/手柄延后。拖拽只消费相邻采样点的水平差，手指或鼠标停止移动时输入立即归零；原始归一化滑动速度先限制到 `[-1,1]`，再乘 `PF_UI_TouchDragArea` Inspector 中默认值为 `1` 的灵敏度系数。
-- 道路使用 LevelConfig 中唯一的世界坐标 `roadBounds`，启动时复制到不可变 LevelConfigSnapshot，宽高与四边由它派生；道路不设置玩法 Collider。ArmyRoot 每局从世界原点开始，共用出生横线 `spawnY` 由关卡道路配置提供。
+- 道路固定以世界原点为中心，LevelConfig 只配置 `roadWidth` 与 `roadHeight`，启动时复制到不可变 LevelConfigSnapshot，四边由半宽和半高派生；道路不设置玩法 Collider。ArmyRoot 每局从 `armySpawnPosition` 开始，共用出生横线 `spawnY` 由关卡道路配置提供。
 - 每条敌人、Gate、Prop 生成项都配置 `[0, 1]` 范围内的 `spawnPosition`：`0` 对应道路最左边，`1` 对应道路最右边，中间值线性映射为世界坐标 `x`。
 - 出生坐标以对象中心点计算，不考虑敌人、门或道具的尺寸；`spawnPosition` 只决定初始位置。敌人随后先垂直向下移动，到达关卡接近线后再向最近的有效士兵槽位移动。
 - 敌人、Gate、Prop 分别使用按本局开始时间计时的生成列表，不使用波次概念。
 - 当所有敌人生成项都已处理且 `AliveEnemyCount == 0` 时胜利；敌人死亡动画尚未回收不影响该条件，符合 EnemyManager 的存活统计规则。
 - Victory 会立即结束当前会话，不等待 Gate/Prop 时间轴派发完成，也不等待仍在道路上的 Gate/Prop 接触或离场；未来条目停止生成，活动道路对象在 StopRun 中清理。这是当前预期规则，不属于内容丢失。
 - 当 Army 总人数小于等于 0 时失败。同一帧同时满足“最后一个敌人死亡”和“Army 归零”时，失败优先。
-- 初始化成功后异步加载 MainMenuScene，固定入口 Ready 后进入主界面并使用 RealTime 等待 1 秒；随后异步卸载旧场景、异步加载 LevelSelectScene，入口 Ready 后进入选关并再等待 1 秒。
+- 初始化成功后异步加载 MainMenuScene，固定入口 Ready 后进入主界面并等待玩家点击开始；随后异步卸载旧场景、异步加载 LevelSelectScene，入口 Ready 后进入选关并等待 RealTime 1 秒。
 - 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并异步加载 LevelSelectScene；入口 Ready 后再次等待 RealTime 1 秒并开始唯一的当前关卡。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
 - 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。槽位激活或实际换武器后等待一个完整 FireInterval，每槽每逻辑帧最多发射一颗且不追赶补发。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
-- SpawnY、EnemyApproachY、DespawnY 与子弹 `roadBounds.yMax` 离场阈值都按实例根 GameObject 中心判断；Army 横向边界仍使用激活槽位合并 AABB。
+- SpawnY、EnemyApproachY、DespawnY 与子弹 `TopBoundary` 离场阈值都按实例根 GameObject 中心判断；Army 横向边界仍使用激活槽位合并 AABB。
 - 加法门数字可以为负数；每次有效子弹命中按本次实际伤害累加，不按命中次数使用固定增量。
 - 非负加法门增加人数并受 ArmyCountLimit 限制；负数门请求 Army 按等价单兵 HP 伤害执行减员，标记失败但仍只结算一次。
 - 元素门的 `ElementType` 与 `MaxHp` 逐生成项配置在 `LevelConfig`；HP 清空后的额外伤害乘关卡级系数得到元素持续时间，当前不设置上限。HP 为零且仍处于待接触状态时继续作为合法子弹目标并消耗子弹；未清空时接触会伤害每个接触槽位，永久锁定奖励并继续离场。

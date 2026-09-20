@@ -34,7 +34,7 @@
 1. Gate/Prop 在本帧完成位移并同步 Physics2D Transform 后，只对终点姿态执行一次 `OverlapCollider` 接触查询；不做 `Cast`、扫掠检测或路径补样。
 2. 通过合理移动速度、Collider 尺寸和目标帧率避免穿透；该风险进入手动与集成验证，不增加补偿框架。
 3. `SpawnY`、`EnemyApproachY`、`DespawnY` 等纵向阈值均以池化实例根 GameObject 的 `transform.position`（对象中心）判定，不使用 Collider 边缘或 Renderer Bounds。
-4. 子弹根 GameObject 中心满足 `position.y > RoadLayoutSnapshot.TopBoundary`（即 `roadBounds.yMax`）时回收。
+4. 子弹根 GameObject 中心满足 `position.y > RoadLayoutSnapshot.TopBoundary` 时回收。
 5. Army 横向移动边界仍以全部激活槽位 Collider 的合并 AABB 计算，这是明确例外。
 
 ## 后果

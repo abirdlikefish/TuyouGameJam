@@ -25,7 +25,7 @@
 - [ ] 怪物生成、接近军队、攻击、死亡与胜负判断
 - [ ] 所有玩法碰撞对象配置 Collider2D 与职责 Layer；子弹/敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap
 - [ ] 敌人 BodyCollider 基于上一同步姿态 Cast；在 MVP 速度、尺寸和帧率下减少穿透并形成排队，不验收同帧绝对不重叠
-- [ ] 唯一数值 `roadBounds`、无道路玩法 Collider、Army 世界原点、出生/接近/离场线和归一化横向出生位置
+- [ ] 原点居中的 `roadWidth`/`roadHeight`、无道路玩法 Collider、可配置 Army 出生坐标、出生/接近/离场线和归一化横向出生位置
 - [ ] LevelManager 同步驱动生成、移动、子弹、道路接触、敌人攻击、回收和终局的固定帧阶段
 - [ ] 按 ADR-048 导入 Army、Monster、Bullet 和 Gate 序列帧并完成 Animator/Prefab 预绑定；Gate 保留单个 TMP 调试文本，首轮不建设 HUD、胜负面板或 VFX
 
@@ -35,7 +35,7 @@
 - [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID，ConfigService 校验后生成供 Gameplay 使用的不可变 `LevelConfigSnapshot`
 - [ ] Luban 配置角色/军队、敌人、Prop 和子弹属性；Gate 不读表，由 LevelConfig 生成项与对应 Prefab 提供配置
 - [ ] Luban 配置 Army 基础数值、固定 Weapon 0/1/2 和每名士兵生命值；当前不建立 TbElement，阵型槽位由 Army Prefab 序列化绑定
-- [ ] 当前临时流程：MainMenuScene 与 LevelSelectScene 各在 Entry Ready 后等待 1 秒；胜利/失败后清理 Gameplay 并切换回 LevelSelectScene，再开始当前关卡
+- [ ] 当前临时流程：MainMenuScene 在 Entry Ready 后等待开始按钮；LevelSelectScene 仍等待 1 秒；胜利/失败后清理 Gameplay 并切换回 LevelSelectScene，再开始当前关卡
 
 ## 阶段 3：表现和性能
 

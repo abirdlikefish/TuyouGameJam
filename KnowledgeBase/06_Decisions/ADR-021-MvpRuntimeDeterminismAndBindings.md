@@ -10,7 +10,7 @@ Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
 > ADR-029 已进一步补充 EventBus 的精确类型匹配、嵌套发布、Token 身份、异常报告、载荷类型和订阅生命周期；本 ADR 的同步快照分发基础语义继续有效。
 
-> ADR-033 已将本 ADR 的同帧顺序落实为 LevelManager 持有的同步阶段管线；ADR-034 已把道路空间收敛为唯一 `roadBounds` 并固定 ArmyRoot 世界原点。
+> ADR-033 已将本 ADR 的同帧顺序落实为 LevelManager 持有的同步阶段管线；ADR-052 已把道路空间收敛为原点居中的道路宽高并改用可配置 Army 出生坐标。
 
 ## 日期
 
@@ -62,7 +62,7 @@ Accepted（对象池不再使用资源键选择 Prefab，见 ADR-031）
 
 - 道路和所有玩法位置使用世界坐标的 XY 平面，运行时 `z = 0`。
 - 世界右方为 `+x`，世界上方为 `+y`；`SpawnY`、`EnemyApproachY`、`DespawnY` 和道路边界都在同一世界坐标系中。横向出生位置由 ADR-023 的 `[0,1]` 归一化规则解析。
-- LevelConfig 的唯一世界坐标 `roadBounds` 提供实际边界，宽高和四边由它派生；ArmyRoot 每局从世界原点 `(0,0,0)` 开始且 y 保持为 0。道路 Prefab 只负责视觉，不提供玩法 Collider。
+- LevelConfig 的 `roadWidth`、`roadHeight` 提供实际尺寸，四边由半宽和半高派生；ArmyRoot 每局从 `armySpawnPosition` 开始且保持配置 Y。道路 Prefab 只负责视觉，不提供玩法 Collider。
 
 ### Army 移动速度
 
