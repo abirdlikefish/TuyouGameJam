@@ -101,6 +101,18 @@ namespace Game.Foundation
             RequestScene(AppSceneId.MainMenu, 0, 0, null);
         }
 
+        public bool TryEnterLevelSelect()
+        {
+            if (disposed || !started || state != AppFlowState.MainMenu || pendingScene.IsValid)
+            {
+                return false;
+            }
+
+            CancelTransitionTimer();
+            RequestScene(AppSceneId.LevelSelect, 0, 0, null);
+            return true;
+        }
+
         public bool TrySelectLevel(int levelId)
         {
             if (disposed || !started || state != AppFlowState.LevelSelect || pendingScene.IsValid)
@@ -210,7 +222,6 @@ namespace Game.Foundation
             {
                 case AppSceneId.MainMenu:
                     ChangeState(AppFlowState.MainMenu);
-                    ScheduleMainMenuAdvance();
                     break;
                 case AppSceneId.LevelSelect:
                     ClearCurrentSession();
@@ -288,21 +299,6 @@ namespace Game.Foundation
                 $"LevelId={message.LevelId}; LevelRunId={message.LevelRunId}");
             pendingScene = default(PendingScene);
             CancelTransitionTimer();
-        }
-
-        private void ScheduleMainMenuAdvance()
-        {
-            CancelTransitionTimer();
-            transitionTimer = timeService.Schedule(
-                AutomaticPageDelaySeconds,
-                () =>
-                {
-                    if (!disposed && state == AppFlowState.MainMenu && !pendingScene.IsValid)
-                    {
-                        RequestScene(AppSceneId.LevelSelect, 0, 0, null);
-                    }
-                },
-                TimeDomain.RealTime);
         }
 
         private void ScheduleLevelSelectAdvance()

@@ -8,6 +8,8 @@ Accepted
 
 2026-09-18
 
+> 后续决策：ADR-051 已用场景内 MainMenuView 和显式应用命令取代 MainMenu 的 1 秒自动推进；LevelSelect 临时自动推进及本 ADR 的场景入口、切换和初始化边界保持有效。
+
 ## 背景
 
 ADR-011 和 ADR-019 将 MainMenu、LevelSelect 作为无实际 Unity 场景的临时流程状态，并只定义了 Gameplay 场景握手。进入工程实现前，需要先验证 `GlobalRoot` 常驻、场景入口解析、服务注入、同步加载、异步卸载、重复切换拒绝和场景监听清理。只加载 Gameplay 无法覆盖完整的页面切换链路，也没有给出各场景入口、文件布局和服务连接时机。

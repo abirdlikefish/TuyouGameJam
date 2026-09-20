@@ -75,7 +75,7 @@ Assets/Tests/
 | 状态 | 所有者 | 进入条件 | 离开条件 |
 |---|---|---|---|
 | `Initializing` | GameStateService | 应用启动 | ConfigService Ready，MainMenuScene 的 Entry 完成初始化并收到 `AppSceneReady(MainMenu)` |
-| `MainMenu` | GameStateService | MainMenuScene Ready | RealTime 1 秒定时器到期并请求切换 LevelSelect |
+| `MainMenu` | GameStateService | MainMenuScene Ready | 玩家点击开始，`TryEnterLevelSelect()` 接受请求并切换 LevelSelect |
 | `LevelSelect` | GameStateService | LevelSelectScene Ready | 已选择有效关卡并请求开始新会话 |
 | `GameplayLoading` | GameStateService | 创建新 `LevelRunId` 并请求切换 Gameplay | 收到匹配的 `AppSceneReady(Gameplay)` 或场景失败事实 |
 | `Gameplay` | GameStateService | GameplayScene Ready，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver，并请求切换 LevelSelect |
@@ -119,14 +119,15 @@ GlobalBootstrap 完成 Create 与 Connect
 → SceneService.SwitchToMainMenu()
 → 异步加载 MainMenuScene，完成后初始化 MainMenuSceneEntry
 → AppSceneReady(MainMenu)
-→ GameStateService 进入 MainMenu，启动 RealTime 1 秒定时器
+→ GameStateService 进入 MainMenu 并等待玩家输入
+→ MainMenuView 点击开始并调用 TryEnterLevelSelect()
 → SceneService 异步卸载 MainMenuScene
 → 异步加载 LevelSelectScene，完成后初始化 LevelSelectSceneEntry
 → AppSceneReady(LevelSelect)
 → GameStateService 进入 LevelSelect、选择唯一关卡并启动 RealTime 1 秒定时器
 ```
 
-MainMenu 和 LevelSelect 当前仍自动跳过，没有正式 UI。计时从对应 Scene Ready 后开始，而不是从加载请求时开始。
+MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用命令，不直接调用 SceneManager；退出按钮在 Editor 停止 Play，在 Player 请求退出。LevelSelect 当前仍自动跳过，没有正式 UI；其计时从 Scene Ready 后开始，而不是从加载请求时开始。
 
 ## 进入 Gameplay
 

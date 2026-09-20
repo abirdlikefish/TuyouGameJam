@@ -6,6 +6,7 @@ namespace Game.Contracts
         int GetSelectedLevelId();
         int GetCurrentLevelRunId();
         void NotifyInitializationReady();
+        bool TryEnterLevelSelect();
         bool TrySelectLevel(int levelId);
         bool TryStartSelectedGameplay();
         void CompleteGameplay(LevelCompletion completion);
