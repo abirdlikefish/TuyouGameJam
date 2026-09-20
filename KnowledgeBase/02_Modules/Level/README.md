@@ -4,7 +4,7 @@
 
 - ID：`MOD-LEVEL`
 - 层级：Gameplay
-- 状态：`ContractReady`
+- 状态：`InProgress`（批次 5 脚本已实现；Road Prefab、GameplayScene 装配与完整玩法手测待完成）
 - 依赖：IGameStateService、ITimeService、IEventBus、ISpawnManager、IArmyRunController、IBulletManager、IEnemyManager、IObstacleManager、IGameplayInputController
 - 被依赖模块：Army、Spawn、Monster、GameplaySceneEntry、Input、UI
 - 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
@@ -262,5 +262,6 @@ unlockedLevelIds 中当前目录不存在的未来关卡 ID 记录 Debug.LogWarn
 
 | 日期 | 变更 | 记录人 |
 |---|---|---|
+| 2026-09-20 | 批次 5 新增 LevelManager 与 RoadView，实现 Preparing/Playing/Completed、固定帧管线、单次 Physics2D 同步、失败优先终局和逆序清理 | Codex |
 | 2026-09-20 | 按 ADR-044 定案 unlockedLevelIds 的空列表、重复、自引用、目录缺失警告与运行时过滤规则 | Codex |
 | 2026-09-19 | 补齐帧阶段所有权、数值道路边界、脚本与资源规划、场景装配、初始化/清理顺序、配置校验和剩余问题 | Codex |

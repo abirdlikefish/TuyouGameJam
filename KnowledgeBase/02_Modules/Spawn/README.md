@@ -4,7 +4,7 @@
 
 - ID：`MOD-SPAWN`
 - 层级：Gameplay
-- 状态：`ContractReady`
+- 状态：`InProgress`（批次 5 脚本已实现；Prefab/Scene 装配与完整玩法手测待完成）
 - 依赖：LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager
 - 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`
 
@@ -61,3 +61,9 @@ SpawnManager 使用注入的 RoadLayoutSnapshot 和已校验的 `spawnPosition` 
 - 每次 Gameplay 会话只调用一次 `StartRun`，且不会残留上局游标；`spawnTime == 0` 的条目只在首帧前生成一次。
 - SpawnManager 在不持有 `IConfigService`、`ITimeService` 或 `IPoolService` 的情况下，仍可仅根据注入的关卡配置、道路快照和 `elapsedTime` 完成确定性调度。
 - 胜利时未到时的 Gate/Prop 条目不会生成；重新进入关卡后由新 LevelRunId 从头开始，不继承被截断游标。
+
+## 变更记录
+
+| 日期 | 变更 | 记录人 |
+|---|---|---|
+| 2026-09-20 | 批次 5 新增 SpawnManager，实现三条独立时间轴游标、零时刻派发、归一化世界坐标解析、LevelRunId 隔离和终局停止 | Codex |

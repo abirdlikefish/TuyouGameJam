@@ -22,8 +22,8 @@
 | Obstacle | ContractReady | `Obstacle/README.md` | IPropConfigProvider（仅 Prop）、PoolService、Gate、Prop、EventBus、Level |
 | Monster | ContractReady | `Monster/README.md` | Level、Bullet、Army、EventBus、IEnemyConfigProvider、PoolService |
 | Bullet | ContractReady | `Bullet/README.md` | Level、IBulletConfigProvider、PoolService、IBulletHittable |
-| Level | ContractReady | `Level/README.md` | GameStateService、TimeService、Spawn、Monster、Army、BulletManager、ObstacleManager、InputGate、EventBus |
-| Spawn | ContractReady | `Spawn/README.md` | LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
+| Level | InProgress | `Level/README.md` | GameStateService、TimeService、Spawn、Monster、Army、BulletManager、ObstacleManager、InputGate、EventBus |
+| Spawn | InProgress | `Spawn/README.md` | LevelConfigSnapshot、RoadLayoutSnapshot、EnemyManager、ObstacleManager |
 | UI | HUD Deferred / Input UI ContractReady | `UI/README.md` | HUD 后续依赖 EventBus、GameStateService；首轮只实现 Input UI |
 | AudioVFX | Audio Deferred / VFX Planned | `AudioVFX/README.md` | VFX：EventBus、PoolService；Audio：后续另行设计 |
 | Input | ContractReady | `Input/README.md` | IHorizontalInputReceiver、UGUI EventSystem、Level；由 Gameplay 场景装配控制启停与逐帧 Tick |
