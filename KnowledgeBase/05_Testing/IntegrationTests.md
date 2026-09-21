@@ -108,7 +108,8 @@
 - [ ] Gate/Prop 先通过 `IArmyController` 完成状态变更再发布事实事件；增删 UI 或 VFX 监听者不会改变结算结果。
 - [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。配置保证获得法杖后不再生成其他武器箱，元素法杖 3～9 不作为武器箱直接掉落。
 - [ ] BasketballProp 接触前击破时不改变武器、人数或元素；接触时对当次去重后的每个有效槽位伤害一次并进入 Failed，后续命中锁血 1 且不能击破。
-- [ ] Ikun 出生后等待完整生成间隔，仅在 MovingDown 阶段周期生成篮球；到达 EnemyApproachY 或死亡后停止，已有篮球继续存在且不阻止胜利。
+- [ ] Ikun 出生后等待完整间隔，仅在 MovingDown 到期时进入 RangedAttacking；到期当帧停止移动，动画期间冻结下一轮计时，末帧后恢复移动；到达 EnemyApproachY 或死亡后停止远程攻击，已有篮球继续存在且不阻止胜利。
+- [ ] Ikun RangedAttack Clip 的篮球离手帧恰好调用一次 `OnBasketballReleaseFrame()`，末帧恰好调用一次 `OnRangedAttackAnimationFinished()`；重复释放事件最多生成一颗，事件前死亡、StopRun 或回池不生成，远程事件不触发 AttackCollider 范围伤害。
 - [ ] 道具未击破接触时，对每个接触槽位造成相同伤害并继续向下离场。
 - [ ] 怪物从固定出生横线上的配置位置向下移动，到达接近线后向最近的有效士兵槽位移动；初始横向位置不限制后续移动。
 - [ ] 初始总人数为 1，并按配置创建对应的上场槽位。

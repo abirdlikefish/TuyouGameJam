@@ -10,6 +10,7 @@ namespace Game.Gameplay
         ApproachingTarget,
         Blocked,
         Attacking,
+        RangedAttacking,
         Dead
     }
 
@@ -36,6 +37,7 @@ namespace Game.Gameplay
     public abstract class MonsterBase : MonoBehaviour, IRuntimeBulletTarget
     {
         private static readonly int AttackTrigger = Animator.StringToHash("Attack");
+        protected static readonly int RangedAttackTrigger = Animator.StringToHash("RangedAttack");
         private static readonly int DeathTrigger = Animator.StringToHash("Death");
         private static readonly int DeathVariantParameter = Animator.StringToHash("DeathVariant");
         private static readonly int MoveState = Animator.StringToHash("Base Layer.Move");
@@ -252,7 +254,8 @@ namespace Game.Gameplay
             SyncElementEffectNodes();
 
             attackCooldownRemaining = Mathf.Max(0f, attackCooldownRemaining - deltaTime);
-            if (state == MonsterRuntimeState.Attacking)
+            if (state == MonsterRuntimeState.Attacking ||
+                state == MonsterRuntimeState.RangedAttacking)
             {
                 return;
             }
@@ -405,6 +408,14 @@ namespace Game.Gameplay
             if (animator.gameObject.activeInHierarchy)
             {
                 animator.ResetTrigger(AttackTrigger);
+                if (HasAnimatorParameter(
+                        animator,
+                        RangedAttackTrigger,
+                        AnimatorControllerParameterType.Trigger))
+                {
+                    animator.ResetTrigger(RangedAttackTrigger);
+                }
+
                 animator.ResetTrigger(DeathTrigger);
                 animator.Rebind();
                 animator.SetInteger(DeathVariantParameter, (int)deathVariant);
@@ -548,6 +559,14 @@ namespace Game.Gameplay
             RequireAnimatorParameters();
             deathVariant = MonsterDeathVariant.Normal;
             animator.ResetTrigger(AttackTrigger);
+            if (HasAnimatorParameter(
+                    animator,
+                    RangedAttackTrigger,
+                    AnimatorControllerParameterType.Trigger))
+            {
+                animator.ResetTrigger(RangedAttackTrigger);
+            }
+
             animator.ResetTrigger(DeathTrigger);
             animator.SetInteger(DeathVariantParameter, (int)deathVariant);
             animator.Play(MoveState, 0, 0f);
@@ -565,7 +584,11 @@ namespace Game.Gameplay
                 return;
             }
 
-            TickBeforeApproach(deltaTime);
+            if (TickBeforeApproach(deltaTime))
+            {
+                return;
+            }
+
             var distance = config.MoveSpeed * deltaTime;
             var maximumDistance = position.y - enemyApproachY;
             var movement = Vector2.down * Mathf.Min(distance, maximumDistance);
@@ -651,6 +674,32 @@ namespace Game.Gameplay
             animator.SetTrigger(AttackTrigger);
         }
 
+        protected bool TryBeginRangedAttack()
+        {
+            if (!runtimeActive || state != MonsterRuntimeState.MovingDown)
+            {
+                return false;
+            }
+
+            state = MonsterRuntimeState.RangedAttacking;
+            animator.SetTrigger(RangedAttackTrigger);
+            return true;
+        }
+
+        protected bool TryFinishRangedAttack()
+        {
+            if (!runtimeActive || state != MonsterRuntimeState.RangedAttacking)
+            {
+                return false;
+            }
+
+            state = MonsterRuntimeState.MovingDown;
+            return true;
+        }
+
+        protected bool IsRangedAttacking =>
+            runtimeActive && state == MonsterRuntimeState.RangedAttacking;
+
         private static bool IsFinite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);
@@ -673,6 +722,14 @@ namespace Game.Gameplay
             return false;
         }
 
+        protected bool HasAnimatorTrigger(int parameterNameHash)
+        {
+            return HasAnimatorParameter(
+                animator,
+                parameterNameHash,
+                AnimatorControllerParameterType.Trigger);
+        }
+
         private void RequireAnimatorParameters()
         {
             if (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
@@ -689,7 +746,10 @@ namespace Game.Gameplay
 
         protected virtual void OnRuntimeInitialized() { }
 
-        protected virtual void TickBeforeApproach(float deltaTime) { }
+        protected virtual bool TickBeforeApproach(float deltaTime)
+        {
+            return false;
+        }
 
         protected virtual void OnPrepareForPool() { }
     }

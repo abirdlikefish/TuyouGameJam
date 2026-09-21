@@ -202,13 +202,15 @@ namespace Game.Tools.Editor
                 string spriteSubfolder,
                 string stateName,
                 bool loop,
-                int? deathVariant = null)
+                int? deathVariant = null,
+                bool ikunOnly = false)
             {
                 Name = name;
                 SpriteSubfolder = spriteSubfolder;
                 StateName = stateName;
                 Loop = loop;
                 DeathVariant = deathVariant;
+                IkunOnly = ikunOnly;
             }
 
             public string Name { get; }
@@ -216,9 +218,15 @@ namespace Game.Tools.Editor
             public string StateName { get; }
             public bool Loop { get; }
             public int? DeathVariant { get; }
+            public bool IkunOnly { get; }
             public string CompletionEventName => DeathVariant.HasValue
                 ? "OnDeathAnimationFinished"
                 : null;
+
+            public bool AppliesTo(MonsterDefinition monster)
+            {
+                return !IkunOnly || monster.TechnicalName == "Ikun";
+            }
         }
 
         private static readonly WeaponDefinition[] Weapons =
@@ -257,6 +265,12 @@ namespace Game.Tools.Editor
         {
             new MonsterActionDefinition("Move", "Move", "Move", true),
             new MonsterActionDefinition("Attack", "Attack", "Attack", false),
+            new MonsterActionDefinition(
+                "RangedAttack",
+                "RangedAttack",
+                "RangedAttack",
+                false,
+                ikunOnly: true),
             new MonsterActionDefinition("Death", "Death", "Death", false, 0),
             new MonsterActionDefinition("Death_Fire", "Death/Fire", "DeathFire", false, 1),
             new MonsterActionDefinition("Death_Ice", "Death/Ice", "DeathIce", false, 2),
@@ -387,6 +401,16 @@ namespace Game.Tools.Editor
                 .Select(result => result.Definition.Id));
         }
 
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Apply Ikun Attack Pending")]
+        public static void ApplyIkunAttackPending()
+        {
+            Apply(new[]
+            {
+                "Monster_Ikun_Attack",
+                "Monster_Ikun_RangedAttack"
+            });
+        }
+
         [MenuItem("Tools/Game Jam/Sequence Animation Builder/Create Missing Registered Assets")]
         public static void CreateMissingRegisteredAssets()
         {
@@ -426,6 +450,61 @@ namespace Game.Tools.Editor
                     $"[SequenceAnimationBuilder] Registered animation assets ready: " +
                     $"{createdFolderCount} folders, {createdClipCount} clips and " +
                     $"{createdControllerCount} controllers created.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Create Missing Ikun Ranged Attack Assets")]
+        public static void CreateMissingIkunRangedAttackAssets()
+        {
+            try
+            {
+                var createdFolderCount = 0;
+                var createdClipCount = 0;
+                var createdControllerCount = 0;
+                var definition = Definitions.Single(candidate =>
+                    candidate.Id == "Monster_Ikun_RangedAttack");
+                var action = MonsterActions.Single(candidate =>
+                    candidate.Name == "RangedAttack");
+                var ikun = Monsters.Single(monster => monster.TechnicalName == "Ikun");
+
+                createdFolderCount += EnsureFolder(definition.SpriteFolder);
+                createdFolderCount += EnsureFolder(
+                    (Path.GetDirectoryName(definition.ClipPath) ?? string.Empty).Replace('\\', '/'));
+                if (AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath) == null)
+                {
+                    CreateEmptyClip(definition);
+                    createdClipCount++;
+                }
+
+                createdFolderCount += EnsureFolder("Assets/Animations/Monsters/Base");
+                var baseClipPath = GetMonsterBaseClipPath(action);
+                if (AssetDatabase.LoadAssetAtPath<AnimationClip>(baseClipPath) == null)
+                {
+                    CreateMonsterBasePlaceholderClip(action, baseClipPath);
+                    createdClipCount++;
+                }
+
+                var baseController = EnsureMonsterBaseController();
+                var ikunFolder = "Assets/Animations/Monsters/Types/Ikun";
+                createdFolderCount += EnsureFolder(ikunFolder);
+                createdFolderCount += EnsureFolder($"{ikunFolder}/Clips");
+                var controllerPath = $"{ikunFolder}/AOC_Monster_Ikun.overrideController";
+                if (EnsureMonsterOverrideController(ikun, baseController, controllerPath))
+                {
+                    createdControllerCount++;
+                }
+
+                EnsureMonsterPrefabController(ikun, controllerPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log(
+                    $"[SequenceAnimationBuilder] Ikun ranged attack assets ready: " +
+                    $"{createdFolderCount} folders, {createdClipCount} clips and " +
+                    $"{createdControllerCount} override controllers created.");
             }
             catch (Exception exception)
             {
@@ -975,19 +1054,21 @@ namespace Game.Tools.Editor
             clip.frameRate = definition.FrameRate;
             AnimationUtility.SetObjectReferenceCurve(clip, targetBinding, keyframes);
 
-            var serializedClip = new SerializedObject(clip);
-            var clipSettings = serializedClip.FindProperty("m_AnimationClipSettings");
-            clipSettings.FindPropertyRelative("m_StartTime").floatValue = 0f;
-            clipSettings.FindPropertyRelative("m_StopTime").floatValue = (float)frames.Count / definition.FrameRate;
-            clipSettings.FindPropertyRelative("m_LoopTime").boolValue = definition.Loop;
-            serializedClip.ApplyModifiedPropertiesWithoutUndo();
-
+            // 事件由设计人员维护；重建只原样写回，不移动、删除或补充攻击事件。
+            // 先恢复事件，再写视觉帧的停止时间，避免旧事件时间把新 Clip 长度自动撑长。
             AnimationUtility.SetAnimationEvents(
                 clip,
                 NormalizeCompletionEvents(
                     definition,
                     existingEvents,
                     (float)frames.Count / definition.FrameRate));
+
+            var serializedClip = new SerializedObject(clip);
+            var clipSettings = serializedClip.FindProperty("m_AnimationClipSettings");
+            clipSettings.FindPropertyRelative("m_StartTime").floatValue = 0f;
+            clipSettings.FindPropertyRelative("m_StopTime").floatValue = (float)frames.Count / definition.FrameRate;
+            clipSettings.FindPropertyRelative("m_LoopTime").boolValue = definition.Loop;
+            serializedClip.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(clip);
         }
 
@@ -1442,7 +1523,20 @@ namespace Game.Tools.Editor
                     "Monster controller DeathVariant parameter must be Int.");
             }
 
+            var rangedAttackParameter = controller.parameters.FirstOrDefault(
+                parameter => parameter.name == "RangedAttack");
+            if (rangedAttackParameter == null)
+            {
+                controller.AddParameter("RangedAttack", AnimatorControllerParameterType.Trigger);
+            }
+            else if (rangedAttackParameter.type != AnimatorControllerParameterType.Trigger)
+            {
+                throw new InvalidOperationException(
+                    "Monster controller RangedAttack parameter must be Trigger.");
+            }
+
             var stateMachine = controller.layers[0].stateMachine;
+            EnsureMonsterRangedAttackState(stateMachine);
             var unusedDeathTransitions = stateMachine.anyStateTransitions
                 .Where(candidate => candidate.conditions.Any(
                     condition => condition.parameter == "Death"))
@@ -1504,6 +1598,84 @@ namespace Game.Tools.Editor
             return controller;
         }
 
+        private static void EnsureMonsterRangedAttackState(AnimatorStateMachine stateMachine)
+        {
+            var moveState = stateMachine.states
+                .Select(child => child.state)
+                .FirstOrDefault(candidate => candidate.name == "Move");
+            if (moveState == null)
+            {
+                throw new InvalidOperationException("Monster controller Move state is missing.");
+            }
+
+            var rangedAction = MonsterActions.Single(action => action.Name == "RangedAttack");
+            var rangedState = stateMachine.states
+                .Select(child => child.state)
+                .FirstOrDefault(candidate => candidate.name == rangedAction.StateName);
+            if (rangedState == null)
+            {
+                rangedState = stateMachine.AddState(
+                    rangedAction.StateName,
+                    new Vector3(380f, -40f, 0f));
+            }
+
+            var baseClipPath = GetMonsterBaseClipPath(rangedAction);
+            var baseClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(baseClipPath);
+            if (baseClip == null)
+            {
+                throw new InvalidOperationException(
+                    $"Monster ranged attack base clip is missing: {baseClipPath}");
+            }
+
+            rangedState.motion = baseClip;
+            rangedState.writeDefaultValues = true;
+
+            var enterTransitions = moveState.transitions
+                .Where(candidate => candidate.conditions.Any(condition =>
+                    condition.parameter == "RangedAttack"))
+                .ToList();
+            var enterTransition = enterTransitions.FirstOrDefault(candidate =>
+                candidate.destinationState == rangedState);
+            if (enterTransition == null)
+            {
+                enterTransition = moveState.AddTransition(rangedState);
+                enterTransition.AddCondition(AnimatorConditionMode.If, 0f, "RangedAttack");
+            }
+
+            foreach (var staleTransition in enterTransitions.Where(candidate =>
+                         candidate != enterTransition))
+            {
+                moveState.RemoveTransition(staleTransition);
+            }
+
+            enterTransition.duration = 0f;
+            enterTransition.hasExitTime = false;
+            enterTransition.canTransitionToSelf = false;
+
+            var exitTransitions = rangedState.transitions
+                .Where(candidate => candidate.destinationState == moveState)
+                .ToList();
+            var exitTransition = exitTransitions.FirstOrDefault(candidate =>
+                candidate.conditions.Length == 0);
+            if (exitTransition == null)
+            {
+                exitTransition = rangedState.AddTransition(moveState);
+            }
+
+            foreach (var staleTransition in exitTransitions.Where(candidate =>
+                         candidate != exitTransition))
+            {
+                rangedState.RemoveTransition(staleTransition);
+            }
+
+            exitTransition.duration = 0f;
+            exitTransition.exitTime = 1f;
+            exitTransition.hasExitTime = true;
+            exitTransition.hasFixedDuration = true;
+            exitTransition.canTransitionToSelf = false;
+            EditorUtility.SetDirty(rangedState);
+        }
+
         private static bool IsMonsterDeathTransition(
             AnimatorStateTransition transition,
             int deathVariant)
@@ -1551,6 +1723,11 @@ namespace Game.Tools.Editor
                 {
                     throw new InvalidOperationException(
                         $"Cannot map Monster base clip {baseClip?.name ?? "<null>"}.");
+                }
+
+                if (!action.AppliesTo(monster))
+                {
+                    continue;
                 }
 
                 var clipPath =
@@ -2051,6 +2228,11 @@ namespace Game.Tools.Editor
             {
                 foreach (var action in MonsterActions)
                 {
+                    if (!action.AppliesTo(monster))
+                    {
+                        continue;
+                    }
+
                     definitions.Add(new SequenceDefinition(
                         $"Monster_{monster.TechnicalName}_{action.Name}",
                         $"Monster {monster.TechnicalName} {action.Name}",

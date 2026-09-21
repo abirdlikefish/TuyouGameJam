@@ -83,7 +83,7 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 存活敌人的身体 Collider 使用上一同步姿态执行 Cast 阻挡。前方敌人较慢或静止时，后方敌人尽量按安全间距排队；该离散规则在 MVP 参数下减少穿透和重叠，但不保证同帧移动后的绝对不重叠，首版不实现事后分离或侧向绕行。
 - Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，Gameplay HUD 与结算数据冻结；玩家选择返回、重试或下一关后卸载场景并执行最终 Army StopRun。
 - 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
-- 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
+- 怪物进入近战攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击。Ikun 在接近线前的篮球间隔到期时停止移动并播放独立 RangedAttack，离手帧登记篮球生成请求，末帧恢复移动；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
 - 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
 - 批次 7 已导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本。Gameplay Canvas 已按 ADR-058 增加功能性 HUD、退出确认和结算控制器；击杀进度条、三种结算根节点及其按钮的具体视觉和 Inspector 绑定由后续场景装配完成。
 - Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；ADR-044 明确允许的 `unlockedLevelIds` 目录缺失 ID 是唯一例外，只警告并过滤。Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。

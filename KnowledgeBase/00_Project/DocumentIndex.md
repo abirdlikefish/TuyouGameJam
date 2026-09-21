@@ -3,7 +3,7 @@
 ## 当前阶段
 
 - 阶段：工程实现 / 批次 7 资源、动画与场景装配
-- 工程状态：批次 7.5A～7.5C 已完成；批次 7.6 已完成现有素材基线的结构与运行态专项验证。Controller/AOC、Weapon/Enemy/Bullet/Gate 身份映射、Monster AnimationEvent、显式 Army 状态切换及池对象复用均通过；当前工作树另有正在导入的帧素材，以最新 Scan Report 为准。ADR-061 双元素命中效果、ADR-062 移动端本地关卡进度、ADR-064 ikun/篮球首轮功能、ADR-065 四类元素死亡动画选择、ADR-066 Army 槽位死亡表现与 ADR-067 可配置道具类型/鹅笼增员均已进入工程实现；十种 Army Death 与四类敌人的普通/火/冰/雷死亡资源骨架已建立，正式死亡帧和鹅笼美术待后续补齐
+- 工程状态：批次 7.5A～7.5C 已完成；批次 7.6 已完成现有素材基线的结构与运行态专项验证。Controller/AOC、Weapon/Enemy/Bullet/Gate 身份映射、既有 Monster AnimationEvent、显式 Army 状态切换及池对象复用均通过；当前工作树另有正在导入的帧素材，以最新 Scan Report 为准。ADR-061 双元素命中效果、ADR-062 移动端本地关卡进度、ADR-064 ikun/篮球首轮功能、ADR-065 四类元素死亡动画选择、ADR-066 Army 槽位死亡表现、ADR-067 可配置道具类型/鹅笼增员与 ADR-068 ikun 篮球远程攻击动画桥接均已进入工程实现；十种 Army Death 与四类敌人的普通/火/冰/雷死亡资源骨架已建立，Ikun RangedAttack 正式帧、Clip、Animator 状态和 AOC 覆盖已完成，远程 AnimationEvent 与鹅笼美术待后续补齐
 - 目标：完成批次 7.6 剩余的竖屏目标分辨率实机验证与 19 个动作素材补齐；之后进入批次 8 完整命中、接触、胜负和重开闭环验收
 
 ## 推荐阅读顺序

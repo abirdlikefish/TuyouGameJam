@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator 池复用重置已实现并通过编译；剩余正式动画、Prefab 字段、Layer 与战斗手测待完成）
 - 依赖：Bullet、Army、Level、EventBus、IEnemyConfigProvider、PoolService
-- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-056-ChickenEnemyIdentityNaming.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`、`../../06_Decisions/ADR-065-ElementalMonsterDeathAnimations.md`
+- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-056-ChickenEnemyIdentityNaming.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`、`../../06_Decisions/ADR-065-ElementalMonsterDeathAnimations.md`、`../../06_Decisions/ADR-068-IkunRangedAttackAnimation.md`
 
 ## 职责
 
@@ -34,7 +34,7 @@
 | `Chick` | `ChickMonster` | 小鸡敌人 Prefab | `SingleTarget` |
 | `Hen` | `HenMonster` | 母鸡敌人 Prefab | `Area` |
 | `Rooster` | `RoosterMonster` | 公鸡敌人 Prefab | `Area`；具体阶段和专属技能另行设计 |
-| `Ikun` | `IkunMonster` | ikun 敌人 Prefab | `Area`；到达接近线前周期生成篮球 |
+| `Ikun` | `IkunMonster` | ikun 敌人 Prefab | `Area` 近战；到达接近线前周期执行篮球远程攻击 |
 
 敌人从 `TbEnemy` 读取：`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange` 和 `AttackCooldown`。`AttackType` 由 `EnemyType` 固定派生：小鸡敌人为单体攻击，母鸡、公鸡和 ikun 为范围攻击。EnemyManager 通过 Inspector 分别绑定四个规范 Prefab，并按 `EnemyType` 选择对应的具体类型池；Prefab 或池类型不写入 Luban。每个规范 Prefab 的具体根脚本另外序列化有限且非负的 `blockingGap`；ikun Prefab 另外序列化正数 `basketballSpawnInterval` 和直属 `basketballSpawnPoint`。这些类型专属字段不进入 `TbEnemy` 或 `LevelConfig`。道路接近线由 `LevelConfig` 的固定空间配置提供，不写入敌人运行时状态；攻击判定时刻由 Animator 判定帧提供。
 
@@ -42,6 +42,8 @@
 
 ```text
 MovingDown
+  -> RangedAttacking（ikun 篮球间隔到期）
+  -> MovingDown（远程动画结束）
   -> ApproachingTarget
   <-> Blocked（前方存活敌人较慢或静止）
   -> Attacking
@@ -50,11 +52,12 @@ MovingDown
 ```
 
 - `MovingDown`：向道路接近线移动；以怪物根 GameObject 中心 `position.y` 与 `EnemyApproachY` 比较，不使用 BodyCollider 或 Renderer 边缘。本帧若会越过接近线，则截断到该线，下一次 TickMovement 才开始向 Army 槽位接近，不消费剩余位移。
-- ikun 只在 `MovingDown` 状态推进篮球计时，出生后等待一个完整间隔再生成第一颗；到达接近线、死亡、StopRun 或回池后停止生成。已经生成的篮球拥有独立生命周期，不因 ikun 死亡回收。
+- ikun 只在 `MovingDown` 状态推进篮球计时，出生后等待一个完整间隔再进入 `RangedAttacking`；远程攻击期间停止移动并冻结下一轮计时，释放帧登记一次篮球生成请求，末帧返回 `MovingDown`。到达接近线、死亡、StopRun 或回池后停止生成。已经生成的篮球拥有独立生命周期，不因 ikun 死亡回收。
 - 归一化横向出生位置只决定初始中心点；进入 `ApproachingTarget` 后不保留出生位置约束。
 - `ApproachingTarget`：从 ArmyController 获取最近的有效士兵槽位并向其当前位置移动；不使用 `TargetSensor`，当 XY 距离平方小于等于 `AttackStartRange²` 时进入攻击。
 - `Blocked`：保持当前敌人规范 Prefab 的 `blockingGap` 并等待；首版不从侧面绕行。阻挡解除后恢复原移动状态。
 - `Attacking`：进入攻击起始范围后停止移动。
+- `RangedAttacking`：仅 ikun 在到达接近线前使用；停止移动并等待远程攻击的释放与结束 AnimationEvent，不执行范围近战查询。
 - `Dead`：不可移动、不可攻击、不可再次受伤结算，等待死亡动画结束。
 
 目标选择只接受 `RepresentedCount > 0` 的槽位；目标在命中关键帧前失效时，本次攻击不得造成伤害，Monster 在攻击动画结束后重新选择目标。目标位置随 Army 移动更新；敌人与槽位部分或完全重合时距离仍满足攻击起始条件，不取消或阻塞攻击。
@@ -68,6 +71,10 @@ MovingDown
 ### 范围攻击
 
 母鸡和公鸡的 Prefab 前方绑定 `AttackCollider`。该 Collider 可以保持启用作为显式查询形状，但自动 Layer Collision Matrix 关闭，平时不会触发玩法回调。非循环 Attack Clip 的命中关键帧调用 `OnAttackFrame()` 登记当前攻击序号；EnemyManager 只在 `ResolveAttacks` 消费有效请求时对 AttackCollider 执行一次显式重叠查询，通过 SlotCollider 同节点的 `ArmySlotHitProxy` 解析并按 SlotIndex 去重，对每个仍有效槽位分别提交一次相同的 `AttackPower`，并各发布一条 `MonsterAttackLanded`。
+
+### ikun 篮球远程攻击
+
+篮球间隔到期时 ikun 进入 `RangedAttacking` 并触发 `RangedAttack`，不直接生成篮球。非循环远程 Clip 的篮球离手帧调用 `OnBasketballReleaseFrame()`，按远程攻击序号只登记一次请求和当帧 SpawnPoint 世界坐标；`EnemyManager.ResolveAttacks` 校验本局与存活状态后调用现有 `IBasketballSpawner`。末帧 `OnRangedAttackAnimationFinished()` 返回 `MovingDown`，下一次 Tick 才恢复移动。请求消费前死亡或回池会取消生成，已生成篮球不受影响。
 
 ### 攻击与动画
 
@@ -109,7 +116,7 @@ PF_Monster_Ikun [IkunMonster；Animator]
 └── BasketballSpawnPoint [Transform]
 ```
 
-四个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Hen/Rooster/Ikun 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。每种怪物提供循环 Move、非循环 Attack，以及普通/火/冰/雷四种非循环 Death；Prefab 使用相同 Trigger/参数语义并绑定本类型 OverrideController。池对象每次借出都清除 Attack/Death Trigger、把 `DeathVariant` 重置为普通并从 Move 第 0 帧起播，回池时重绑 Animator，不能继承上一实例的 Death 状态、参数、帧或 Sprite。Ikun 使用独立 AOC；正式帧动画后续导入。完整导入和绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)、[PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043、ADR-046、ADR-048、ADR-056、ADR-064 和 ADR-065。
+四个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Hen/Rooster/Ikun 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。每种怪物提供循环 Move、非循环 Attack，以及普通/火/冰/雷四种非循环 Death；Ikun 另外使用独立的非循环 RangedAttack。Prefab 使用相同公共 Trigger/参数语义并绑定本类型 OverrideController。池对象每次借出都清除 Attack/RangedAttack/Death Trigger、把 `DeathVariant` 重置为普通并从 Move 第 0 帧起播，回池时重绑 Animator，不能继承上一实例的攻击、Death 状态、参数、帧或 Sprite。Ikun 远程攻击帧、Clip、Animator 状态和 AOC 覆盖已装配；篮球离手与动画结束两个 AnimationEvent 仍由用户手工放置。完整导入和绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)、[PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043、ADR-046、ADR-048、ADR-056、ADR-064、ADR-065 和 ADR-068。
 
 ## EnemyManager
 

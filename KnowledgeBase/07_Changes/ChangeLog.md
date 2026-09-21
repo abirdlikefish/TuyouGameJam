@@ -2,6 +2,7 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-22 | 新增并实施 ADR-068：ikun 篮球周期到期后进入独立 RangedAttacking 并停止移动，远程动画释放帧登记一次篮球请求，由 EnemyManager 在既有攻击结算阶段校验生成，末帧恢复 MovingDown；近战范围攻击保持原逻辑；完成 Attack 6 帧与 RangedAttack 12 帧导入、正式 Clip、公共状态/Trigger/Transition 和 Ikun AOC 覆盖，AnimationEvent 按分工保留给用户手工设置 | Monster、Animation、Prefab、测试、资源管线、ADR-064/068 | Codex |
 | 2026-09-21 | 新增并实现 ADR-067：`TbProp` 加入 WeaponBox/Basketball/GooseCage 类型与增员字段，篮球迁入统一配置，ikun 读取关卡篮球配置；新增 GooseCageProp、独立池/Prefab/Loop 动画骨架与关卡可配置生成，击破同步增员、未击破接触逐槽伤害并沿用 Failed 锁血；Luban、配置快照、事件、场景绑定和文档同步更新 | Prop、Army、Obstacle、Monster、Spawn、Level、Config、Luban、Animation、Prefab、Scene、共享契约、测试、ADR-067 | Codex |
 | 2026-09-21 | 为 BasketballProp 与 WeaponProp 接入池复用安全的序列帧表现：篮球导入 13 帧 8 FPS 循环，WeaponId 0/1/2 建立三个待填帧状态与不清空占位图的空 Clip；扩展 Prop 专用扫描应用入口、Controller、Prefab Animator 绑定与验收记录，不改变击破立即回收语义 | Prop、Animation、Prefab、资源管线、测试 | Codex |
 | 2026-09-21 | 新增并实施 ADR-066：Army 槽位采用 Alive/Dying/Empty 三态，致死立即结算但保留对应 WeaponId 的 Death 至末帧；Dying 关闭受击、发射并退出增减员选择，GameOver 保留最终死亡表现；扩展序列帧工具、六状态 AOC 与十个死亡帧目录 | Army、Level、Animation、Prefab、共享契约、测试 | Codex |

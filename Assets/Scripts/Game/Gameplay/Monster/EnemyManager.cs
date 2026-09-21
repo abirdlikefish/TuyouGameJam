@@ -150,11 +150,6 @@ namespace Game.Gameplay
             var config = configProvider.GetEnemyConfig(request.ConfigId);
             var monster = Rent(config.EnemyType);
             var runtimeId = nextRuntimeInstanceId++;
-            if (monster is IkunMonster ikun)
-            {
-                ikun.ConfigureBasketballSpawner(OnBasketballSpawnRequested);
-            }
-
             monster.InitializeRuntime(
                 request,
                 config,
@@ -217,8 +212,18 @@ namespace Game.Gameplay
             for (var index = 0; index < activeMonsters.Count; index++)
             {
                 var monster = activeMonsters[index];
-                if (monster == null || !monster.IsAlive ||
-                    !monster.TryConsumeAttackRequest(out var request))
+                if (monster == null || !monster.IsAlive)
+                {
+                    continue;
+                }
+
+                if (monster is IkunMonster ikun &&
+                    ikun.TryConsumeBasketballSpawnRequest(out var basketballWorldPosition))
+                {
+                    OnBasketballSpawnRequested(ikun, basketballWorldPosition);
+                }
+
+                if (!monster.TryConsumeAttackRequest(out var request))
                 {
                     continue;
                 }
