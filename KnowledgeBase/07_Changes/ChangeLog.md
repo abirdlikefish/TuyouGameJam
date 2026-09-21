@@ -2,6 +2,7 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 为三种 Monster Prefab 增加 Fire/Ice/Lightning 三个默认关闭的表现挂点，并由 MonsterBase 按既有一秒最近元素记录控制独立显隐；死亡、初始化与回池统一关闭，具体特效资源留待后续装配 | Monster、ElementCombo、Prefab、VFX、测试、ADR-061 | Codex |
 | 2026-09-21 | 新增 ADR-061 并实施双元素命中派生效果：火雷同步范围爆炸、冰雷确定性随机闪电链、冰火固定 +Y 击退；玩法在 Bullet 阶段显式一次性结算，死亡目标只保留视觉覆盖，表现使用冻结坐标并独立完成；Monster 增加一秒最近元素记录与击退后的第二次物理同步 | Bullet、Monster、ElementCombo、VFX、Level、Pool、Prefab、Scene、事件、共享契约、测试 | Codex |
 | 2026-09-21 | 新增 ADR-060 并实现 Army 攻击周期与战斗动画同步：初始活动槽位在首个 Playing Tick 第 1 帧立即发射；Attack/MoveLeft/MoveRight 切换继承 `FireInterval` 周期相位；实际换武器重播第 0 帧并立即发射；大帧保留周期余量且单帧最多一弹；BulletManager 当前遍历隔离命中回调中新生成的子弹 | Army、Bullet、Animation、配置契约、测试、ADR-060 | Codex |
 | 2026-09-21 | 新增 ADR-059 并实现关卡开场全屏视频门禁：Gameplay Canvas 新增 LevelIntroVideo，按 LevelId 显式绑定 VideoClip；Gameplay Ready 后保持 GameplayLoading/LevelManager Preparing，视频正常完成、未配置、播放失败或准备超时后通过 LevelIntroFinished 统一进入玩法；当前未加入 MP4 素材，未绑定关卡安全跳过 | UI、Application、Scene、Level、事件、共享契约、资源、测试 | Codex |

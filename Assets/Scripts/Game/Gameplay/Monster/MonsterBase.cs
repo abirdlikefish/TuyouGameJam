@@ -36,6 +36,11 @@ namespace Game.Gameplay
         [SerializeField] private Animator animator;
         [SerializeField, Min(0f)] private float blockingGap;
 
+        [Header("元素效果节点")]
+        [SerializeField] private GameObject fireEffectRoot;
+        [SerializeField] private GameObject iceEffectRoot;
+        [SerializeField] private GameObject lightningEffectRoot;
+
         private readonly RaycastHit2D[] blockingResults = new RaycastHit2D[32];
 
         private IArmyController army;
@@ -118,6 +123,23 @@ namespace Game.Gameplay
                 return false;
             }
 
+            if (!TryValidateElementEffectRoot(fireEffectRoot, nameof(fireEffectRoot), out error) ||
+                !TryValidateElementEffectRoot(iceEffectRoot, nameof(iceEffectRoot), out error) ||
+                !TryValidateElementEffectRoot(
+                    lightningEffectRoot,
+                    nameof(lightningEffectRoot),
+                    out error))
+            {
+                return false;
+            }
+
+            if (fireEffectRoot == iceEffectRoot || fireEffectRoot == lightningEffectRoot ||
+                iceEffectRoot == lightningEffectRoot)
+            {
+                error = $"{name} requires three distinct element effect roots.";
+                return false;
+            }
+
             if (!bodyCollider.TryGetComponent<BulletHitProxy>(out var proxy) ||
                 proxy.TargetBehaviour != this ||
                 !proxy.TryValidate(out error))
@@ -173,6 +195,7 @@ namespace Game.Gameplay
             attackFrameRegistered = false;
             deathAnimationFinished = false;
             runtimeActive = true;
+            SyncElementEffectNodes();
 
             transform.SetParent(parent, false);
             transform.position = request.WorldPosition;
@@ -209,6 +232,7 @@ namespace Game.Gameplay
             recentFireRemaining = Mathf.Max(0f, recentFireRemaining - deltaTime);
             recentIceRemaining = Mathf.Max(0f, recentIceRemaining - deltaTime);
             recentLightningRemaining = Mathf.Max(0f, recentLightningRemaining - deltaTime);
+            SyncElementEffectNodes();
 
             attackCooldownRemaining = Mathf.Max(0f, attackCooldownRemaining - deltaTime);
             if (state == MonsterRuntimeState.Attacking)
@@ -240,6 +264,7 @@ namespace Game.Gameplay
             RefreshRecentElements(damage.ActiveElements);
             currentHp = (int)Math.Max(0L, (long)currentHp - damage.Damage);
             var fatal = currentHp == 0;
+            SyncElementEffectNodes();
             damagedCallback(this, damage, currentHp, fatal);
             if (!fatal)
             {
@@ -373,6 +398,7 @@ namespace Game.Gameplay
             recentFireRemaining = 0f;
             recentIceRemaining = 0f;
             recentLightningRemaining = 0f;
+            SyncElementEffectNodes();
             targetSlotIndex = -1;
             pendingAttackSequenceId = -1;
             gameObject.SetActive(false);
@@ -393,6 +419,43 @@ namespace Game.Gameplay
             if ((elements & ElementMask.Lightning) != 0)
             {
                 recentLightningRemaining = 1f;
+            }
+        }
+
+        private void SyncElementEffectNodes()
+        {
+            var elements = GetRecentElementMask();
+            SetEffectRootActive(fireEffectRoot, (elements & ElementMask.Fire) != 0);
+            SetEffectRootActive(iceEffectRoot, (elements & ElementMask.Ice) != 0);
+            SetEffectRootActive(lightningEffectRoot, (elements & ElementMask.Lightning) != 0);
+        }
+
+        private bool TryValidateElementEffectRoot(
+            GameObject effectRoot,
+            string fieldName,
+            out string error)
+        {
+            if (effectRoot == null || effectRoot.transform.parent != transform)
+            {
+                error = $"{name}.{fieldName} must reference a direct child GameObject.";
+                return false;
+            }
+
+            if (effectRoot.activeSelf)
+            {
+                error = $"{name}.{fieldName} must be inactive by default.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static void SetEffectRootActive(GameObject effectRoot, bool active)
+        {
+            if (effectRoot.activeSelf != active)
+            {
+                effectRoot.SetActive(active);
             }
         }
 

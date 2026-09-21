@@ -102,22 +102,32 @@ PF_Effect_FireIceSteam [FireIceSteamEffect]
 ```text
 PF_Monster_Chick [ChickMonster；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer]
-└── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
+├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
+├── FireEffectRoot [默认关闭；后续特效挂点]
+├── IceEffectRoot [默认关闭；后续特效挂点]
+└── LightningEffectRoot [默认关闭；后续特效挂点]
 
 PF_Monster_Hen [HenMonster；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer]
 ├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
-└── AttackCollider [Collider2D；EnemyAttack Layer]
+├── AttackCollider [Collider2D；EnemyAttack Layer]
+├── FireEffectRoot [默认关闭；后续特效挂点]
+├── IceEffectRoot [默认关闭；后续特效挂点]
+└── LightningEffectRoot [默认关闭；后续特效挂点]
 
 PF_Monster_Rooster [RoosterMonster；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer]
 ├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
-└── AttackCollider [Collider2D；EnemyAttack Layer]
+├── AttackCollider [Collider2D；EnemyAttack Layer]
+├── FireEffectRoot [默认关闭；后续特效挂点]
+├── IceEffectRoot [默认关闭；后续特效挂点]
+└── LightningEffectRoot [默认关闭；后续特效挂点]
 ```
 
 - 三个根 GameObject 都同时挂载具体 Monster 根脚本、Animator 和 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
 - Hen/Rooster 另外绑定 `attackCollider`；Chick 不绑定 AttackCollider。
 - 三种 Prefab 均不创建 TargetSensor。
+- 三种 Prefab 根脚本都显式绑定三个互不重复的直属元素效果子节点。节点自身默认关闭且不带玩法组件；后续具体表现只能挂在对应节点内部，不替换根脚本引用。
 - `blockingGap` 只来自当前规范 Prefab，不进入 Luban 或 LevelConfig。
 - 三种 Prefab 的 Animator 使用相同的默认 Move、Attack Trigger 和 Death Trigger 语义；Move Clip 循环，Attack/Death Clip 非循环。每种 Prefab 直接绑定本类型 Controller 或基于公共状态机的预创建 OverrideController。
 - 三种非循环 Attack Clip 都必须包含恰好一个调用 `OnAttackFrame()` 的命中关键帧事件，以及末帧一个调用 `OnAttackAnimationFinished()` 的结束事件。AnimationEvent 只登记请求，实际伤害由 EnemyManager.ResolveAttacks 执行。
