@@ -108,7 +108,7 @@ Prop
 
 Layer 只负责过滤候选目标，不替代模块状态检查。道路左右边界、生成线、接近线和离场线均使用数值，不建立 Collider 或 Layer。
 
-所有纵向数值线以池化实例根 GameObject 的 `transform.position` 为准：出生使用中心落在 `SpawnY`；怪物中心到达 `EnemyApproachY` 后切换接近 Army；Gate/Prop 中心满足 `y <= DespawnY` 时离场；子弹中心满足 `y > TopBoundary` 时回收。不得改用 Collider 或 Renderer 边缘。Army 横向边界使用激活槽位合并 AABB，是唯一明确例外。
+所有纵向数值线以池化实例根 GameObject 的 `transform.position` 为准：出生使用中心落在 `SpawnY`；怪物中心到达 `EnemyApproachY` 后切换接近 Army；Gate/Prop 中心满足 `y <= DespawnY` 时离场；士兵子弹中心满足 `y > BulletDespawnY` 时回收。子弹单帧跨线时只对回收线以内的路径执行 Cast，不能命中回收线以上的目标。不得改用 Collider 或 Renderer 边缘。Army 横向边界使用激活槽位合并 AABB，是唯一明确例外。
 
 ## Layer Collision Matrix（DES-030）
 

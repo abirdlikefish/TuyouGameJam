@@ -61,7 +61,8 @@ namespace Game.Contracts
             Vector2 armySpawnPosition,
             float spawnY,
             float enemyApproachY,
-            float despawnY)
+            float despawnY,
+            float bulletDespawnY)
         {
             Width = width;
             Height = height;
@@ -75,6 +76,7 @@ namespace Game.Contracts
             SpawnY = spawnY;
             EnemyApproachY = enemyApproachY;
             DespawnY = despawnY;
+            BulletDespawnY = bulletDespawnY;
         }
 
         public float Width { get; }
@@ -87,5 +89,6 @@ namespace Game.Contracts
         public float SpawnY { get; }
         public float EnemyApproachY { get; }
         public float DespawnY { get; }
+        public float BulletDespawnY { get; }
     }
 }

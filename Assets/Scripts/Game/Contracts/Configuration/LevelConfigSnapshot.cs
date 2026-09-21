@@ -12,6 +12,7 @@ namespace Game.Contracts
             float spawnY,
             float enemyApproachY,
             float despawnY,
+            float bulletDespawnY,
             IReadOnlyList<EnemySpawnEntrySnapshot> enemySpawns,
             IReadOnlyList<GateSpawnEntrySnapshot> gateSpawns,
             IReadOnlyList<PropSpawnEntrySnapshot> propSpawns,
@@ -24,6 +25,7 @@ namespace Game.Contracts
             SpawnY = spawnY;
             EnemyApproachY = enemyApproachY;
             DespawnY = despawnY;
+            BulletDespawnY = bulletDespawnY;
             EnemySpawns = Copy(enemySpawns, nameof(enemySpawns));
             GateSpawns = Copy(gateSpawns, nameof(gateSpawns));
             PropSpawns = Copy(propSpawns, nameof(propSpawns));
@@ -37,6 +39,7 @@ namespace Game.Contracts
         public float SpawnY { get; }
         public float EnemyApproachY { get; }
         public float DespawnY { get; }
+        public float BulletDespawnY { get; }
         public IReadOnlyList<EnemySpawnEntrySnapshot> EnemySpawns { get; }
         public IReadOnlyList<GateSpawnEntrySnapshot> GateSpawns { get; }
         public IReadOnlyList<PropSpawnEntrySnapshot> PropSpawns { get; }

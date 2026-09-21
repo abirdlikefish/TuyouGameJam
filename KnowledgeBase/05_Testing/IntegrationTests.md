@@ -117,10 +117,10 @@
 - [ ] 槽位受击只减少当前槽位人数，不主动重新平均其他槽位。
 - [ ] 新增人数优先补充受击后人数较少或为空的槽位。
 - [ ] 槽位聚合 HP 按 `HpPerSoldier` 计算，伤害按比例转换为槽位人数损失。
-- [ ] 每个激活槽位从独立发射点按同一武器间隔发射一枚子弹；改变代表人数不改变单次发射数量、伤害或速度。
+- [ ] 每个激活槽位从独立发射点按同一武器间隔触发射击；WeaponId 0～1 单发，WeaponId 2～9 从同一 FirePoint 同帧生成竖直、上偏左、上偏右三颗；改变代表人数不改变对应武器的固定弹丸数量、伤害或速度。
 - [ ] 本局初始活动槽位在首个 Playing Tick 立即首发；运行中新激活槽位和失活后重新激活的槽位等待完整 `FireInterval` 后首发。
 - [ ] 实际切换到不同 WeaponId 后全部激活槽位按新武器完整间隔重置；重复当前 WeaponId 不重置。
-- [ ] 单个逻辑帧每槽最多生成一颗子弹；delta 跨过多个 FireInterval 时不补发历史子弹。
+- [ ] 单个逻辑帧每槽最多触发一次射击；法杖一次固定生成三颗，delta 跨过多个 FireInterval 时不补发历史齐射。
 - [ ] 每局初始武器为 WeaponId=0，火/冰/雷剩余时间均为 0；三元素可以同时有效并从 Gameplay delta 扣减到不小于 0。
 - [ ] 子弹保存发射瞬间的 WeaponId 与 ElementMask；Army 后续换武器、获得元素或元素过期不修改飞行中的子弹。
 - [ ] 只有 `Fire|Lightning`、`Ice|Lightning`、`Fire|Ice` 三个精准二元素掩码触发对应效果；None、单元素、三元素、Gate 与 Prop 命中均不误触发。
@@ -134,7 +134,8 @@
 - [ ] 正式进入 Playing 时，初始活动槽位在 Attack/Move 动画第 1 帧立即发射；运行中新激活槽位仍等待完整 `FireInterval`。
 - [ ] Attack、MoveLeft、MoveRight 连续切换保持已经播放的攻击周期进度，不从第 0 帧重启，也不改变下一次发射边界。
 - [ ] 实际 WeaponId 改变时活动槽位从新动画第 0 帧立即发射；重复相同 WeaponId 不重播、不发射。
-- [ ] 大帧每槽最多产生一颗周期弹且保留跨周期余量；换武器回调中新生成的子弹不在 BulletManager 当前 Tick 内移动或连锁命中。
+- [ ] 大帧每槽最多触发一次周期射击且保留跨周期余量；法杖齐射三颗全部遵循当前 Tick 的快照边界，换武器回调中新生成的子弹不在 BulletManager 当前 Tick 内移动或连锁命中。
+- [ ] 法杖中弹方向为 `(0,1)`，左弹为 `(-3,13).normalized`，右弹为 `(3,13).normalized`；三者速度大小相同且等于配置 MoveSpeed，根节点默认向上并分别对齐飞行方向。
 - [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
 - [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
 - [ ] 四类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。
@@ -163,7 +164,7 @@
 - [ ] 多个槽位同时接触同一门时只应用一次门接触结果。
 - [ ] `ObstacleManager` 能登记、查询、注销和回收 Gate/Prop，且相同生成参数的多个 Gate 或相同配置的多个 Prop 拥有不同运行时 ID。
 - [ ] Gate/Prop 根中心 `y <= DespawnY` 时离场，Collider/Renderer 尺寸不改变阈值；离场对象不再结算接触。
-- [ ] 子弹根中心严格大于派生 `TopBoundary` 时回收；等于上边界时不因 Sprite 或 Collider 边缘提前回收。
+- [ ] 子弹根中心严格大于关卡 `BulletDespawnY` 时当帧回池；等于回收线时仍有效，Sprite、Collider 和飞行方向不改变阈值；单帧跨线只能命中线以内目标。
 - [ ] 军队人数为 0 时进入 GameOver。
 - [ ] 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后进入 Victory。
 - [ ] Victory 不等待 Gate/Prop 时间轴或活动实例完成；未来 Gate/Prop 停止生成，活动对象在 StopRun 中回收，且不会补发接触、击破或奖励效果。
@@ -184,6 +185,13 @@
 - [ ] MainMenu 和 LevelSelect 都等待 UI 命令，不创建自动跳过定时器，也不依赖 Gameplay 推进。
 - [ ] `TimerHandle.Cancel()` 幂等；状态离开、加载失败、终局或会话失效后，旧回调不会执行或推进流程。
 - [ ] MVP 不暴露父域图、重叠归属、倍率修改、暂停令牌、减速、加速或局部时停接口。
+
+## Army 奖励粒子 VFX
+
+- [x] GameplaySceneEntry 显式绑定 `VFXRoot/ArmyRewardVfx`，Prefab 内 Glow、Ring、Spark 三套 ParticleSystem 引用完整，自动 Emission、Loop 和 Play On Awake 均关闭，排序高于 SoldierVisual。
+- [x] 鹅笼奖励事件专项冒烟：3 个 Alive 槽位准确产生 3 Glow、3 Ring、15 Spark；Cleanup 后全部归零且订阅取消。
+- [x] 过滤专项冒烟：2 个 Alive、1 个 Dying 时，元素门、武器箱、实际增员分别只覆盖 2 个 Alive；实际增员为 0 和元素派生 `ArmyWeaponChanged` 不产生额外粒子。
+- [ ] Play Mode 完整关卡实机检查加法门、鹅笼、武器箱和三种元素门的最终颜色、尺寸、遮挡与 Army 横移跟随；当前被工作树中 ikun Animator 缺少 `RangedAttack` Trigger 的独立校验错误阻塞。
 
 ## Deferred 能力
 
@@ -222,7 +230,7 @@
 - [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。
-- [ ] `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary`；无效宽高、非有限或越界 Army 坐标、Y 线顺序错误时报告 `InvalidLevelConfig` 并退出应用。
+- [ ] `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary` 且 `armySpawnPosition.y < bulletDespawnY <= TopBoundary`；bulletDespawnY 可以低于 enemyApproachY 或 spawnY；无效宽高、非有限或越界 Army 坐标、Y 线顺序错误时报告 `InvalidLevelConfig` 并退出应用。
 - [ ] 相同 `spawnPosition` 的不同尺寸敌人、Gate 和 Prop 使用相同中心点坐标，不按碰撞体或渲染尺寸内缩。
 - [ ] 任一生成项的 `spawnPosition` 越界、为 NaN 或无穷值时报告 `InvalidLevelConfig` 并退出应用。
 - [ ] 配置源不被运行时人数、生命值、门数字、道具 HP、生成游标或关卡计时覆盖。

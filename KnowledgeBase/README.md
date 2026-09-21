@@ -38,7 +38,7 @@
 | 关卡 | ContractReady | `02_Modules/Level/README.md` |
 | 生成与对象池 | ContractReady | `02_Modules/Spawn/README.md` |
 | UI | HUD Deferred / Input UI ContractReady | `02_Modules/UI/README.md` |
-| 音频与特效 | Audio Deferred / VFX InProgress（三种元素组合最小显示已装配） | `02_Modules/AudioVFX/README.md` |
+| 音频与特效 | Audio Deferred / VFX InProgress（三种元素组合与 Army 奖励粒子已装配） | `02_Modules/AudioVFX/README.md` |
 | 输入 | ContractReady | `02_Modules/Input/README.md` |
 | 本地关卡进度 | InTest | `02_Modules/Save/README.md` |
 

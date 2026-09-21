@@ -41,6 +41,8 @@ namespace Game.Gameplay
         private int aliveEnemyCount;
         private int ikunBasketballConfigId;
         private float enemyApproachY;
+        private float roadLeftBoundary;
+        private float roadRightBoundary;
         private bool initialized;
         private bool running;
 
@@ -116,7 +118,10 @@ namespace Game.Gameplay
             }
 
             if (startedLevelRunId <= 0 || initializedIkunBasketballConfigId < 0 ||
-                !IsFinite(roadLayout.EnemyApproachY))
+                !IsFinite(roadLayout.EnemyApproachY) ||
+                !IsFinite(roadLayout.LeftBoundary) ||
+                !IsFinite(roadLayout.RightBoundary) ||
+                roadLayout.LeftBoundary >= roadLayout.RightBoundary)
             {
                 throw new ArgumentException("Enemy run configuration is invalid.");
             }
@@ -124,6 +129,8 @@ namespace Game.Gameplay
             levelRunId = startedLevelRunId;
             ikunBasketballConfigId = initializedIkunBasketballConfigId;
             enemyApproachY = roadLayout.EnemyApproachY;
+            roadLeftBoundary = roadLayout.LeftBoundary;
+            roadRightBoundary = roadLayout.RightBoundary;
             nextRuntimeInstanceId = 0;
             aliveEnemyCount = 0;
             activeMonsters.Clear();
@@ -155,6 +162,8 @@ namespace Game.Gameplay
                 config,
                 runtimeId,
                 enemyApproachY,
+                roadLeftBoundary,
+                roadRightBoundary,
                 army,
                 OnMonsterDamaged,
                 OnMonsterDied,
@@ -315,6 +324,9 @@ namespace Game.Gameplay
             running = false;
             levelRunId = 0;
             ikunBasketballConfigId = 0;
+            enemyApproachY = 0f;
+            roadLeftBoundary = 0f;
+            roadRightBoundary = 0f;
         }
 
         private void ResolveSingleTargetAttack(MonsterBase monster, int slotIndex)

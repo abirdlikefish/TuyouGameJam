@@ -18,6 +18,8 @@ namespace Game.Gameplay
         private const int IceLightningStaffWeaponId = 8;
         private const int FireIceLightningStaffWeaponId = 9;
         private const int MvpWeaponCount = 10;
+        private static readonly Vector2 StaffLeftBulletDirection = new Vector2(-3f, 13f).normalized;
+        private static readonly Vector2 StaffRightBulletDirection = new Vector2(3f, 13f).normalized;
 
         [Serializable]
         private struct WeaponAnimatorControllerBinding
@@ -743,7 +745,7 @@ namespace Game.Gameplay
                 {
                     // 实际换武器会刷新攻击：动画和攻击周期同时归零，并在第 1 帧发射。
                     slot.SetFireCooldown(nextWeapon.FireInterval);
-                    SpawnBullet(slot, nextWeapon, activeElements);
+                    SpawnProjectilesForShot(slot, nextWeapon, activeElements);
                 }
             }
 
@@ -907,10 +909,10 @@ namespace Game.Gameplay
 
                 if (allowScheduledFire)
                 {
-                    SpawnBullet(slot, weapon, activeElements);
+                    SpawnProjectilesForShot(slot, weapon, activeElements);
                 }
 
-                // 大帧仍只发射一颗，但保留越过周期边界的时间，避免射击相位逐帧漂移。
+                // 大帧仍只触发一次射击，但保留越过周期边界的时间，避免射击相位逐帧漂移。
                 var elapsedAfterShot = Mathf.Max(0f, deltaTime - cooldown);
                 var elapsedInCycle = Mathf.Repeat(elapsedAfterShot, weapon.FireInterval);
                 var nextCooldown = elapsedInCycle > 0f
@@ -920,10 +922,27 @@ namespace Game.Gameplay
             }
         }
 
-        private void SpawnBullet(
+        private void SpawnProjectilesForShot(
             ArmySlotView slot,
             WeaponConfigSnapshot weapon,
             ElementMask activeElements)
+        {
+            SpawnBullet(slot, weapon, activeElements, Vector2.up);
+            if (!IsStaffWeapon(currentWeaponId))
+            {
+                return;
+            }
+
+            // 法杖固定三弹道；方向在此归一化，速度仍只取 Bullet 配置。
+            SpawnBullet(slot, weapon, activeElements, StaffLeftBulletDirection);
+            SpawnBullet(slot, weapon, activeElements, StaffRightBulletDirection);
+        }
+
+        private void SpawnBullet(
+            ArmySlotView slot,
+            WeaponConfigSnapshot weapon,
+            ElementMask activeElements,
+            Vector2 direction)
         {
             bulletManager.Spawn(
                 new BulletSpawnRequest(
@@ -934,7 +953,7 @@ namespace Game.Gameplay
                     currentWeaponId,
                     activeElements,
                     slot.FirePosition,
-                    Vector2.up));
+                    direction));
         }
 
         private static float GetAttackNormalizedTime(ArmySlotView slot, float fireInterval)

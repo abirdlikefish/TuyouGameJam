@@ -69,6 +69,8 @@ namespace Game.Gameplay
         private int pendingAttackSequenceId = -1;
         private float attackCooldownRemaining;
         private float enemyApproachY;
+        private float roadLeftBoundary;
+        private float roadRightBoundary;
         private float recentFireRemaining;
         private float recentIceRemaining;
         private float recentLightningRemaining;
@@ -91,6 +93,8 @@ namespace Game.Gameplay
         internal Collider2D BodyCollider => bodyCollider;
         internal Vector2 EffectCenter => bodyCollider.bounds.center;
         internal MonsterDeathVariant DeathVariant => deathVariant;
+        protected float RoadLeftBoundary => roadLeftBoundary;
+        protected float RoadRightBoundary => roadRightBoundary;
 
         BulletTargetKind IRuntimeBulletTarget.BulletTargetKind => BulletTargetKind.Enemy;
         bool IBulletHittable.CanReceiveBulletHit => IsAlive;
@@ -180,6 +184,8 @@ namespace Game.Gameplay
             EnemyConfigSnapshot enemyConfig,
             int initializedRuntimeInstanceId,
             float approachY,
+            float initializedRoadLeftBoundary,
+            float initializedRoadRightBoundary,
             IArmyController armyController,
             Action<MonsterBase, EnemyDamageContext, int, bool> onDamaged,
             Action<MonsterBase, EnemyDamageContext> onDeath,
@@ -191,6 +197,14 @@ namespace Game.Gameplay
                 throw new ArgumentException("Enemy config type does not match the concrete monster type.");
             }
 
+            if (!IsFinite(approachY) ||
+                !IsFinite(initializedRoadLeftBoundary) ||
+                !IsFinite(initializedRoadRightBoundary) ||
+                initializedRoadLeftBoundary >= initializedRoadRightBoundary)
+            {
+                throw new ArgumentException("Monster road movement bounds are invalid.");
+            }
+
             army = armyController ?? throw new ArgumentNullException(nameof(armyController));
             damagedCallback = onDamaged ?? throw new ArgumentNullException(nameof(onDamaged));
             deathCallback = onDeath ?? throw new ArgumentNullException(nameof(onDeath));
@@ -200,6 +214,8 @@ namespace Game.Gameplay
             runtimeInstanceId = initializedRuntimeInstanceId;
             spawnEntryIndex = request.SpawnEntryIndex;
             enemyApproachY = approachY;
+            roadLeftBoundary = initializedRoadLeftBoundary;
+            roadRightBoundary = initializedRoadRightBoundary;
             currentHp = config.MaxHp;
             state = MonsterRuntimeState.MovingDown;
             targetSlotIndex = -1;
@@ -435,6 +451,9 @@ namespace Game.Gameplay
             levelRunId = 0;
             runtimeInstanceId = -1;
             spawnEntryIndex = -1;
+            enemyApproachY = 0f;
+            roadLeftBoundary = 0f;
+            roadRightBoundary = 0f;
             currentHp = 0;
             recentFireRemaining = 0f;
             recentIceRemaining = 0f;
@@ -591,7 +610,8 @@ namespace Game.Gameplay
 
             var distance = config.MoveSpeed * deltaTime;
             var maximumDistance = position.y - enemyApproachY;
-            var movement = Vector2.down * Mathf.Min(distance, maximumDistance);
+            var downwardDistance = Mathf.Min(distance, maximumDistance);
+            var movement = CalculateMovingDownMovement(deltaTime, downwardDistance);
             ApplyBlockedMovement(movement, enemyBodyFilter);
             if (transform.position.y <= enemyApproachY)
             {
@@ -749,6 +769,13 @@ namespace Game.Gameplay
         protected virtual bool TickBeforeApproach(float deltaTime)
         {
             return false;
+        }
+
+        protected virtual Vector2 CalculateMovingDownMovement(
+            float deltaTime,
+            float downwardDistance)
+        {
+            return Vector2.down * downwardDistance;
         }
 
         protected virtual void OnPrepareForPool() { }

@@ -21,7 +21,7 @@ namespace Game.Gameplay
         private IElementComboResolver elementComboResolver;
         private int levelRunId;
         private int nextRuntimeInstanceId;
-        private float topBoundary;
+        private float bulletDespawnY;
         private bool initialized;
         private bool running;
 
@@ -91,13 +91,13 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException(nameof(startedLevelRunId));
             }
 
-            if (!IsFinite(roadLayout.TopBoundary))
+            if (!IsFinite(roadLayout.BulletDespawnY))
             {
-                throw new ArgumentException("Road top boundary must be finite.", nameof(roadLayout));
+                throw new ArgumentException("Bullet despawn Y must be finite.", nameof(roadLayout));
             }
 
             levelRunId = startedLevelRunId;
-            topBoundary = roadLayout.TopBoundary;
+            bulletDespawnY = roadLayout.BulletDespawnY;
             nextRuntimeInstanceId = 0;
             activeBullets.Clear();
             pendingRecycles.Clear();
@@ -153,8 +153,20 @@ namespace Game.Gameplay
                     continue;
                 }
 
+                var currentPosition = (Vector2)bullet.transform.position;
+                if (currentPosition.y > bulletDespawnY)
+                {
+                    pendingRecycles.Add(bullet);
+                    continue;
+                }
+
                 var desiredPosition = bullet.GetDesiredPosition(bulletDeltaTime);
-                var distance = bullet.GetTravelDistance(desiredPosition);
+                var crossesDespawnLine = desiredPosition.y > bulletDespawnY;
+                // 单帧跨线时只查询回收线以内的路径，避免子弹命中本应不可达的线外目标。
+                var movementEndPosition = crossesDespawnLine
+                    ? ClipMovementToDespawnLine(currentPosition, desiredPosition, bulletDespawnY)
+                    : desiredPosition;
+                var distance = bullet.GetTravelDistance(movementEndPosition);
                 if (TryFindHit(bullet, filter, distance, out var candidate))
                 {
                     var hitPosition = candidate.Hit.point;
@@ -181,8 +193,8 @@ namespace Game.Gameplay
                     continue;
                 }
 
-                bullet.ApplyPosition(desiredPosition);
-                if (desiredPosition.y > topBoundary)
+                bullet.ApplyPosition(movementEndPosition);
+                if (crossesDespawnLine)
                 {
                     pendingRecycles.Add(bullet);
                 }
@@ -298,6 +310,21 @@ namespace Game.Gameplay
             return kindComparison != 0
                 ? kindComparison
                 : left.Target.RuntimeInstanceId.CompareTo(right.Target.RuntimeInstanceId);
+        }
+
+        private static Vector2 ClipMovementToDespawnLine(
+            Vector2 currentPosition,
+            Vector2 desiredPosition,
+            float despawnY)
+        {
+            var verticalDistance = desiredPosition.y - currentPosition.y;
+            if (verticalDistance <= 0f)
+            {
+                return currentPosition;
+            }
+
+            var ratio = Mathf.Clamp01((despawnY - currentPosition.y) / verticalDistance);
+            return Vector2.Lerp(currentPosition, desiredPosition, ratio);
         }
 
         private bool IsCurrentRun(int queriedLevelRunId)
