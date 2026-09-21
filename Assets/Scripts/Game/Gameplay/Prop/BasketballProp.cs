@@ -6,10 +6,10 @@ namespace Game.Gameplay
 {
     public sealed class BasketballProp : BreakablePropBase
     {
-        [SerializeField, Min(1)] private int maxHp = 10;
-        [SerializeField, Min(1)] private int contactDamage = 10;
-        [SerializeField, Min(0f)] private float moveSpeed = 1f;
+        private static readonly int BasketballLoopState =
+            Animator.StringToHash("Base Layer.Basketball_Loop");
 
+        private PropConfigSnapshot config;
         private int sourceEnemyRuntimeInstanceId = -1;
 
         public override bool TryValidate(out string error)
@@ -19,43 +19,97 @@ namespace Game.Gameplay
                 return false;
             }
 
-            if (maxHp <= 0 || contactDamage <= 0 || !IsFinite(moveSpeed) || moveSpeed < 0f)
-            {
-                error = $"{name} requires positive maxHp/contactDamage and finite non-negative moveSpeed.";
-                return false;
-            }
-
             error = string.Empty;
             return true;
         }
 
         internal void InitializeRuntime(
-            BasketballSpawnRequest request,
+            PropSpawnRequest request,
+            PropConfigSnapshot propConfig,
             int initializedRuntimeInstanceId,
             IArmyController armyController,
             IEventBus initializedEventBus,
             Action<IRoadObstacleRuntime, ObstacleRecycleReason> onRecycleRequested,
             Transform parent)
         {
-            if (request.SourceEnemyRuntimeInstanceId < 0)
+            if (request.ConfigId != propConfig.Id)
             {
-                throw new ArgumentException("Basketball source enemy ID must be non-negative.");
+                throw new ArgumentException("Prop config ID does not match its spawn request.");
             }
 
-            sourceEnemyRuntimeInstanceId = request.SourceEnemyRuntimeInstanceId;
-            InitializeBreakableRuntime(
+            InitializeRuntime(
                 request.LevelRunId,
-                initializedRuntimeInstanceId,
-                -1,
-                null,
-                maxHp,
-                contactDamage,
-                moveSpeed,
+                request.SpawnEntryIndex,
                 request.WorldPosition,
+                -1,
+                propConfig,
+                initializedRuntimeInstanceId,
                 armyController,
                 initializedEventBus,
                 onRecycleRequested,
                 parent);
+        }
+
+        internal void InitializeRuntime(
+            BasketballSpawnRequest request,
+            PropConfigSnapshot propConfig,
+            int initializedRuntimeInstanceId,
+            IArmyController armyController,
+            IEventBus initializedEventBus,
+            Action<IRoadObstacleRuntime, ObstacleRecycleReason> onRecycleRequested,
+            Transform parent)
+        {
+            if (request.SourceEnemyRuntimeInstanceId < 0 || request.ConfigId != propConfig.Id)
+            {
+                throw new ArgumentException("Basketball request source or config ID is invalid.");
+            }
+
+            InitializeRuntime(
+                request.LevelRunId,
+                -1,
+                request.WorldPosition,
+                request.SourceEnemyRuntimeInstanceId,
+                propConfig,
+                initializedRuntimeInstanceId,
+                armyController,
+                initializedEventBus,
+                onRecycleRequested,
+                parent);
+        }
+
+        private void InitializeRuntime(
+            int initializedLevelRunId,
+            int initializedSpawnEntryIndex,
+            Vector2 worldPosition,
+            int initializedSourceEnemyRuntimeInstanceId,
+            PropConfigSnapshot propConfig,
+            int initializedRuntimeInstanceId,
+            IArmyController armyController,
+            IEventBus initializedEventBus,
+            Action<IRoadObstacleRuntime, ObstacleRecycleReason> onRecycleRequested,
+            Transform parent)
+        {
+            if (propConfig.PropType != PropType.Basketball)
+            {
+                throw new ArgumentException("BasketballProp requires PropType.Basketball.");
+            }
+
+            config = propConfig;
+            sourceEnemyRuntimeInstanceId = initializedSourceEnemyRuntimeInstanceId;
+            InitializeBreakableRuntime(
+                initializedLevelRunId,
+                initializedRuntimeInstanceId,
+                initializedSpawnEntryIndex,
+                config.Id,
+                config.MaxHp,
+                config.ContactDamage,
+                config.MoveSpeed,
+                worldPosition,
+                armyController,
+                initializedEventBus,
+                onRecycleRequested,
+                parent);
+            PrepareAnimation(BasketballLoopState);
         }
 
         protected override void OnBroken(BulletDamageContext damage)
@@ -65,22 +119,19 @@ namespace Game.Gameplay
                     LevelRunId,
                     RuntimeInstanceId,
                     sourceEnemyRuntimeInstanceId,
+                    config.Id,
                     damage));
         }
 
         protected override string BuildDebugText()
         {
-            return $"Basketball  HP {CurrentHp}/{MaxHp}";
+            return $"Basketball {config.Id}  HP {CurrentHp}/{MaxHp}";
         }
 
         protected override void OnPrepareForPool()
         {
             sourceEnemyRuntimeInstanceId = -1;
-        }
-
-        private static bool IsFinite(float value)
-        {
-            return !float.IsNaN(value) && !float.IsInfinity(value);
+            config = default(PropConfigSnapshot);
         }
     }
 }

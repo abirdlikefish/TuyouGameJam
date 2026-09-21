@@ -39,6 +39,7 @@ namespace Game.Gameplay
         private int levelRunId;
         private int nextRuntimeInstanceId;
         private int aliveEnemyCount;
+        private int ikunBasketballConfigId;
         private float enemyApproachY;
         private bool initialized;
         private bool running;
@@ -103,7 +104,10 @@ namespace Game.Gameplay
                    ikunPrefab.TryValidate(out error);
         }
 
-        public void StartRun(int startedLevelRunId, RoadLayoutSnapshot roadLayout)
+        public void StartRun(
+            int startedLevelRunId,
+            RoadLayoutSnapshot roadLayout,
+            int initializedIkunBasketballConfigId)
         {
             EnsureInitialized();
             if (running)
@@ -111,12 +115,14 @@ namespace Game.Gameplay
                 throw new InvalidOperationException("EnemyManager already has an active run.");
             }
 
-            if (startedLevelRunId <= 0 || !IsFinite(roadLayout.EnemyApproachY))
+            if (startedLevelRunId <= 0 || initializedIkunBasketballConfigId < 0 ||
+                !IsFinite(roadLayout.EnemyApproachY))
             {
                 throw new ArgumentException("Enemy run configuration is invalid.");
             }
 
             levelRunId = startedLevelRunId;
+            ikunBasketballConfigId = initializedIkunBasketballConfigId;
             enemyApproachY = roadLayout.EnemyApproachY;
             nextRuntimeInstanceId = 0;
             aliveEnemyCount = 0;
@@ -303,6 +309,7 @@ namespace Game.Gameplay
             aliveEnemyCount = 0;
             running = false;
             levelRunId = 0;
+            ikunBasketballConfigId = 0;
         }
 
         private void ResolveSingleTargetAttack(MonsterBase monster, int slotIndex)
@@ -408,7 +415,11 @@ namespace Game.Gameplay
             }
 
             basketballSpawner.SpawnBasketball(
-                new BasketballSpawnRequest(levelRunId, ikun.RuntimeInstanceId, worldPosition));
+                new BasketballSpawnRequest(
+                    levelRunId,
+                    ikun.RuntimeInstanceId,
+                    ikunBasketballConfigId,
+                    worldPosition));
         }
 
         private bool IsOwnedCurrentMonster(MonsterBase monster)

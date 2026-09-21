@@ -4,20 +4,44 @@
     "weaponId": 0,
     "maxHp": 10,
     "contactDamage": 10,
-    "moveSpeed": 1
+    "moveSpeed": 1,
+    "propType": 0,
+    "armyAddition": 0
   },
   {
     "id": 1,
     "weaponId": 1,
     "maxHp": 10,
     "contactDamage": 10,
-    "moveSpeed": 1
+    "moveSpeed": 1,
+    "propType": 0,
+    "armyAddition": 0
   },
   {
     "id": 2,
     "weaponId": 2,
     "maxHp": 10,
     "contactDamage": 10,
-    "moveSpeed": 1
+    "moveSpeed": 1,
+    "propType": 0,
+    "armyAddition": 0
+  },
+  {
+    "id": 3,
+    "weaponId": 0,
+    "maxHp": 10,
+    "contactDamage": 10,
+    "moveSpeed": 1,
+    "propType": 1,
+    "armyAddition": 0
+  },
+  {
+    "id": 4,
+    "weaponId": 0,
+    "maxHp": 10,
+    "contactDamage": 10,
+    "moveSpeed": 1,
+    "propType": 2,
+    "armyAddition": 1
   }
 ]

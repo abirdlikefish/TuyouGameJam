@@ -11,6 +11,7 @@ namespace Game.Gameplay
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private BulletHitProxy bulletHitProxy;
         [SerializeField] private SpriteRenderer visual;
+        [SerializeField] private Animator animator;
         [SerializeField] private TMP_Text debugText;
 
         private readonly HashSet<int> consumedBulletIds = new HashSet<int>();
@@ -22,17 +23,19 @@ namespace Game.Gameplay
         private int runtimeInstanceId = -1;
         private int spawnEntryIndex = -1;
         private int? configId;
-        private int maxHp;
-        private int contactDamage;
-        private float moveSpeed;
+        private int runtimeMaxHp;
+        private int runtimeContactDamage;
+        private float runtimeMoveSpeed;
         private int currentHp;
         private PropContactState contactState;
         private bool runtimeActive;
+        private bool animationPrepared;
+        private int preparedAnimationState;
 
         public int RuntimeInstanceId => runtimeInstanceId;
         protected int LevelRunId => levelRunId;
         protected int CurrentHp => currentHp;
-        protected int MaxHp => maxHp;
+        protected int MaxHp => runtimeMaxHp;
         protected IArmyController Army => army;
         protected IEventBus EventBus => eventBus;
 
@@ -52,9 +55,16 @@ namespace Game.Gameplay
         public virtual bool TryValidate(out string error)
         {
             error = string.Empty;
-            if (bodyCollider == null || bulletHitProxy == null || visual == null)
+            if (bodyCollider == null || bulletHitProxy == null || visual == null ||
+                animator == null || animator.runtimeAnimatorController == null)
             {
-                error = $"{name} requires bodyCollider, bulletHitProxy and visual bindings.";
+                error = $"{name} requires bodyCollider, bulletHitProxy, visual and Animator bindings.";
+                return false;
+            }
+
+            if (!animator.enabled)
+            {
+                error = $"{name}.animator must be enabled.";
                 return false;
             }
 
@@ -100,10 +110,10 @@ namespace Game.Gameplay
             runtimeInstanceId = initializedRuntimeInstanceId;
             spawnEntryIndex = initializedSpawnEntryIndex;
             configId = initializedConfigId;
-            maxHp = initializedMaxHp;
-            contactDamage = initializedContactDamage;
-            moveSpeed = initializedMoveSpeed;
-            currentHp = maxHp;
+            runtimeMaxHp = initializedMaxHp;
+            runtimeContactDamage = initializedContactDamage;
+            runtimeMoveSpeed = initializedMoveSpeed;
+            currentHp = runtimeMaxHp;
             contactState = PropContactState.Pending;
             runtimeActive = true;
             consumedBulletIds.Clear();
@@ -112,6 +122,14 @@ namespace Game.Gameplay
             transform.rotation = Quaternion.identity;
             bodyCollider.enabled = true;
             RefreshDebugText();
+        }
+
+        private void OnEnable()
+        {
+            if (runtimeActive && animationPrepared)
+            {
+                PlayPreparedAnimation();
+            }
         }
 
         public void ReceiveBulletHit(BulletDamageContext damage)
@@ -146,7 +164,7 @@ namespace Game.Gameplay
         {
             if (runtimeActive)
             {
-                transform.position += Vector3.down * (moveSpeed * deltaTime);
+                transform.position += Vector3.down * (runtimeMoveSpeed * deltaTime);
             }
         }
 
@@ -167,14 +185,14 @@ namespace Game.Gameplay
                     continue;
                 }
 
-                army.ApplySlotDamage(slotIndex, contactDamage);
+                army.ApplySlotDamage(slotIndex, runtimeContactDamage);
                 eventBus.Publish(
                     new PropContactDamage(
                         levelRunId,
                         runtimeInstanceId,
                         armyId,
                         slotIndex,
-                        contactDamage));
+                        runtimeContactDamage));
             }
 
             RefreshDebugText();
@@ -200,6 +218,14 @@ namespace Game.Gameplay
         void IRoadObstacleRuntime.PrepareForPool()
         {
             runtimeActive = false;
+            animationPrepared = false;
+            preparedAnimationState = 0;
+            if (animator.gameObject.activeInHierarchy)
+            {
+                animator.Rebind();
+                ResetAnimatorForPool(animator);
+            }
+
             bodyCollider.enabled = false;
             OnPrepareForPool();
             army = null;
@@ -209,9 +235,9 @@ namespace Game.Gameplay
             runtimeInstanceId = -1;
             spawnEntryIndex = -1;
             configId = null;
-            maxHp = 0;
-            contactDamage = 0;
-            moveSpeed = 0f;
+            runtimeMaxHp = 0;
+            runtimeContactDamage = 0;
+            runtimeMoveSpeed = 0f;
             currentHp = 0;
             consumedBulletIds.Clear();
             gameObject.SetActive(false);
@@ -220,6 +246,43 @@ namespace Game.Gameplay
         protected abstract void OnBroken(BulletDamageContext damage);
         protected abstract string BuildDebugText();
         protected virtual void OnPrepareForPool() { }
+        protected virtual void ConfigureAnimatorForPlayback(Animator targetAnimator) { }
+        protected virtual void ResetAnimatorForPool(Animator targetAnimator) { }
+
+        protected void PrepareAnimation(int animationState)
+        {
+            preparedAnimationState = animationState;
+            animationPrepared = true;
+            if (gameObject.activeInHierarchy)
+            {
+                PlayPreparedAnimation();
+            }
+        }
+
+        protected bool HasAnimatorParameter(
+            int parameterNameHash,
+            AnimatorControllerParameterType parameterType)
+        {
+            var parameters = animator.parameters;
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                if (parameters[index].nameHash == parameterNameHash &&
+                    parameters[index].type == parameterType)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void PlayPreparedAnimation()
+        {
+            animator.Rebind();
+            ConfigureAnimatorForPlayback(animator);
+            animator.Play(preparedAnimationState, 0, 0f);
+            animator.Update(0f);
+        }
 
         private ObstacleState ToObstacleState()
         {

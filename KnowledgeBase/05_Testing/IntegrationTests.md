@@ -67,16 +67,20 @@
 
 - [ ] 原始导出包只保存在 `Reference/AnimationSource`；`Assets/Art/Sprites` 中没有原始绿底帧、预览 GIF、导出 JSON 或供应方 4K 图集。
 - [ ] 所有运行时动画帧使用连续四位编号；同一对象家族的 Texture Type、Alpha、Clamp、Bilinear、MipMap、Read/Write、Max Size、PPU 和 Pivot 设置一致，透明边缘在深浅背景上无明显绿边。
-- [ ] 十个 WeaponId 各有 Idle、Victory、Attack、MoveLeft、MoveRight；Idle/Attack/左右移动循环，Victory 非循环；`AC_Army_Base` 无参数、无自动 Transition，所有 OverrideController 完整覆盖且无 Missing Motion。
+- [ ] 十个 WeaponId 各有 Idle、Victory、Attack、MoveLeft、MoveRight、Death；Idle/Attack/左右移动循环，Victory/Death 非循环；`AC_Army_Base` 无参数、无自动 Transition，所有 OverrideController 完整覆盖且无 Missing Motion。
 - [ ] WeaponId 在 0～9 间实际切换时，当前活动和隐藏槽位都更新到对应 Controller；之后增加人数或重新激活槽位不会回到旧武器动画。
 - [ ] 持有法杖时，火/冰/雷的 7 种非空组合分别映射 WeaponId 3～9；元素结束后直接降级到剩余组合，全部结束后回到 WeaponId 2。同一帧多个元素结束只发生一次最终切换。
 - [ ] Preparing 播放 Idle；Playing 原地持续 Attack，实际左/右位移持续 MoveLeft/MoveRight；道路边缘无实际位移时为 Attack，状态不变时不会每帧重启动画。
 - [ ] Army 持续战斗动画与实际 FireInterval 解耦，AnimationEvent 不生成子弹、不修改 FireInterval、伤害或 WeaponId；Victory 不参与终局判定，请求切换 LevelSelect 前保留士兵，场景卸载时仍完成 StopRun。
+- [ ] 槽位致死时人数和 HP 同步归零并只进入一次 Dying；期间 SoldierVisual 保留、Collider/受击/选中/发射关闭，AddArmy 和 RemoveArmy 都跳过该槽位，死亡末帧后才隐藏并恢复空槽增员资格。
+- [ ] Dying 期间的 Attack/Move/Victory 与武器切换不打断 Death；动画结束后槽位缓存最新 Controller，重新增员时使用当前 WeaponId。全部槽位 Dying 时 AddArmy 实际增加量为 0。
+- [ ] GameOver 仍在 ArmyCount 归零帧提交一次，但不当帧 StopRun Army；最后一批 Death 可在结果页播放至末帧，返回、重试或场景卸载再最终清理。
 - [ ] Normal、Elite、Boss 各有循环 Move、非循环 Attack 和非循环 Death；Controller 使用既有 Attack/Death Trigger，所有 Motion 引用完整。
 - [ ] 三种 Monster Attack Clip 恰好各有一个 `OnAttackFrame()` 和末帧一个 `OnAttackAnimationFinished()`；Death Clip 末帧恰好一个 `OnDeathAnimationFinished()`。
 - [ ] BulletId 0～9 在唯一 `PF_Bullet` 上分别播放正确循环动画；同一池实例以不同 BulletId 复用时不残留旧参数、状态、帧或 Sprite。
 - [ ] `PF_Gate_Additive` 播放唯一循环动画；唯一 `PF_Gate_Element` 按 Fire/Ice/Lightning 播放对应循环动画，以不同 ElementType 复用时不残留旧表现。
-- [ ] Army、Bullet、Gate 动画不包含玩法结算事件；所有 Controller、OverrideController 和 ID 映射都由 Inspector 显式绑定，不存在 Resources、StreamingAssets、AssetDatabase 或字符串路径运行时加载。
+- [ ] `PF_Prop_Basketball` 每次借出都从 Basketball_Loop 第 0 帧播放；`PF_Prop_Weapon` 按 WeaponId 0/1/2 播放对应循环状态，以不同 WeaponId 复用时不残留旧参数、状态、帧或 Sprite。
+- [ ] Army、Bullet、Gate、Prop 循环动画不包含玩法结算事件；所有 Controller、OverrideController 和 ID 映射都由 Inspector 显式绑定，不存在 Resources、StreamingAssets、AssetDatabase 或字符串路径运行时加载。
 - [ ] 当前动画纹理在目标平台记录实际导入尺寸和内存；关闭 Mipmap/ReadWrite，发现超预算时优先降低 Max Size、公共裁切或重新打包，不直接采用供应方稀疏 4K 图集。
 
 ## 核心闭环
@@ -87,6 +91,7 @@
 - 通过：WeaponId 0/1/2 在活动与隐藏槽位间完整切换；新增槽位继承当前武器；运行态原地 Attack、左右移动 Attack 和 Victory 显式状态正确。Idle 入口已完成代码与状态名检查，Preparing 短窗口尚未截图留证。
 - 通过：Normal/Elite/Boss 的 Attack 命中事件分别位于第 10/17/4 帧，结束事件位于第 22/61/30 帧；三个 Death 回收事件均位于第 3 帧。运行态完成 Move → Attack → Move、Death → 回收，并验证复借后 Trigger 清空。
 - 通过：BulletId 0/1/2 与 Additive/Fire/Ice/Lightning Gate 的 Animator 状态和参数匹配；两轮借还复用了相同 GameObject 实例集合，无旧身份残留。
+- 通过：Basketball 的 13 帧 Clip 为 8 FPS 循环、无 AnimationEvent，首次激活与回池复借均从 `Basketball_Loop` 第 0 帧和首张 Sprite 开始；WeaponProp 以 WeaponId 0/1/2 复用时分别进入对应 Loop、参数匹配且 normalized time 为 0。三组 WeaponProp 正式帧尚未导入，因此这里只验收状态选择、占位图保留与池复用，不验收画面连续性。
 - 通过：场景实例 TouchDragInput 必需引用和区域宽度有效；拖动产生有限输入，PointerUp 后读取归零。
 - 待完成：19 个正式 Clip 仍为空占位，不能勾选完整动作视觉验收；当前仅在 `844×529` Game View 验证输入，PlayerSettings 仍为横屏 `1920×1080`/AutoRotation，跨 9:16 分辨率与目标设备验证未完成。
 
@@ -138,7 +143,10 @@
 - [ ] 母鸡/公鸡的 AttackCollider 只在攻击判定帧执行一次显式重叠查询，每个 Army 槽位最多受击一次。
 - [ ] 四种敌人的非循环 Attack Clip 在命中关键帧恰好调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；AnimationEvent 不直接修改 Army，实际伤害只在 `EnemyManager.ResolveAttacks` 中发生；Ikun 正式素材加入前复用 Rooster 占位事件。
 - [ ] AttackCooldown 从每次攻击开始时刻计算且在攻击动画期间继续递减；动画结束时若已到期，下一次 EnemyManager.TickMovement 重新验证成功后立即起攻，不由动画回调直接递归起攻。
-- [ ] 三种非循环 Death Clip 末帧恰好调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期回调不重复计数、发布 MonsterKilled 或归还对象池，StopRun 不等待动画。
+- [ ] 四类敌人的普通/火/冰/雷 Death Clip 在结束时间恰好调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期回调不重复计数、发布 MonsterKilled 或归还对象池，StopRun 不等待动画。
+- [ ] 无最近元素时选择普通死亡；非元素致命伤害选择正数剩余时间最大的最近元素；剩余时间相同按火、冰、雷优先。
+- [ ] 元素致命伤害只按本次命中的元素选择死亡动画，多元素同次命中按火、冰、雷优先，不被更早但剩余时间更长的元素覆盖。
+- [ ] 四类敌人回池并复借后 `DeathVariant` 恢复为普通；四套 AOC 的 Move、Attack 与四个 Death 覆盖均非空。
 - [ ] 同一 AttackSequenceId 的重复关键帧事件只登记一次；事件前目标失效、事件后但结算前死亡、StopRun 或回池都会使待结算请求无效。
 - [ ] AnimationEvent 在当帧 ResolveAttacks 之后触发时，请求安全保留到下一次 ResolveAttacks，且不会因为跨帧而重复结算。
 - [ ] Gate/Prop 在移动并同步 Transform 后只以终点姿态执行一次 `OverlapCollider`；不执行接触 Cast/扫掠，接触状态和运行时 ID 保证一次性结算。

@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator 池复用重置已实现并通过编译；剩余正式动画、Prefab 字段、Layer 与战斗手测待完成）
 - 依赖：Bullet、Army、Level、EventBus、IEnemyConfigProvider、PoolService
-- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-056-ChickenEnemyIdentityNaming.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`
+- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-056-ChickenEnemyIdentityNaming.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`、`../../06_Decisions/ADR-065-ElementalMonsterDeathAnimations.md`
 
 ## 职责
 
@@ -75,7 +75,7 @@ MovingDown
 
 ### 死亡动画
 
-HP 归零后立即进入 `Dead`、退出受击与阻挡查询，由 EnemyManager 完成一次死亡去重、`AliveEnemyCount` 递减和 `MonsterKilled` 发布。非循环 Death Clip 的末帧调用根脚本 `OnDeathAnimationFinished()`；该本地 AnimationEvent 只向 EnemyManager 登记回收请求，真正注销和归还对象池在 `FlushPendingRecycles` 阶段完成。重复事件、过期会话事件以及 StopRun/回池后的事件均忽略；StopRun 不等待死亡动画。
+HP 归零后立即进入 `Dead`、退出受击与阻挡查询，由 EnemyManager 完成一次死亡去重、`AliveEnemyCount` 递减和 `MonsterKilled` 发布。Monster 在触发 `Death` 前设置 `DeathVariant`：致命伤害带元素时只从本次元素中按火、冰、雷优先选择；致命伤害不带元素时选择正数剩余时间最大的最近元素，同值仍按火、冰、雷；全部过期时选择普通死亡。四种非循环 Death Clip 的末尾均调用一次根脚本 `OnDeathAnimationFinished()`；该本地 AnimationEvent 只向 EnemyManager 登记回收请求，真正注销和归还对象池在 `FlushPendingRecycles` 阶段完成。重复事件、过期会话事件以及 StopRun/回池后的事件均忽略；StopRun 不等待死亡动画。
 
 ## 碰撞体
 
@@ -109,7 +109,7 @@ PF_Monster_Ikun [IkunMonster；Animator]
 └── BasketballSpawnPoint [Transform]
 ```
 
-四个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Hen/Rooster/Ikun 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。每种怪物提供循环 Move、非循环 Attack 和非循环 Death；Prefab 使用相同状态/Trigger 语义并绑定本类型 Controller 或预创建 OverrideController。池对象每次借出都清除 Attack/Death Trigger 并从 Move 第 0 帧起播，回池时重绑 Animator，不能继承上一实例的 Death 状态、帧或 Sprite。Chick/Hen/Rooster 的正式非循环 Clip 遵循既有事件约束；Ikun 首轮复用 Rooster Controller 和事件作为占位，正式帧动画后续另行导入。完整导入和绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)、[PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043、ADR-046、ADR-048、ADR-056 和 ADR-064。
+四个 Prefab 根 GameObject 都同时挂载具体根脚本和 Animator，并显式序列化 `bodyCollider`、视觉引用、Animator 和 `blockingGap`；BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster，Hen/Rooster/Ikun 另外序列化 `attackCollider`。`blockingGap` 必须有限且大于等于 `0`。每种怪物提供循环 Move、非循环 Attack，以及普通/火/冰/雷四种非循环 Death；Prefab 使用相同 Trigger/参数语义并绑定本类型 OverrideController。池对象每次借出都清除 Attack/Death Trigger、把 `DeathVariant` 重置为普通并从 Move 第 0 帧起播，回池时重绑 Animator，不能继承上一实例的 Death 状态、参数、帧或 Sprite。Ikun 使用独立 AOC；正式帧动画后续导入。完整导入和绑定见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)、[PrefabSpecifications](../../04_Assets/PrefabSpecifications.md)、ADR-040、ADR-043、ADR-046、ADR-048、ADR-056、ADR-064 和 ADR-065。
 
 ## EnemyManager
 
@@ -164,9 +164,10 @@ Monster 的统一受击入口接收 `EnemyDamageContext`。它保留来源 `Bull
 - 小鸡敌人单体攻击锁定目标；目标在判定帧前变为空时取消攻击并重新选目标。
 - 母鸡和公鸡的攻击碰撞体只在攻击判定帧执行一次显式重叠查询，所有命中槽位受到相同伤害且每槽位只结算一次。
 - 四种敌人的非循环 Attack Clip 都由命中关键帧调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；重复攻击帧回调不会造成第二次伤害。Ikun 在正式素材补入前由 Rooster 占位事件满足该契约。
-- 四种敌人的 Move Clip 循环，默认进入 Move；Attack/Death 非循环并使用同名 Trigger，已绑定的 Controller/OverrideController 不出现 Missing Motion。
+- 四种敌人的 Move Clip 循环，默认进入 Move；Attack 与四种 Death 非循环，死亡分流由 `Death` Trigger 和 `DeathVariant` 共同决定，已绑定的 Controller/OverrideController 不出现 Missing Motion。
 - AttackCooldown 从攻击开始时刻计算并在动画期间继续递减；若动画结束时已到期，下一次 TickMovement 满足存活、目标有效且在范围内即可开始下一次攻击。
-- 四种非循环 Death Clip 末帧各调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期事件不重复注销、计数或发布 MonsterKilled，StopRun 不等待该事件。Ikun 正式素材补入前复用 Rooster 占位事件。
+- 四类敌人的普通/火/冰/雷 Death Clip 末尾各调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期事件不重复注销、计数或发布 MonsterKilled，StopRun 不等待该事件。
+- 致命元素命中选择本次元素；非元素致命命中选择剩余时间最大的最近元素；任意并列按火、冰、雷。复借对象必须恢复普通死亡类型。
 - AnimationEvent 发生后但 ResolveAttacks 前死亡、StopRun 或回池时，请求作废；事件在当帧 ResolveAttacks 之后发生时允许顺延到下一逻辑帧结算。
 - 所有敌人 Prefab 都提供职责明确的 `BodyCollider`、同节点 `BulletHitProxy` 和有限非负的 `blockingGap`。BodyCollider Cast 只查询上一轮 Physics2D 同步姿态；后方敌人在命中前方敌人时截断本帧位移，但 MVP 不保证多个敌人同帧移动后的绝对不重叠，也不执行事后分离。
 - 四类敌人根节点的 Rigidbody2D 必须满足 ADR-055 的 Kinematic 查询适配配置；BodyCollider 继续为 Trigger，自动碰撞矩阵关闭，阻挡结果仍只由 `ApplyBlockedMovement` 决定。

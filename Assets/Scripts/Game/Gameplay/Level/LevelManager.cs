@@ -103,7 +103,7 @@ namespace Game.Gameplay
                 armyStarted = true;
                 army.StartRun(levelRunId, roadLayout);
                 enemyStarted = true;
-                enemyManager.StartRun(levelRunId, roadLayout);
+                enemyManager.StartRun(levelRunId, roadLayout, levelConfig.IkunBasketballConfigId);
                 obstacleStarted = true;
                 obstacleManager.StartRun(levelRunId, roadLayout);
                 spawnStarted = true;
@@ -255,11 +255,19 @@ namespace Game.Gameplay
             inputController.SetGameplayEnabled(false);
             completedHudSnapshot = CreateHudSnapshot(true);
             hasCompletedHudSnapshot = true;
-            var preserveArmyVisuals = result == LevelResult.Victory && armyStarted;
+            var preserveArmyVisuals = armyStarted;
             if (preserveArmyVisuals)
             {
-                // 胜利表现保留到 Gameplay 场景卸载；OnDestroy/显式 StopRun 仍负责最终清理。
-                army.EnterVictoryPresentation(levelRunId);
+                if (result == LevelResult.Victory)
+                {
+                    // 胜利表现保留到 Gameplay 场景卸载；OnDestroy/显式 StopRun 仍负责最终清理。
+                    army.EnterVictoryPresentation(levelRunId);
+                }
+                else
+                {
+                    // GameOver 立即提交，但保留最后一批死亡动画，避免 StopRun 当帧清空表现。
+                    army.EnterDefeatPresentation(levelRunId);
+                }
             }
 
             StopModules(preserveArmyVisuals);

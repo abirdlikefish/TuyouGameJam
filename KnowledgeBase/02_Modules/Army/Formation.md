@@ -14,7 +14,7 @@ ArmyController 通过 Inspector 序列化 `ArmySlotView[] slots`。数组下标�
 - 与 SlotCollider 同节点、显式绑定当前 ArmySlotView 的 `ArmySlotHitProxy`。
 - 一个子弹生成点。
 
-`RepresentedCount == 0` 时保留槽位位置和索引，但禁用士兵表现、碰撞体和发射点，等待后续新增人数补充。
+槽位内部区分 `Alive`、`Dying`、`Empty`。`Alive` 要求 `RepresentedCount > 0`；致死伤害同步把人数与 HP 归零并进入 `Dying`，保留 SoldierVisual 播放对应武器的 Death，但立即禁用碰撞体、受击、选中和发射；末帧事件后进入 `Empty` 并隐藏表现。`Empty` 保留位置和索引，等待后续新增人数补充。
 
 ## 人数分配
 
@@ -28,7 +28,7 @@ remainder = ArmyCount % active
 Slot[i].RepresentedCount = base + (i < remainder ? 1 : 0)
 ```
 
-运行时人数增加时逐人分配。每次都从全部槽位选择 `RepresentedCount` 最少者，相同时选择 `SlotIndex` 较小者；空槽位人数为 `0`，因此会自然优先重新启用。Army 不保存 `NeedsRefill`，也不需要推断受击前的目标人数。
+运行时人数增加时逐人分配。每次都从非 `Dying` 槽位选择 `RepresentedCount` 最少者，相同时选择 `SlotIndex` 较小者；`Empty` 槽位人数为 `0`，因此会自然优先重新启用。全部槽位都在 `Dying` 时实际增加量为 `0`，不缓存请求。Army 不保存 `NeedsRefill`，也不需要推断受击前的目标人数。
 
 受击不会触发其他槽位向少人数槽位的转移。任何分配后都必须满足：
 
@@ -50,7 +50,7 @@ MaxHp = RepresentedCount × HpPerSoldier
 RepresentedCount = CurrentHp <= 0 ? 0 : Ceil(CurrentHp / HpPerSoldier)
 ```
 
-人数减少后重新计算 `MaxHp`，但不把其他槽位的人数迁移过来。槽位人数变为 0 时禁用表现、Collider 和发射资格，后续增员按最少人数规则自然重新启用。受击导致的代表人数减少量同步从 `ArmyCount` 扣除，并发布人数和阵型变化事件。
+人数减少后重新计算 `MaxHp`，但不把其他槽位的人数迁移过来。槽位人数变为 0 时立即进入 `Dying`、禁用 Collider 和发射资格，但保留表现至非循环 Death 末帧；结束后进入 `Empty`，后续增员按最少人数规则自然重新启用。受击导致的代表人数减少量同步从 `ArmyCount` 扣除，并发布人数和阵型变化事件，动画结束不重复发布数值事件。
 
 ## 负数门请求减员
 

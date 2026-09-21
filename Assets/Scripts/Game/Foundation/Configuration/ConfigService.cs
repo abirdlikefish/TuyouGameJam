@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Contracts;
 using UnityEngine;
 using RuntimeEnemyType = Game.Contracts.EnemyType;
+using RuntimePropType = Game.Contracts.PropType;
 
 namespace Game.Foundation
 {
@@ -303,10 +304,7 @@ namespace Game.Foundation
                 var row = rows[index];
                 var source = $"TbProp[{index}]";
                 ValidateNonNegativeId(row.Id, source);
-                if (row.WeaponId < 0)
-                {
-                    ThrowInvalidTableValue(source, "WeaponId must be non-negative.");
-                }
+                var propType = ConvertPropType(row.PropType, source);
 
                 if (row.MaxHp <= 0)
                 {
@@ -319,12 +317,48 @@ namespace Game.Foundation
                 }
 
                 ValidateFiniteNonNegative(row.MoveSpeed, source, "MoveSpeed");
+                switch (propType)
+                {
+                    case RuntimePropType.WeaponBox:
+                        if (row.WeaponId < 0 || row.ArmyAddition != 0)
+                        {
+                            ThrowInvalidTableValue(
+                                source,
+                                "WeaponBox requires a non-negative WeaponId and ArmyAddition=0.");
+                        }
+
+                        break;
+                    case RuntimePropType.Basketball:
+                        if (row.WeaponId != 0 || row.ArmyAddition != 0)
+                        {
+                            ThrowInvalidTableValue(
+                                source,
+                                "Basketball requires neutral WeaponId=0 and ArmyAddition=0.");
+                        }
+
+                        break;
+                    case RuntimePropType.GooseCage:
+                        if (row.WeaponId != 0 || row.ArmyAddition <= 0)
+                        {
+                            ThrowInvalidTableValue(
+                                source,
+                                "GooseCage requires neutral WeaponId=0 and ArmyAddition greater than zero.");
+                        }
+
+                        break;
+                    default:
+                        ThrowInvalidTableValue(source, "PropType is not supported.");
+                        break;
+                }
+
                 AddUnique(
                     snapshots,
                     row.Id,
                     new PropConfigSnapshot(
                         row.Id,
+                        propType,
                         row.WeaponId,
+                        row.ArmyAddition,
                         row.MaxHp,
                         row.ContactDamage,
                         row.MoveSpeed),
@@ -376,7 +410,8 @@ namespace Game.Foundation
                     continue;
                 }
 
-                if (!weapons.ContainsKey(row.WeaponId))
+                if (row.PropType == cfg.game.PropType.WeaponBox &&
+                    !weapons.ContainsKey(row.WeaponId))
                 {
                     throw new ConfigValidationException(
                         ConfigErrorCode.MissingReference,
@@ -481,6 +516,7 @@ namespace Game.Foundation
             var enemySpawns = BuildEnemySpawnSnapshots(levelConfig, source, enemies);
             var gateSpawns = BuildGateSpawnSnapshots(levelConfig, source, out var containsElementGate);
             var propSpawns = BuildPropSpawnSnapshots(levelConfig, source, props);
+            ValidateIkunBasketballConfig(levelConfig, source, enemySpawns, enemies, props);
 
             var durationFactor = levelConfig.ElementDurationSecondsPerDamage;
             if (containsElementGate)
@@ -510,7 +546,58 @@ namespace Game.Foundation
                 enemySpawns,
                 gateSpawns,
                 propSpawns,
+                levelConfig.IkunBasketballConfigId,
                 durationFactor);
+        }
+
+        private static void ValidateIkunBasketballConfig(
+            LevelConfig levelConfig,
+            string source,
+            IReadOnlyList<EnemySpawnEntrySnapshot> enemySpawns,
+            Dictionary<int, EnemyConfigSnapshot> enemies,
+            Dictionary<int, PropConfigSnapshot> props)
+        {
+            var containsIkun = false;
+            for (var index = 0; index < enemySpawns.Count; index++)
+            {
+                if (enemies[enemySpawns[index].ConfigId].EnemyType == RuntimeEnemyType.Ikun)
+                {
+                    containsIkun = true;
+                    break;
+                }
+            }
+
+            var configId = levelConfig.IkunBasketballConfigId;
+            var configSource = $"{source}.ikunBasketballConfigId";
+            if (!containsIkun)
+            {
+                if (configId != 0)
+                {
+                    ThrowInvalidLevel(
+                        configSource,
+                        "A level without Ikun must use the neutral value zero.");
+                }
+
+                return;
+            }
+
+            if (configId < 0)
+            {
+                ThrowInvalidLevel(configSource, "An Ikun level requires a non-negative Prop config ID.");
+            }
+
+            if (!props.TryGetValue(configId, out var prop))
+            {
+                throw new ConfigValidationException(
+                    ConfigErrorCode.MissingReference,
+                    configSource,
+                    $"Prop config ID {configId} does not exist in TbProp.");
+            }
+
+            if (prop.PropType != RuntimePropType.Basketball)
+            {
+                ThrowInvalidLevel(configSource, "An Ikun level must reference PropType.Basketball.");
+            }
         }
 
         private static int[] BuildUnlockedLevelIds(
@@ -858,6 +945,22 @@ namespace Game.Foundation
                     return RuntimeEnemyType.Ikun;
                 default:
                     ThrowInvalidTableValue($"{source}.EnemyType", $"EnemyType value {(int)value} is not supported.");
+                    return default;
+            }
+        }
+
+        private static RuntimePropType ConvertPropType(cfg.game.PropType value, string source)
+        {
+            switch (value)
+            {
+                case cfg.game.PropType.WeaponBox:
+                    return RuntimePropType.WeaponBox;
+                case cfg.game.PropType.Basketball:
+                    return RuntimePropType.Basketball;
+                case cfg.game.PropType.GooseCage:
+                    return RuntimePropType.GooseCage;
+                default:
+                    ThrowInvalidTableValue($"{source}.PropType", $"PropType value {(int)value} is not supported.");
                     return default;
             }
         }

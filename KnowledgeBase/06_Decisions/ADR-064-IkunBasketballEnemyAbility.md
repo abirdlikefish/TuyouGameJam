@@ -4,6 +4,8 @@
 
 Accepted
 
+> 配置来源与请求载荷已由 ADR-067 修订：篮球 HP、接触伤害和移动速度迁入 `TbProp`，ikun 使用关卡的 `ikunBasketballConfigId`。本 ADR 的行为与生命周期规则继续有效。
+
 ## 日期
 
 2026-09-21

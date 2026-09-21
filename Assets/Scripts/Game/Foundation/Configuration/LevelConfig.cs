@@ -37,6 +37,11 @@ namespace Game.Foundation
         [Tooltip("元素门 HP 清空后的额外伤害每 1 点可兑换的元素持续秒数。关卡存在元素门时必须大于 0；没有元素门时必须为 0。")]
         private float elementDurationSecondsPerDamage;
 
+        [Header("ikun 篮球")]
+        [SerializeField]
+        [Tooltip("包含 ikun 的关卡必须填写一个 PropType=Basketball 的 TbProp.Id；无 ikun 时保持 0。")]
+        private int ikunBasketballConfigId;
+
         [Header("生成时间轴")]
         [SerializeField]
         [Tooltip("敌人生成列表，至少需要一项。按 Spawn Time 非递减排列，Config Id 引用 Luban 的 TbEnemy。")]
@@ -57,6 +62,7 @@ namespace Game.Foundation
         public float EnemyApproachY => enemyApproachY;
         public float DespawnY => despawnY;
         public float ElementDurationSecondsPerDamage => elementDurationSecondsPerDamage;
+        public int IkunBasketballConfigId => ikunBasketballConfigId;
         public IReadOnlyList<EnemySpawnEntry> EnemySpawns => enemySpawns;
         public IReadOnlyList<GateSpawnEntry> GateSpawns => gateSpawns;
         public IReadOnlyList<PropSpawnEntry> PropSpawns => propSpawns;

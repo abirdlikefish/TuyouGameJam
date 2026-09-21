@@ -11,6 +11,7 @@ namespace Game.Gameplay
         [SerializeField] private ElementGate elementGatePrefab;
         [SerializeField] private WeaponProp weaponPropPrefab;
         [SerializeField] private BasketballProp basketballPropPrefab;
+        [SerializeField] private GooseCageProp gooseCagePropPrefab;
         [SerializeField] private LayerMask armySlotLayers;
 
         private readonly List<IRoadObstacleRuntime> activeObjects =
@@ -24,6 +25,7 @@ namespace Game.Gameplay
         private IComponentPool<ElementGate> elementGatePool;
         private IComponentPool<WeaponProp> weaponPropPool;
         private IComponentPool<BasketballProp> basketballPropPool;
+        private IComponentPool<GooseCageProp> gooseCagePropPool;
         private IPropConfigProvider propConfigProvider;
         private IArmyController army;
         private IEventBus eventBus;
@@ -62,15 +64,16 @@ namespace Game.Gameplay
             elementGatePool = poolService.GetOrCreatePool(elementGatePrefab);
             weaponPropPool = poolService.GetOrCreatePool(weaponPropPrefab);
             basketballPropPool = poolService.GetOrCreatePool(basketballPropPrefab);
+            gooseCagePropPool = poolService.GetOrCreatePool(gooseCagePropPrefab);
             initialized = true;
         }
 
         public bool TryValidate(out string error)
         {
             if (additiveGatePrefab == null || elementGatePrefab == null || weaponPropPrefab == null ||
-                basketballPropPrefab == null)
+                basketballPropPrefab == null || gooseCagePropPrefab == null)
             {
-                error = $"{name} requires AdditiveGate, ElementGate, WeaponProp and BasketballProp prefab bindings.";
+                error = $"{name} requires AdditiveGate, ElementGate, WeaponProp, BasketballProp and GooseCageProp prefab bindings.";
                 return false;
             }
 
@@ -83,7 +86,8 @@ namespace Game.Gameplay
             return additiveGatePrefab.TryValidate(out error) &&
                    elementGatePrefab.TryValidate(out error) &&
                    weaponPropPrefab.TryValidate(out error) &&
-                   basketballPropPrefab.TryValidate(out error);
+                   basketballPropPrefab.TryValidate(out error) &&
+                   gooseCagePropPrefab.TryValidate(out error);
         }
 
         public void StartRun(int startedLevelRunId, RoadLayoutSnapshot roadLayout)
@@ -173,23 +177,62 @@ namespace Game.Gameplay
 
             var config = propConfigProvider.GetPropConfig(request.ConfigId);
             var runtimeId = nextRuntimeInstanceId++;
-            var prop = weaponPropPool.RentInactive();
-            prop.InitializeRuntime(
-                request,
-                config,
-                runtimeId,
-                army,
-                eventBus,
-                OnRecycleRequested,
-                transform);
+            IRoadObstacleRuntime prop;
+            GameObject propObject;
+            switch (config.PropType)
+            {
+                case PropType.WeaponBox:
+                    var weapon = weaponPropPool.RentInactive();
+                    weapon.InitializeRuntime(
+                        request,
+                        config,
+                        runtimeId,
+                        army,
+                        eventBus,
+                        OnRecycleRequested,
+                        transform);
+                    prop = weapon;
+                    propObject = weapon.gameObject;
+                    break;
+                case PropType.Basketball:
+                    var basketball = basketballPropPool.RentInactive();
+                    basketball.InitializeRuntime(
+                        request,
+                        config,
+                        runtimeId,
+                        army,
+                        eventBus,
+                        OnRecycleRequested,
+                        transform);
+                    prop = basketball;
+                    propObject = basketball.gameObject;
+                    break;
+                case PropType.GooseCage:
+                    var gooseCage = gooseCagePropPool.RentInactive();
+                    gooseCage.InitializeRuntime(
+                        request,
+                        config,
+                        runtimeId,
+                        army,
+                        eventBus,
+                        OnRecycleRequested,
+                        transform);
+                    prop = gooseCage;
+                    propObject = gooseCage.gameObject;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(config.PropType));
+            }
+
             activeObjects.Add(prop);
-            prop.gameObject.SetActive(true);
+            propObject.SetActive(true);
             eventBus.Publish(
                 new PropSpawned(
                     levelRunId,
                     runtimeId,
+                    request.SpawnEntryIndex,
                     config.Id,
-                    config.WeaponId,
+                    config.PropType,
                     request.WorldPosition));
         }
 
@@ -200,10 +243,19 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (request.SourceEnemyRuntimeInstanceId < 0 || !IsFinite(request.WorldPosition))
+            if (request.SourceEnemyRuntimeInstanceId < 0 || request.ConfigId < 0 ||
+                !IsFinite(request.WorldPosition))
             {
                 throw new ArgumentException(
                     "Basketball spawn request contains invalid values.",
+                    nameof(request));
+            }
+
+            var config = propConfigProvider.GetPropConfig(request.ConfigId);
+            if (config.PropType != PropType.Basketball)
+            {
+                throw new ArgumentException(
+                    "Basketball spawn request must reference PropType.Basketball.",
                     nameof(request));
             }
 
@@ -211,6 +263,7 @@ namespace Game.Gameplay
             var basketball = basketballPropPool.RentInactive();
             basketball.InitializeRuntime(
                 request,
+                config,
                 runtimeId,
                 army,
                 eventBus,
@@ -223,6 +276,7 @@ namespace Game.Gameplay
                     levelRunId,
                     runtimeId,
                     request.SourceEnemyRuntimeInstanceId,
+                    request.ConfigId,
                     request.WorldPosition));
         }
 
@@ -435,6 +489,10 @@ namespace Game.Gameplay
             else if (roadObject is BasketballProp basketball)
             {
                 basketballPropPool.Return(basketball);
+            }
+            else if (roadObject is GooseCageProp gooseCage)
+            {
+                gooseCagePropPool.Return(gooseCage);
             }
             else
             {

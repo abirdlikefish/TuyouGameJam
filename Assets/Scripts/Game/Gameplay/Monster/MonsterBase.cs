@@ -13,6 +13,14 @@ namespace Game.Gameplay
         Dead
     }
 
+    internal enum MonsterDeathVariant
+    {
+        Normal = 0,
+        Fire = 1,
+        Ice = 2,
+        Lightning = 3
+    }
+
     internal readonly struct MonsterAttackRequest
     {
         public MonsterAttackRequest(int attackSequenceId, int targetSlotIndex)
@@ -29,6 +37,7 @@ namespace Game.Gameplay
     {
         private static readonly int AttackTrigger = Animator.StringToHash("Attack");
         private static readonly int DeathTrigger = Animator.StringToHash("Death");
+        private static readonly int DeathVariantParameter = Animator.StringToHash("DeathVariant");
         private static readonly int MoveState = Animator.StringToHash("Base Layer.Move");
 
         [SerializeField] private Collider2D bodyCollider;
@@ -61,6 +70,7 @@ namespace Game.Gameplay
         private float recentFireRemaining;
         private float recentIceRemaining;
         private float recentLightningRemaining;
+        private MonsterDeathVariant deathVariant;
         private bool runtimeActive;
         private bool attackFrameRegistered;
         private bool deathAnimationFinished;
@@ -78,6 +88,7 @@ namespace Game.Gameplay
         internal bool IsRuntimeActive => runtimeActive;
         internal Collider2D BodyCollider => bodyCollider;
         internal Vector2 EffectCenter => bodyCollider.bounds.center;
+        internal MonsterDeathVariant DeathVariant => deathVariant;
 
         BulletTargetKind IRuntimeBulletTarget.BulletTargetKind => BulletTargetKind.Enemy;
         bool IBulletHittable.CanReceiveBulletHit => IsAlive;
@@ -111,9 +122,13 @@ namespace Game.Gameplay
 
             if (animator.gameObject.activeInHierarchy &&
                 (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
-                 !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger)))
+                 !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger) ||
+                 !HasAnimatorParameter(
+                     animator,
+                     DeathVariantParameter,
+                     AnimatorControllerParameterType.Int)))
             {
-                error = $"{name}.animator controller requires Attack and Death Trigger parameters.";
+                error = $"{name}.animator controller requires Attack/Death Triggers and an Int DeathVariant parameter.";
                 return false;
             }
 
@@ -192,6 +207,7 @@ namespace Game.Gameplay
             recentFireRemaining = 0f;
             recentIceRemaining = 0f;
             recentLightningRemaining = 0f;
+            deathVariant = MonsterDeathVariant.Normal;
             attackFrameRegistered = false;
             deathAnimationFinished = false;
             runtimeActive = true;
@@ -265,6 +281,15 @@ namespace Game.Gameplay
             RefreshRecentElements(damage.ActiveElements);
             currentHp = (int)Math.Max(0L, (long)currentHp - damage.Damage);
             var fatal = currentHp == 0;
+            if (fatal)
+            {
+                deathVariant = ResolveDeathVariant(
+                    damage.ActiveElements,
+                    recentFireRemaining,
+                    recentIceRemaining,
+                    recentLightningRemaining);
+            }
+
             SyncElementEffectNodes();
             damagedCallback(this, damage, currentHp, fatal);
             if (!fatal)
@@ -282,6 +307,7 @@ namespace Game.Gameplay
                 AttackCollider.enabled = false;
             }
 
+            animator.SetInteger(DeathVariantParameter, (int)deathVariant);
             animator.SetTrigger(DeathTrigger);
             deathCallback(this, damage);
             return true;
@@ -375,11 +401,13 @@ namespace Game.Gameplay
         {
             runtimeActive = false;
             animationPrepared = false;
+            deathVariant = MonsterDeathVariant.Normal;
             if (animator.gameObject.activeInHierarchy)
             {
                 animator.ResetTrigger(AttackTrigger);
                 animator.ResetTrigger(DeathTrigger);
                 animator.Rebind();
+                animator.SetInteger(DeathVariantParameter, (int)deathVariant);
             }
 
             bodyCollider.enabled = false;
@@ -422,6 +450,50 @@ namespace Game.Gameplay
             {
                 recentLightningRemaining = 1f;
             }
+        }
+
+        private static MonsterDeathVariant ResolveDeathVariant(
+            ElementMask lethalElements,
+            float fireRemaining,
+            float iceRemaining,
+            float lightningRemaining)
+        {
+            // 致命命中的元素必然比历史记录更新；同一次多元素命中按固定优先级选择。
+            if ((lethalElements & ElementMask.Fire) != 0)
+            {
+                return MonsterDeathVariant.Fire;
+            }
+
+            if ((lethalElements & ElementMask.Ice) != 0)
+            {
+                return MonsterDeathVariant.Ice;
+            }
+
+            if ((lethalElements & ElementMask.Lightning) != 0)
+            {
+                return MonsterDeathVariant.Lightning;
+            }
+
+            var selected = MonsterDeathVariant.Normal;
+            var selectedRemaining = 0f;
+            if (fireRemaining > selectedRemaining)
+            {
+                selected = MonsterDeathVariant.Fire;
+                selectedRemaining = fireRemaining;
+            }
+
+            if (iceRemaining > selectedRemaining)
+            {
+                selected = MonsterDeathVariant.Ice;
+                selectedRemaining = iceRemaining;
+            }
+
+            if (lightningRemaining > selectedRemaining)
+            {
+                selected = MonsterDeathVariant.Lightning;
+            }
+
+            return selected;
         }
 
         private void SyncElementEffectNodes()
@@ -474,8 +546,10 @@ namespace Game.Gameplay
         {
             animator.Rebind();
             RequireAnimatorParameters();
+            deathVariant = MonsterDeathVariant.Normal;
             animator.ResetTrigger(AttackTrigger);
             animator.ResetTrigger(DeathTrigger);
+            animator.SetInteger(DeathVariantParameter, (int)deathVariant);
             animator.Play(MoveState, 0, 0f);
             animator.Update(0f);
         }
@@ -602,10 +676,14 @@ namespace Game.Gameplay
         private void RequireAnimatorParameters()
         {
             if (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
-                !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger))
+                !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger) ||
+                !HasAnimatorParameter(
+                    animator,
+                    DeathVariantParameter,
+                    AnimatorControllerParameterType.Int))
             {
                 throw new InvalidOperationException(
-                    $"{name}.animator controller requires Attack and Death Trigger parameters.");
+                    $"{name}.animator controller requires Attack/Death Triggers and an Int DeathVariant parameter.");
             }
         }
 

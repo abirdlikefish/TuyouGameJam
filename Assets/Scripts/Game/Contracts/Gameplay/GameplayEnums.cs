@@ -22,6 +22,13 @@ namespace Game.Contracts
         Element = 1
     }
 
+    public enum PropType
+    {
+        WeaponBox = 0,
+        Basketball = 1,
+        GooseCage = 2
+    }
+
     public enum ObstacleKind
     {
         Gate = 0,

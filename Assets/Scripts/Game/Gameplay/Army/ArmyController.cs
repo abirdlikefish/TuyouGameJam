@@ -50,7 +50,7 @@ namespace Game.Gameplay
         private ArmyAnimationState currentAnimationState = ArmyAnimationState.Idle;
         private bool initialized;
         private bool running;
-        private bool victoryPresentation;
+        private bool completionPresentation;
 
         public void Initialize(
             int initializedArmyId,
@@ -176,7 +176,7 @@ namespace Game.Gameplay
             iceRemainingDuration = 0f;
             lightningRemainingDuration = 0f;
             currentAnimationState = ArmyAnimationState.Idle;
-            victoryPresentation = false;
+            completionPresentation = false;
             running = true;
 
             ApplyWeaponAnimatorController(currentWeaponId, 0f);
@@ -193,7 +193,7 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (victoryPresentation)
+            if (completionPresentation)
             {
                 return;
             }
@@ -232,14 +232,26 @@ namespace Game.Gameplay
 
         public void EnterVictoryPresentation(int completedLevelRunId)
         {
-            if (!IsCurrentRun(completedLevelRunId) || victoryPresentation)
+            if (!IsCurrentRun(completedLevelRunId) || completionPresentation)
             {
                 return;
             }
 
-            victoryPresentation = true;
+            completionPresentation = true;
             horizontalInput = 0f;
             SetAnimationState(ArmyAnimationState.Victory, 0f);
+        }
+
+        public void EnterDefeatPresentation(int completedLevelRunId)
+        {
+            if (!IsCurrentRun(completedLevelRunId) || completionPresentation)
+            {
+                return;
+            }
+
+            // 败北立即停止玩法命令，但保留 Dying 槽位直到各自死亡动画末帧事件到达。
+            completionPresentation = true;
+            horizontalInput = 0f;
         }
 
         public void StopRun(int stoppedLevelRunId)
@@ -257,7 +269,7 @@ namespace Game.Gameplay
             iceRemainingDuration = 0f;
             lightningRemainingDuration = 0f;
             currentAnimationState = ArmyAnimationState.Idle;
-            victoryPresentation = false;
+            completionPresentation = false;
             for (var index = 0; index < slots.Length; index++)
             {
                 slots[index].PrepareForRunStop();
@@ -272,7 +284,7 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException(nameof(value));
             }
 
-            horizontalInput = running && !victoryPresentation ? value : 0f;
+            horizontalInput = running && !completionPresentation ? value : 0f;
         }
 
         public int GetArmyCount()
@@ -325,17 +337,17 @@ namespace Game.Gameplay
 
             allowed = Mathf.Min(allowed, int.MaxValue - armyCount);
             var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
-            DistributeAddition(allowed, weapon.FireInterval);
+            var actualAddition = DistributeAddition(allowed, weapon.FireInterval);
 
-            armyCount = SaturatingAdd(armyCount, allowed);
-            if (allowed > 0)
+            armyCount = SumRepresentedCount();
+            if (actualAddition > 0)
             {
                 ClampRootToRoad();
-                PublishCountChanged(allowed, ArmyCountChangeReason.Addition);
+                PublishCountChanged(actualAddition, ArmyCountChangeReason.Addition);
                 PublishFormationChanged();
             }
 
-            return new ArmyAdditionResult(amount, allowed, armyCount);
+            return new ArmyAdditionResult(amount, actualAddition, armyCount);
         }
 
         public ArmyRemovalResult RemoveArmy(int amount)
@@ -578,10 +590,10 @@ namespace Game.Gameplay
 
                 overrides.Clear();
                 controller.GetOverrides(overrides);
-                if (overrides.Count != 5)
+                if (overrides.Count != 6)
                 {
                     error = $"{name}.weaponAnimatorControllers[{index}] must override " +
-                            "exactly five Army clips.";
+                            "exactly six Army clips.";
                     return false;
                 }
 
@@ -946,7 +958,14 @@ namespace Game.Gameplay
                 : (int)Math.Min(int.MaxValue, ((long)nextHp + armyConfig.HpPerSoldier - 1) / armyConfig.HpPerSoldier);
             var nextMaxHp = SaturatingMultiply(nextCount, armyConfig.HpPerSoldier);
             var countLoss = oldCount - nextCount;
-            slot.SetState(nextCount, nextHp, nextMaxHp, nextCount > 0 ? slot.FireCooldownRemaining : 0f);
+            if (nextCount > 0)
+            {
+                slot.SetState(nextCount, nextHp, nextMaxHp, slot.FireCooldownRemaining);
+            }
+            else
+            {
+                slot.BeginDeathAnimation();
+            }
 
             eventBus.Publish(
                 new SoldierHit(
@@ -959,14 +978,27 @@ namespace Game.Gameplay
             return new SlotDamageResult(actualHpDamage, countLoss);
         }
 
-        private void DistributeAddition(int amount, float fireInterval)
+        private int DistributeAddition(int amount, float fireInterval)
         {
             if (amount <= 0)
             {
-                return;
+                return 0;
             }
 
-            var ordered = new List<ArmySlotView>(slots);
+            var ordered = new List<ArmySlotView>(slots.Length);
+            for (var index = 0; index < slots.Length; index++)
+            {
+                if (!slots[index].IsDeathAnimating)
+                {
+                    ordered.Add(slots[index]);
+                }
+            }
+
+            if (ordered.Count == 0)
+            {
+                return 0;
+            }
+
             ordered.Sort((left, right) =>
             {
                 var countComparison = left.RepresentedCount.CompareTo(right.RepresentedCount);
@@ -1011,6 +1043,8 @@ namespace Game.Gameplay
 
                 remaining = 0;
             }
+
+            return amount;
         }
 
         private void ApplySlotAddition(ArmySlotView slot, int addition, float fireInterval)
@@ -1149,7 +1183,7 @@ namespace Game.Gameplay
         private void EnsureRunning()
         {
             EnsureInitialized();
-            if (!running || victoryPresentation)
+            if (!running || completionPresentation)
             {
                 throw new InvalidOperationException(
                     "ArmyController does not have an active gameplay run.");

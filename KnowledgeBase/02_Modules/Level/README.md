@@ -211,7 +211,7 @@ else if SpawnManager.AreAllEnemySpawnsDispatched(LevelRunId)
     Victory
 ```
 
-命中终局后先设置 `runState = Completed` 和唯一结果，再禁用 Input，并按启动逆序调用 Spawn、Obstacle、Enemy、Army、Bullet 的 `StopRun`；任何 StopRun 期间都不再执行玩法阶段。全部完成后调用一次 `CompleteGameplay`。SceneEntry 卸载时再次调用清理只能作为幂等兜底，不得重复提交结果。
+命中终局后先设置 `runState = Completed` 和唯一结果，再禁用 Input。Victory 调用 Army 的 `EnterVictoryPresentation`，GameOver 调用 `EnterDefeatPresentation`，两者都保留 Army 到结果页退出；其余模块按启动逆序 StopRun，且不再执行玩法阶段。全部完成后调用一次 `CompleteGameplay`。SceneEntry 卸载、重试、返回或显式停止时最终调用 Army StopRun；重复清理不得重复提交结果。
 
 Victory 是立即截断点：不检查 Gate/Prop 时间轴是否派发完毕，也不等待活动 Gate/Prop 接触或离场。SpawnManager 停止未来 Gate/Prop 生成，ObstacleManager 在 StopRun 中归还活动道路对象；这些未生成或未结算内容不发放补偿效果。
 

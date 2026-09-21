@@ -99,15 +99,18 @@ namespace Game.Contracts
         public BasketballSpawnRequest(
             int levelRunId,
             int sourceEnemyRuntimeInstanceId,
+            int configId,
             Vector2 worldPosition)
         {
             LevelRunId = levelRunId;
             SourceEnemyRuntimeInstanceId = sourceEnemyRuntimeInstanceId;
+            ConfigId = configId;
             WorldPosition = worldPosition;
         }
 
         public int LevelRunId { get; }
         public int SourceEnemyRuntimeInstanceId { get; }
+        public int ConfigId { get; }
         public Vector2 WorldPosition { get; }
     }
 }

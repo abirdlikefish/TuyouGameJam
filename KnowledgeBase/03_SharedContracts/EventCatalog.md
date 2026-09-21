@@ -21,10 +21,13 @@
 | `ElementGateDamageChanged` | Gate | UI、VFX | `LevelRunId`、运行时门实例 ID、`BulletDamageContext`、旧/新 HP、本次 HP 伤害、本次额外伤害、累计 `PostDepletionDamage`、奖励是否已锁定 |
 | `GateContactResolved` | Gate | UI、VFX | `LevelRunId`、运行时门实例 ID、`ArmyId`、门类型、是否成功；加法门携带请求/实际增员或 `ArmyRemovalResult`；元素门携带 `ElementType`、`PostDepletionDamage`、换算系数、计算持续时间、可选的 `ElementDurationChangeResult`、奖励是否锁定；另含是否继续移动 |
 | `GateExitedRoad` | ObstacleManager | — | `LevelRunId`、运行时门实例 ID、是否接触过 Army |
-| `PropSpawned` | ObstacleManager | UI、VFX | `LevelRunId`、运行时道具实例 ID、配置 ID、WeaponId、位置 |
+| `PropSpawned` | ObstacleManager | UI、VFX | `LevelRunId`、运行时道具实例 ID、`SpawnEntryIndex`、配置 ID、`PropType`、位置 |
 | `PropBroken` | Prop | UI、VFX | 当前 MVP：`LevelRunId`、运行时道具实例 ID、WeaponId、命中上下文、接触状态、是否已发放武器替换效果；只由 Pending 状态 HP 归零发布，Failed 后锁血不发布；未来效果载荷需按 ADR-022 另行定案 |
 | `PropContactDamage` | Prop | UI、VFX | `LevelRunId`、运行时道具实例 ID、`ArmyId`、接触槽位索引、已提交的 `ContactDamage`；实际 HP 与人数损失见 `SoldierHit` |
 | `PropExitedRoad` | ObstacleManager | — | `LevelRunId`、运行时道具实例 ID、是否接触过 Army |
+| `GooseCageBroken` | GooseCageProp | UI、VFX | `LevelRunId`、运行时实例 ID、配置 ID、命中上下文与 `ArmyAdditionResult`；同步增员完成后发布 |
+| `BasketballSpawned` | ObstacleManager | UI、VFX | `LevelRunId`、运行时实例 ID、来源敌人运行时 ID、篮球配置 ID、位置 |
+| `BasketballBroken` | BasketballProp | UI、VFX | `LevelRunId`、运行时实例 ID、来源敌人运行时 ID（关卡直接生成时为 `-1`）、配置 ID与命中上下文 |
 | `ObstacleRecycled` | ObstacleManager | —（当前无必需监听者） | `LevelRunId`、运行时实例 ID、对象类别、`ObstacleRecycleReason` |
 | `MonsterSpawned` | EnemyManager | LevelManager、UI | `LevelRunId`、运行时敌人实例 ID、`SpawnEntryIndex`、敌人配置 ID、敌人类型、`SpawnPosition`、初始世界坐标 |
 | `MonsterDamaged` | Monster | UI、VFX | `LevelRunId`、运行时敌人实例 ID、`EnemyDamageContext`（来源子弹、组合类型、直接/效果伤害、元素、命中位置与方向）、剩余生命值、是否致命 |

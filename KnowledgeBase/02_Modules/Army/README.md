@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 脚本已实现并通过编译；批次 7 动画表现适配、Prefab/Scene 装配与玩法手测待完成）
 - 依赖：EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager
-- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`
+- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-066-ArmySlotDeathPresentation.md`
 - MVP `ArmyId` 固定为 `0`，同时读取首行 `TbArmy.Id = 0` 并选择序列化 `ArmyPrefabBinding.ArmyId = 0` 的 Prefab。
 
 ## 职责
@@ -59,7 +59,7 @@ ArmyElementStateSnapshot GetElementStateSnapshot();
 
 `ApplySlotDamage` 保持 `void`。Monster、Gate 和 Prop 在调用前必须通过 `TryGetSlotTarget` 重新确认槽位仍有效；无效或空槽位不提交伤害。方法同步完成权威 HP、人数和事件更新，实际扣除与人数损失只由 Army 的 `SoldierHit`、人数及阵型事件表达。攻击者不读取伤害返回值推进状态。
 
-LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`EnterVictoryPresentation`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时与每槽位攻击周期，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。本局初始活动槽位在首个 Playing Tick 立即发射；运行中新激活槽位等待完整 `FireInterval`；实际换到不同武器时全部活动槽位从新周期第 0 帧立即发射。每槽位每逻辑帧最多发射一颗且不追赶补发，但保留越界余量维持周期相位。Victory 表现停止 Army Tick 与命令，但把最终隐藏和身份清理延后到场景卸载或显式 StopRun。
+LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`EnterVictoryPresentation`、`EnterDefeatPresentation`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时与每槽位攻击周期，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。本局初始活动槽位在首个 Playing Tick 立即发射；运行中新激活槽位等待完整 `FireInterval`；实际换到不同武器时全部活动槽位从新周期第 0 帧立即发射。每槽位每逻辑帧最多发射一颗且不追赶补发，但保留越界余量维持周期相位。Victory/Defeat 表现停止 Army Tick 与命令，但把最终隐藏和身份清理延后到场景卸载或显式 StopRun。
 
 ## Prefab 与场景装配
 
@@ -103,6 +103,7 @@ public sealed class ArmyPrefabBinding
 // ArmySlotView（每个 Slot_xx 节点一个）
 [SerializeField] private GameObject soldierVisual;
 [SerializeField] private Animator soldierAnimator;
+[SerializeField] private ArmySlotAnimationEventProxy animationEventProxy;
 [SerializeField] private Collider2D slotCollider;
 [SerializeField] private ArmySlotHitProxy slotHitProxy;
 [SerializeField] private Transform firePoint;
@@ -112,12 +113,13 @@ public sealed class ArmyPrefabBinding
 
 ### 批次 7 动画表现适配
 
-- 每个 WeaponId 提供 Idle、Victory、Attack、MoveLeft、MoveRight 五个 Clip；目录和导入设置见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)。
+- 每个 WeaponId 提供 Idle、Victory、Attack、MoveLeft、MoveRight、Death 六个 Clip；目录和导入设置见 [AnimationPipeline](../../04_Assets/AnimationPipeline.md)。
 - `PF_Army_000` 保持唯一，不按武器复制 Prefab。ArmyController 新增唯一且完整的 `WeaponId -> AnimatorOverrideController` 序列化映射；ArmySlotView 新增显式 `soldierAnimator` 引用。
 - 初始化 WeaponId=0 以及每次实际换武器时，把预创建的 OverrideController 应用到全部槽位，包括当前 `soldierVisual` 未激活的槽位。不得运行时创建 OverrideController、按路径加载或缺失时回退到武器 0。
-- `AC_Army_Base` 的五个状态不使用参数或 Transition。Preparing 播放 Idle；Playing 原地播放循环 Attack，实际左/右位移播放循环 MoveLeft/MoveRight。代码只在状态变化时显式播放，顶在道路边缘且实际位移为零时回到 Attack。
+- `AC_Army_Base` 的六个状态不使用参数或 Transition。Preparing 播放 Idle；Playing 原地播放循环 Attack，实际左/右位移播放循环 MoveLeft/MoveRight。代码只在状态变化时显式播放，顶在道路边缘且实际位移为零时回到 Attack；Death 非循环并由槽位致死入口单独触发。
 - Army 动画持续表达攻击姿态，不通过 AnimationEvent 修改冷却、伤害或生成子弹。Attack、MoveLeft、MoveRight 共享由 `FireInterval` 派生的攻击周期相位，状态切换从已播放进度继续；实际换武器后全部槽位使用新 AOC，活动槽位从当前战斗状态第 0 帧重播并立即发射，不先进入 Idle。
 - Victory 只由关卡胜利表现入口触发，不参与 Level 终局判定；LevelManager 停止其他玩法模块但保留 SoldierVisual，玩家从结算页选择返回、重试或下一关并卸载场景时，再由显式 StopRun 最终清理。
+- 槽位最后一名士兵死亡时立即结算人数并进入 `Dying`：保留 SoldierVisual 播放死亡瞬间武器对应的非循环 Death，关闭受击和发射，增减员及最少人数选择跳过该槽位；末帧事件后隐藏并回到普通空槽。GameOver 调用 `EnterDefeatPresentation` 保留最终死亡表现，但不延迟结果提交。
 
 ## 测试标准
 
@@ -143,7 +145,7 @@ public sealed class ArmyPrefabBinding
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。
 - `TbArmy.MoveSpeed` 是横向基础速度；实际位移使用 `horizontalInput × MoveSpeed × gameplayDeltaTime`，该 delta 由 LevelManager 在帧开始读取并传入，同一次更新不得再读取或叠加其他时间域。当前拖拽先把原始归一化滑动速度限制到 `[-1,1]` 再乘 Inspector 系数，因此最终有限输入允许超过该范围；Army 不得再次 Clamp 到 `[-1,1]`。键盘/手柄输入延后。
-- 十套 WeaponId 动画映射完整且唯一；换武器后所有槽位立即使用新 Controller，随后新增或重新激活的槽位不会显示旧武器。Idle/Attack/左右移动循环、Victory 非循环；Attack/MoveLeft/MoveRight 切换时按当前攻击周期 normalized time 进入新状态，不刷新攻击或改变下次周期边界。
+- 十套 WeaponId 动画映射完整且唯一；换武器后非 Dying 槽位立即使用新 Controller，Dying 槽位完成当前 Death 后应用缓存的新 Controller，随后新增或重新激活的槽位不会显示旧武器。Idle/Attack/左右移动循环，Victory/Death 非循环；Attack/MoveLeft/MoveRight 切换时按当前攻击周期 normalized time 进入新状态，不刷新攻击或改变下次周期边界。
 - ArmyRoot 每局准确重置到配置出生坐标，移动期间 Y 保持为配置值；初始阵型在该坐标越界时 Preparing 失败，道路没有 Collider 时仍能用激活槽位合并 AABB 完成后续左右限位。
 
 - 人数、槽位聚合 HP 和元素持续时间使用宽中间类型计算；超过公开存储类型时饱和到最大有限值，不得整数回绕、变负、NaN 或无穷。

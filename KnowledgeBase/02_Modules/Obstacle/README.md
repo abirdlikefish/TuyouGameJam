@@ -14,7 +14,7 @@
 
 ## 职责
 
-- 通过 Inspector 绑定 `AdditiveGate`、`ElementGate` 和 `WeaponProp` 规范 Prefab，从 PoolService 取得对应具体类型池；接收 Spawn 请求后从正确类型池取得未激活对象。
+- 通过 Inspector 绑定 `AdditiveGate`、`ElementGate`、`WeaponProp`、`BasketballProp` 和 `GooseCageProp` 规范 Prefab，从 PoolService 取得对应具体类型池；接收请求后按 GateType/PropType 从正确类型池取得未激活对象。
 - 为每个实例分配唯一的 `RuntimeInstanceId`。
 - 设置 `ObstacleRoot`、世界位置和旋转；Gate 直接消费 `GateSpawnRequest` 的 LevelConfig 内联数据，Prop 按 `PropSpawnRequest.ConfigId` 从 `IPropConfigProvider` 必得已校验快照；随后注入会话 ID、实例 ID 和回调，登记活动集合后再激活对象。配置缺失已在应用启动时作为致命错误处理，ObstacleManager 不重复降级或记录同一错误。
 - 登记、查询和注销活动 Gate/Prop。

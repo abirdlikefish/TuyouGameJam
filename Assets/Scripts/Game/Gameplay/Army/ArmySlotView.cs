@@ -9,7 +9,15 @@ namespace Game.Gameplay
         Attack,
         MoveLeft,
         MoveRight,
-        Victory
+        Victory,
+        Death
+    }
+
+    internal enum ArmySlotLifeState
+    {
+        Empty,
+        Alive,
+        Dying
     }
 
     public sealed class ArmySlotView : MonoBehaviour
@@ -19,9 +27,11 @@ namespace Game.Gameplay
         private static readonly int MoveLeftState = Animator.StringToHash("Base Layer.MoveLeft");
         private static readonly int MoveRightState = Animator.StringToHash("Base Layer.MoveRight");
         private static readonly int VictoryState = Animator.StringToHash("Base Layer.Victory");
+        private static readonly int DeathState = Animator.StringToHash("Base Layer.Death");
 
         [SerializeField] private GameObject soldierVisual;
         [SerializeField] private Animator soldierAnimator;
+        [SerializeField] private ArmySlotAnimationEventProxy animationEventProxy;
         [SerializeField] private Collider2D slotCollider;
         [SerializeField] private ArmySlotHitProxy slotHitProxy;
         [SerializeField] private Transform firePoint;
@@ -32,13 +42,17 @@ namespace Game.Gameplay
         private int maxHp;
         private float fireCooldownRemaining;
         private ArmyAnimationState desiredAnimationState = ArmyAnimationState.Idle;
+        private ArmyAnimationState postDeathAnimationState = ArmyAnimationState.Idle;
+        private ArmySlotLifeState lifeState = ArmySlotLifeState.Empty;
+        private AnimatorOverrideController pendingAnimatorController;
         private bool animationStateInitialized;
 
         public int SlotIndex => slotIndex;
         public int RepresentedCount => representedCount;
         public int CurrentHp => currentHp;
         public int MaxHp => maxHp;
-        public bool IsActive => representedCount > 0;
+        public bool IsActive => lifeState == ArmySlotLifeState.Alive;
+        public bool IsDeathAnimating => lifeState == ArmySlotLifeState.Dying;
         public Vector2 WorldPosition => transform.position;
         public Vector2 FirePosition => firePoint != null ? firePoint.position : transform.position;
         public Collider2D SlotCollider => slotCollider;
@@ -62,6 +76,18 @@ namespace Game.Gameplay
             if (soldierAnimator.gameObject != soldierVisual)
             {
                 error = $"{name}.soldierAnimator must be on the soldierVisual GameObject.";
+                return false;
+            }
+
+            if (animationEventProxy == null || animationEventProxy.gameObject != soldierVisual)
+            {
+                error = $"{name}.animationEventProxy must be assigned on soldierVisual.";
+                return false;
+            }
+
+            if (animationEventProxy.Target != this)
+            {
+                error = $"{name}.animationEventProxy must explicitly reference this ArmySlotView.";
                 return false;
             }
 
@@ -116,13 +142,20 @@ namespace Game.Gameplay
 
         internal void SetState(int count, int hp, int slotMaxHp, float cooldown)
         {
+            if (lifeState == ArmySlotLifeState.Dying)
+            {
+                throw new System.InvalidOperationException(
+                    $"{name} cannot change represented soldiers while its death animation is playing.");
+            }
+
             representedCount = Mathf.Max(0, count);
             currentHp = Mathf.Max(0, hp);
             maxHp = Mathf.Max(0, slotMaxHp);
             fireCooldownRemaining = Mathf.Max(0f, cooldown);
 
-            var wasActive = soldierVisual.activeSelf;
             var active = representedCount > 0;
+            lifeState = active ? ArmySlotLifeState.Alive : ArmySlotLifeState.Empty;
+            var wasActive = soldierVisual.activeSelf;
             soldierVisual.SetActive(active);
             slotCollider.enabled = active;
             if (active && (!wasActive || !animationStateInitialized))
@@ -142,6 +175,13 @@ namespace Game.Gameplay
                 throw new System.ArgumentNullException(nameof(controller));
             }
 
+            if (lifeState == ArmySlotLifeState.Dying)
+            {
+                pendingAnimatorController = controller;
+                postDeathAnimationState = animationState;
+                return;
+            }
+
             desiredAnimationState = animationState;
             soldierAnimator.runtimeAnimatorController = controller;
             soldierAnimator.Rebind();
@@ -151,6 +191,12 @@ namespace Game.Gameplay
 
         internal void SetAnimationState(ArmyAnimationState animationState, float normalizedTime)
         {
+            if (lifeState == ArmySlotLifeState.Dying && animationState != ArmyAnimationState.Death)
+            {
+                postDeathAnimationState = animationState;
+                return;
+            }
+
             if (desiredAnimationState == animationState && animationStateInitialized)
             {
                 return;
@@ -159,6 +205,49 @@ namespace Game.Gameplay
             desiredAnimationState = animationState;
             animationStateInitialized = false;
             PlayDesiredAnimation(normalizedTime);
+        }
+
+        internal void BeginDeathAnimation()
+        {
+            if (lifeState != ArmySlotLifeState.Alive)
+            {
+                return;
+            }
+
+            representedCount = 0;
+            currentHp = 0;
+            maxHp = 0;
+            fireCooldownRemaining = 0f;
+            lifeState = ArmySlotLifeState.Dying;
+            postDeathAnimationState = desiredAnimationState == ArmyAnimationState.Death
+                ? ArmyAnimationState.Idle
+                : desiredAnimationState;
+            desiredAnimationState = ArmyAnimationState.Death;
+            animationStateInitialized = false;
+            soldierVisual.SetActive(true);
+            slotCollider.enabled = false;
+            PlayDesiredAnimation(0f);
+        }
+
+        internal void HandleDeathAnimationFinished()
+        {
+            if (lifeState != ArmySlotLifeState.Dying)
+            {
+                return;
+            }
+
+            lifeState = ArmySlotLifeState.Empty;
+            desiredAnimationState = postDeathAnimationState;
+            animationStateInitialized = false;
+            if (pendingAnimatorController != null)
+            {
+                soldierAnimator.runtimeAnimatorController = pendingAnimatorController;
+                soldierAnimator.Rebind();
+                pendingAnimatorController = null;
+            }
+
+            soldierVisual.SetActive(false);
+            slotCollider.enabled = false;
         }
 
         internal void SetFireCooldown(float value)
@@ -183,6 +272,9 @@ namespace Game.Gameplay
             maxHp = 0;
             fireCooldownRemaining = 0f;
             desiredAnimationState = ArmyAnimationState.Idle;
+            postDeathAnimationState = ArmyAnimationState.Idle;
+            lifeState = ArmySlotLifeState.Empty;
+            pendingAnimatorController = null;
             animationStateInitialized = false;
             if (soldierVisual != null)
             {
@@ -229,6 +321,8 @@ namespace Game.Gameplay
                     return MoveRightState;
                 case ArmyAnimationState.Victory:
                     return VictoryState;
+                case ArmyAnimationState.Death:
+                    return DeathState;
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(animationState));
             }

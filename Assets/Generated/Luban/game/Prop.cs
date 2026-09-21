@@ -22,6 +22,8 @@ public sealed partial class Prop : Luban.BeanBase
         { if(!_buf["maxHp"].IsNumber) { throw new SerializationException(); }  MaxHp = _buf["maxHp"]; }
         { if(!_buf["contactDamage"].IsNumber) { throw new SerializationException(); }  ContactDamage = _buf["contactDamage"]; }
         { if(!_buf["moveSpeed"].IsNumber) { throw new SerializationException(); }  MoveSpeed = _buf["moveSpeed"]; }
+        { if(!_buf["propType"].IsNumber) { throw new SerializationException(); }  PropType = (game.PropType)_buf["propType"].AsInt; }
+        { if(!_buf["armyAddition"].IsNumber) { throw new SerializationException(); }  ArmyAddition = _buf["armyAddition"]; }
     }
 
     public static Prop DeserializeProp(JSONNode _buf)
@@ -34,7 +36,7 @@ public sealed partial class Prop : Luban.BeanBase
     /// </summary>
     public readonly int Id;
     /// <summary>
-    /// 武器配置 ID
+    /// 武器配置 ID（非武器箱填 0）
     /// </summary>
     public readonly int WeaponId;
     /// <summary>
@@ -49,6 +51,14 @@ public sealed partial class Prop : Luban.BeanBase
     /// 移动速度
     /// </summary>
     public readonly float MoveSpeed;
+    /// <summary>
+    /// 道具类型
+    /// </summary>
+    public readonly game.PropType PropType;
+    /// <summary>
+    /// 击破增员数量
+    /// </summary>
+    public readonly int ArmyAddition;
    
     public const int __ID__ = 954838015;
     public override int GetTypeId() => __ID__;
@@ -65,6 +75,8 @@ public sealed partial class Prop : Luban.BeanBase
         + "maxHp:" + MaxHp + ","
         + "contactDamage:" + ContactDamage + ","
         + "moveSpeed:" + MoveSpeed + ","
+        + "propType:" + PropType + ","
+        + "armyAddition:" + ArmyAddition + ","
         + "}";
     }
 }

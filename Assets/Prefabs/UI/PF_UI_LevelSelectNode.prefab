@@ -60,8 +60,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75c5e1e29c704b6b8ca20bdb248754a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lockedState: {fileID: 0}
-  unlockedState: {fileID: 2525658983397032489}
+  lockedState: {fileID: 2525658983397032489}
+  unlockedState: {fileID: 6329998295621125238}
   startButton: {fileID: 2896693362489186838}
 --- !u!1 &2525658983397032489
 GameObject:
@@ -75,7 +75,7 @@ GameObject:
   - component: {fileID: 3151867620693006194}
   - component: {fileID: 5651551531924001738}
   m_Layer: 0
-  m_Name: UnlockedState
+  m_Name: LockedState
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

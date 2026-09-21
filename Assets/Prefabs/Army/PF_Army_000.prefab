@@ -49,6 +49,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 2240901083671154210}
   soldierAnimator: {fileID: 7773213716492449439}
+  animationEventProxy: {fileID: 956802611952604966}
   slotCollider: {fileID: 743015200920880486}
   slotHitProxy: {fileID: 1301813239778156811}
   firePoint: {fileID: 4990292480611327432}
@@ -63,6 +64,7 @@ GameObject:
   - component: {fileID: 8999216458017057096}
   - component: {fileID: 5877813452236656804}
   - component: {fileID: 4434856671472027317}
+  - component: {fileID: 4046405890747236344}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -134,7 +136,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &4434856671472027317
@@ -158,6 +160,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4046405890747236344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 82062102776713606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5089597127872545494}
 --- !u!1 &110697311559033861
 GameObject:
   m_ObjectHideFlags: 0
@@ -655,6 +670,7 @@ GameObject:
   - component: {fileID: 5459339926364388923}
   - component: {fileID: 6931803606983166009}
   - component: {fileID: 3411012713745286538}
+  - component: {fileID: 3391338125916779403}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -726,7 +742,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3411012713745286538
@@ -750,6 +766,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3391338125916779403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 244065800893458375}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 997645079385021069}
 --- !u!1 &245559651579717754
 GameObject:
   m_ObjectHideFlags: 0
@@ -890,6 +919,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 9172430008758308039}
   soldierAnimator: {fileID: 8613920315645930247}
+  animationEventProxy: {fileID: 1101805115784779127}
   slotCollider: {fileID: 4420660652850305441}
   slotHitProxy: {fileID: 8998347956143970239}
   firePoint: {fileID: 6008802899640534170}
@@ -942,6 +972,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8275824560857565569}
   soldierAnimator: {fileID: 6665154500981042773}
+  animationEventProxy: {fileID: 6782023887917571450}
   slotCollider: {fileID: 1742209717358756416}
   slotHitProxy: {fileID: 5940387281895466798}
   firePoint: {fileID: 2857546733700858257}
@@ -1147,6 +1178,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 2445097775638134429}
   soldierAnimator: {fileID: 4422807061227765290}
+  animationEventProxy: {fileID: 5202813573311109445}
   slotCollider: {fileID: 2982659493770020799}
   slotHitProxy: {fileID: 2845898712746014627}
   firePoint: {fileID: 3634685382136171611}
@@ -1314,6 +1346,7 @@ GameObject:
   - component: {fileID: 5478214773829781358}
   - component: {fileID: 8317578709130271544}
   - component: {fileID: 381424060562206809}
+  - component: {fileID: 5141196605944732459}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -1385,7 +1418,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &381424060562206809
@@ -1409,6 +1442,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5141196605944732459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 595844636974172369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 7935136828205831444}
 --- !u!1 &640217923292937361
 GameObject:
   m_ObjectHideFlags: 0
@@ -1451,6 +1497,7 @@ GameObject:
   - component: {fileID: 8018778501236233279}
   - component: {fileID: 482301754057529586}
   - component: {fileID: 8729588846506004922}
+  - component: {fileID: 3229652415849511167}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -1522,7 +1569,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &8729588846506004922
@@ -1546,6 +1593,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3229652415849511167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673766095616521570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1470885433416296944}
 --- !u!1 &703202726920070366
 GameObject:
   m_ObjectHideFlags: 0
@@ -1710,6 +1770,7 @@ GameObject:
   - component: {fileID: 6532608586224495966}
   - component: {fileID: 773648382023839319}
   - component: {fileID: 2756240442989789855}
+  - component: {fileID: 2272600732118188098}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -1781,7 +1842,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &2756240442989789855
@@ -1805,6 +1866,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2272600732118188098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 971423015771702567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6991795320142523739}
 --- !u!1 &987988234378583653
 GameObject:
   m_ObjectHideFlags: 0
@@ -1854,6 +1928,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 3801076556734303773}
   soldierAnimator: {fileID: 3900054816020964704}
+  animationEventProxy: {fileID: 5591150708720808892}
   slotCollider: {fileID: 5356979578363364339}
   slotHitProxy: {fileID: 8177902947592296809}
   firePoint: {fileID: 6743172354301232589}
@@ -1959,6 +2034,7 @@ GameObject:
   - component: {fileID: 3104737720568075618}
   - component: {fileID: 3231747880632709060}
   - component: {fileID: 3946066851091378459}
+  - component: {fileID: 6719845516272902819}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -2030,7 +2106,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3946066851091378459
@@ -2054,6 +2130,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6719845516272902819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1165560087313062205}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5782166425710934383}
 --- !u!1 &1186593547433619723
 GameObject:
   m_ObjectHideFlags: 0
@@ -2096,6 +2185,7 @@ GameObject:
   - component: {fileID: 7387891293643593517}
   - component: {fileID: 7975679462382857292}
   - component: {fileID: 1374559822284041488}
+  - component: {fileID: 4016086533164609956}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -2167,7 +2257,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1374559822284041488
@@ -2191,6 +2281,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4016086533164609956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1255232892322991785}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 3801713014990754498}
 --- !u!1 &1255809962882366958
 GameObject:
   m_ObjectHideFlags: 0
@@ -2233,6 +2336,7 @@ GameObject:
   - component: {fileID: 3112882283116214966}
   - component: {fileID: 2627031889462378716}
   - component: {fileID: 822380447549284217}
+  - component: {fileID: 3875483502119346234}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -2304,7 +2408,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &822380447549284217
@@ -2328,6 +2432,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3875483502119346234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1276111321549010155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2317845963413642524}
 --- !u!1 &1293548343269597215
 GameObject:
   m_ObjectHideFlags: 0
@@ -2468,6 +2585,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 4343912495927761355}
   soldierAnimator: {fileID: 4181911176762245106}
+  animationEventProxy: {fileID: 9043720266851264102}
   slotCollider: {fileID: 4736769778295856718}
   slotHitProxy: {fileID: 6961029745796810109}
   firePoint: {fileID: 8888907922106270419}
@@ -2520,6 +2638,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 4198513654183390249}
   soldierAnimator: {fileID: 1716562748679258711}
+  animationEventProxy: {fileID: 1017635109675918553}
   slotCollider: {fileID: 5360557473643132816}
   slotHitProxy: {fileID: 5795699596393978075}
   firePoint: {fileID: 6049133091001678362}
@@ -2663,6 +2782,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 4974241587978591357}
   soldierAnimator: {fileID: 1326378756157621585}
+  animationEventProxy: {fileID: 1928503521353081214}
   slotCollider: {fileID: 3524848054913562730}
   slotHitProxy: {fileID: 2467182859105712810}
   firePoint: {fileID: 1627602225991493387}
@@ -2715,6 +2835,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 3283381881952045656}
   soldierAnimator: {fileID: 7388198248570234782}
+  animationEventProxy: {fileID: 5000646863693998352}
   slotCollider: {fileID: 8038352452582700644}
   slotHitProxy: {fileID: 9148553385317005180}
   firePoint: {fileID: 3418801890628647729}
@@ -2949,6 +3070,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 2325613802173320440}
   soldierAnimator: {fileID: 947313427070574612}
+  animationEventProxy: {fileID: 2108178424934033990}
   slotCollider: {fileID: 6290315182967535277}
   slotHitProxy: {fileID: 8328887138622402695}
   firePoint: {fileID: 5519893003517469740}
@@ -2963,6 +3085,7 @@ GameObject:
   - component: {fileID: 3369472882974704563}
   - component: {fileID: 8409924774661230620}
   - component: {fileID: 7324912565635915639}
+  - component: {fileID: 7129976826730166302}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -3034,7 +3157,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7324912565635915639
@@ -3058,6 +3181,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7129976826730166302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1598653498597373795}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5773057273381250338}
 --- !u!1 &1638180718965463894
 GameObject:
   m_ObjectHideFlags: 0
@@ -3160,6 +3296,7 @@ GameObject:
   - component: {fileID: 4979934601140210539}
   - component: {fileID: 388083705113137681}
   - component: {fileID: 9050207922985232428}
+  - component: {fileID: 1978159102689731417}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -3231,7 +3368,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &9050207922985232428
@@ -3255,6 +3392,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1978159102689731417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1653744493447400946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 3154471201660807250}
 --- !u!1 &1703315715171851018
 GameObject:
   m_ObjectHideFlags: 0
@@ -3388,6 +3538,7 @@ GameObject:
   - component: {fileID: 1440905717767813466}
   - component: {fileID: 4796650999363453869}
   - component: {fileID: 8791561291703892889}
+  - component: {fileID: 6896249734975287404}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -3459,7 +3610,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &8791561291703892889
@@ -3483,6 +3634,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6896249734975287404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1863851663303146600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 7201320850811777160}
 --- !u!1 &1884644944991372528
 GameObject:
   m_ObjectHideFlags: 0
@@ -3654,6 +3818,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8304004312292267915}
   soldierAnimator: {fileID: 2397741452526601814}
+  animationEventProxy: {fileID: 1042101383553659374}
   slotCollider: {fileID: 8686635655585338265}
   slotHitProxy: {fileID: 385075513224783114}
   firePoint: {fileID: 7902243587404504742}
@@ -3737,6 +3902,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8332003274826238047}
   soldierAnimator: {fileID: 7175772519913670230}
+  animationEventProxy: {fileID: 1439029105400122320}
   slotCollider: {fileID: 6420566798723973734}
   slotHitProxy: {fileID: 4517645887599485140}
   firePoint: {fileID: 5382617115257550269}
@@ -3782,6 +3948,7 @@ GameObject:
   - component: {fileID: 3284957516820526916}
   - component: {fileID: 5883702673105266848}
   - component: {fileID: 7773213716492449439}
+  - component: {fileID: 956802611952604966}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -3853,7 +4020,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7773213716492449439
@@ -3877,6 +4044,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &956802611952604966
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2240901083671154210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 8137458314023505995}
 --- !u!1 &2248570948799173255
 GameObject:
   m_ObjectHideFlags: 0
@@ -3926,6 +4106,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8445284385408490850}
   soldierAnimator: {fileID: 3544738330620620042}
+  animationEventProxy: {fileID: 6375372351756376457}
   slotCollider: {fileID: 7551751157495634930}
   slotHitProxy: {fileID: 2520972666841630239}
   firePoint: {fileID: 3509105430681944251}
@@ -4062,6 +4243,7 @@ GameObject:
   - component: {fileID: 874015198051778915}
   - component: {fileID: 3573506545255710979}
   - component: {fileID: 947313427070574612}
+  - component: {fileID: 2108178424934033990}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -4133,7 +4315,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &947313427070574612
@@ -4157,6 +4339,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2108178424934033990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2325613802173320440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1548496466976626176}
 --- !u!1 &2376096266679795300
 GameObject:
   m_ObjectHideFlags: 0
@@ -4168,6 +4363,7 @@ GameObject:
   - component: {fileID: 4246085606251404245}
   - component: {fileID: 6494733670430285666}
   - component: {fileID: 862487598186054783}
+  - component: {fileID: 5967672891899980195}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -4239,7 +4435,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &862487598186054783
@@ -4263,6 +4459,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5967672891899980195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2376096266679795300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1374124228627013146}
 --- !u!1 &2398037578544882946
 GameObject:
   m_ObjectHideFlags: 0
@@ -4312,6 +4521,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 971423015771702567}
   soldierAnimator: {fileID: 2756240442989789855}
+  animationEventProxy: {fileID: 2272600732118188098}
   slotCollider: {fileID: 1905762035438348605}
   slotHitProxy: {fileID: 256571629221284039}
   firePoint: {fileID: 7848531322589889357}
@@ -4357,6 +4567,7 @@ GameObject:
   - component: {fileID: 3226190617933385728}
   - component: {fileID: 5476198960450139332}
   - component: {fileID: 4422807061227765290}
+  - component: {fileID: 5202813573311109445}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -4428,7 +4639,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &4422807061227765290
@@ -4452,6 +4663,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5202813573311109445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2445097775638134429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2444728985810900616}
 --- !u!1 &2747897315344285613
 GameObject:
   m_ObjectHideFlags: 0
@@ -4501,6 +4725,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 5242673766412527474}
   soldierAnimator: {fileID: 1195557947382477593}
+  animationEventProxy: {fileID: 8710749564154299638}
   slotCollider: {fileID: 869862569968555309}
   slotHitProxy: {fileID: 2423657079746681711}
   firePoint: {fileID: 7522221920641810619}
@@ -4515,6 +4740,7 @@ GameObject:
   - component: {fileID: 3651096721677519023}
   - component: {fileID: 8341171702376186196}
   - component: {fileID: 2488026223680729508}
+  - component: {fileID: 4253652462194134001}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -4586,7 +4812,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &2488026223680729508
@@ -4610,6 +4836,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4253652462194134001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2747952055213682820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6168591859058814145}
 --- !u!1 &2767087905564312435
 GameObject:
   m_ObjectHideFlags: 0
@@ -4621,6 +4860,7 @@ GameObject:
   - component: {fileID: 3985163242797223433}
   - component: {fileID: 8175319081973493605}
   - component: {fileID: 2931331653674046081}
+  - component: {fileID: 2303187499237844864}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -4692,7 +4932,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &2931331653674046081
@@ -4716,6 +4956,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2303187499237844864
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2767087905564312435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 3851541351544174610}
 --- !u!1 &2806190216997796741
 GameObject:
   m_ObjectHideFlags: 0
@@ -4880,6 +5133,7 @@ GameObject:
   - component: {fileID: 1105449199726465821}
   - component: {fileID: 1767324918521488292}
   - component: {fileID: 7388198248570234782}
+  - component: {fileID: 5000646863693998352}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -4951,7 +5205,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7388198248570234782
@@ -4975,6 +5229,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5000646863693998352
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3283381881952045656}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5649164106158677912}
 --- !u!1 &3446256712169567679
 GameObject:
   m_ObjectHideFlags: 0
@@ -4986,6 +5253,7 @@ GameObject:
   - component: {fileID: 2076361323323511184}
   - component: {fileID: 7885759213777066470}
   - component: {fileID: 7496017383550479065}
+  - component: {fileID: 6170451218097135186}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -5057,7 +5325,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7496017383550479065
@@ -5081,6 +5349,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6170451218097135186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3446256712169567679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2907417179908704764}
 --- !u!1 &3617084723232266655
 GameObject:
   m_ObjectHideFlags: 0
@@ -5130,6 +5411,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 5629797745730237411}
   soldierAnimator: {fileID: 6074642695916884226}
+  animationEventProxy: {fileID: 5623081437475214689}
   slotCollider: {fileID: 3931574661917019648}
   slotHitProxy: {fileID: 5406890324178136198}
   firePoint: {fileID: 7320273617917034618}
@@ -5213,6 +5495,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 2767087905564312435}
   soldierAnimator: {fileID: 2931331653674046081}
+  animationEventProxy: {fileID: 2303187499237844864}
   slotCollider: {fileID: 5875990087869366053}
   slotHitProxy: {fileID: 1271488795769933422}
   firePoint: {fileID: 2007960830633900631}
@@ -5258,6 +5541,7 @@ GameObject:
   - component: {fileID: 5954351050976806717}
   - component: {fileID: 617078517668674765}
   - component: {fileID: 3900054816020964704}
+  - component: {fileID: 5591150708720808892}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -5329,7 +5613,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3900054816020964704
@@ -5353,6 +5637,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5591150708720808892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3801076556734303773}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 491890386218432698}
 --- !u!1 &3880814622925051166
 GameObject:
   m_ObjectHideFlags: 0
@@ -5402,6 +5699,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 7989303659003376074}
   soldierAnimator: {fileID: 1535757227120440106}
+  animationEventProxy: {fileID: 1448305391268620549}
   slotCollider: {fileID: 911370805649036562}
   slotHitProxy: {fileID: 8561785859493338018}
   firePoint: {fileID: 1538112074938035402}
@@ -5758,6 +6056,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 6826161330515223658}
   soldierAnimator: {fileID: 3353419884818165973}
+  animationEventProxy: {fileID: 5716015920310966900}
   slotCollider: {fileID: 1421401700041330533}
   slotHitProxy: {fileID: 4711830307026075064}
   firePoint: {fileID: 6096328365768572367}
@@ -5841,6 +6140,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 7347262995791995943}
   soldierAnimator: {fileID: 3767768539944847301}
+  animationEventProxy: {fileID: 6430275602096079583}
   slotCollider: {fileID: 2202023616165510369}
   slotHitProxy: {fileID: 1943294226311625198}
   firePoint: {fileID: 2632892742231205065}
@@ -6015,6 +6315,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 4648064302280869871}
   soldierAnimator: {fileID: 7636920973994452170}
+  animationEventProxy: {fileID: 7010970255292593087}
   slotCollider: {fileID: 5486090598354634583}
   slotHitProxy: {fileID: 5980135589457990643}
   firePoint: {fileID: 7999151270607153323}
@@ -6067,6 +6368,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8351969502664919150}
   soldierAnimator: {fileID: 7330894175913703518}
+  animationEventProxy: {fileID: 7533700629768307826}
   slotCollider: {fileID: 6690963329304966157}
   slotHitProxy: {fileID: 7656770785472289198}
   firePoint: {fileID: 1093103822543676160}
@@ -6081,6 +6383,7 @@ GameObject:
   - component: {fileID: 6019921558320129570}
   - component: {fileID: 3590202193713859816}
   - component: {fileID: 1716562748679258711}
+  - component: {fileID: 1017635109675918553}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -6152,7 +6455,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1716562748679258711
@@ -6176,6 +6479,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1017635109675918553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198513654183390249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 4400599424456303138}
 --- !u!1 &4280909117018757686
 GameObject:
   m_ObjectHideFlags: 0
@@ -6256,6 +6572,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 5854865571853952431}
   soldierAnimator: {fileID: 4502623849557930475}
+  animationEventProxy: {fileID: 2977387947647459248}
   slotCollider: {fileID: 1314602924033001925}
   slotHitProxy: {fileID: 6903386366911906428}
   firePoint: {fileID: 8835849922542100349}
@@ -6392,6 +6709,7 @@ GameObject:
   - component: {fileID: 5823004126199323359}
   - component: {fileID: 5396493587998704389}
   - component: {fileID: 4181911176762245106}
+  - component: {fileID: 9043720266851264102}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -6463,7 +6781,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &4181911176762245106
@@ -6487,6 +6805,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &9043720266851264102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4343912495927761355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1383904107143421397}
 --- !u!1 &4350295620115520163
 GameObject:
   m_ObjectHideFlags: 0
@@ -6498,6 +6829,7 @@ GameObject:
   - component: {fileID: 7643952915105436742}
   - component: {fileID: 1037101493371534461}
   - component: {fileID: 8071142070940440401}
+  - component: {fileID: 8995071141302528805}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -6569,7 +6901,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &8071142070940440401
@@ -6593,6 +6925,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &8995071141302528805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4350295620115520163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2100063669534116539}
 --- !u!1 &4434225807454913553
 GameObject:
   m_ObjectHideFlags: 0
@@ -6695,6 +7040,7 @@ GameObject:
   - component: {fileID: 2178658598887623599}
   - component: {fileID: 2930327820595587109}
   - component: {fileID: 7636920973994452170}
+  - component: {fileID: 7010970255292593087}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -6766,7 +7112,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7636920973994452170
@@ -6790,6 +7136,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7010970255292593087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4648064302280869871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 8136327577527955834}
 --- !u!1 &4746449393518459064
 GameObject:
   m_ObjectHideFlags: 0
@@ -6832,6 +7191,7 @@ GameObject:
   - component: {fileID: 121953547679077148}
   - component: {fileID: 395498372363067594}
   - component: {fileID: 1326378756157621585}
+  - component: {fileID: 1928503521353081214}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -6903,7 +7263,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1326378756157621585
@@ -6927,6 +7287,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1928503521353081214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4974241587978591357}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 3906095860019647812}
 --- !u!1 &5022876759818068526
 GameObject:
   m_ObjectHideFlags: 0
@@ -6969,6 +7342,7 @@ GameObject:
   - component: {fileID: 5005202161958234019}
   - component: {fileID: 5233437336083329290}
   - component: {fileID: 1073724157723912366}
+  - component: {fileID: 785417463272558556}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -7040,7 +7414,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1073724157723912366
@@ -7064,6 +7438,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &785417463272558556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5138178878323834646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6795136372755363232}
 --- !u!1 &5167105520135578015
 GameObject:
   m_ObjectHideFlags: 0
@@ -7106,6 +7493,7 @@ GameObject:
   - component: {fileID: 859718298943567308}
   - component: {fileID: 7162167992591273355}
   - component: {fileID: 6137749335174161596}
+  - component: {fileID: 3665400004054135412}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -7177,7 +7565,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &6137749335174161596
@@ -7201,6 +7589,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3665400004054135412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5204339213431112057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5626055729112220801}
 --- !u!1 &5232771509630011960
 GameObject:
   m_ObjectHideFlags: 0
@@ -7250,6 +7651,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 1653744493447400946}
   soldierAnimator: {fileID: 9050207922985232428}
+  animationEventProxy: {fileID: 1978159102689731417}
   slotCollider: {fileID: 1650911222061970748}
   slotHitProxy: {fileID: 4456623021736711071}
   firePoint: {fileID: 6469641353222882565}
@@ -7302,6 +7704,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 5138178878323834646}
   soldierAnimator: {fileID: 1073724157723912366}
+  animationEventProxy: {fileID: 785417463272558556}
   slotCollider: {fileID: 9094714883565555217}
   slotHitProxy: {fileID: 3755734842164058577}
   firePoint: {fileID: 1485887576637578291}
@@ -7316,6 +7719,7 @@ GameObject:
   - component: {fileID: 4890683653017146624}
   - component: {fileID: 1414462881678030798}
   - component: {fileID: 1195557947382477593}
+  - component: {fileID: 8710749564154299638}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -7387,7 +7791,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1195557947382477593
@@ -7411,6 +7815,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &8710749564154299638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5242673766412527474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2822788274151106725}
 --- !u!1 &5292949049400116755
 GameObject:
   m_ObjectHideFlags: 0
@@ -7551,6 +7968,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 5204339213431112057}
   soldierAnimator: {fileID: 6137749335174161596}
+  animationEventProxy: {fileID: 3665400004054135412}
   slotCollider: {fileID: 5397274344717498218}
   slotHitProxy: {fileID: 8988928554571415138}
   firePoint: {fileID: 8525709505036889113}
@@ -7634,6 +8052,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 595844636974172369}
   soldierAnimator: {fileID: 381424060562206809}
+  animationEventProxy: {fileID: 5141196605944732459}
   slotCollider: {fileID: 2545379619529102361}
   slotHitProxy: {fileID: 229300447106168813}
   firePoint: {fileID: 4418797805616433129}
@@ -7739,6 +8158,7 @@ GameObject:
   - component: {fileID: 2965726272310590049}
   - component: {fileID: 2594972602242800157}
   - component: {fileID: 6074642695916884226}
+  - component: {fileID: 5623081437475214689}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -7810,7 +8230,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &6074642695916884226
@@ -7834,6 +8254,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5623081437475214689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5629797745730237411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1657050063445408161}
 --- !u!1 &5686029597268919110
 GameObject:
   m_ObjectHideFlags: 0
@@ -7914,6 +8347,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 1863851663303146600}
   soldierAnimator: {fileID: 8791561291703892889}
+  animationEventProxy: {fileID: 6896249734975287404}
   slotCollider: {fileID: 8753575991688641952}
   slotHitProxy: {fileID: 3524676720737341053}
   firePoint: {fileID: 4840915534783126969}
@@ -7997,6 +8431,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 673766095616521570}
   soldierAnimator: {fileID: 8729588846506004922}
+  animationEventProxy: {fileID: 3229652415849511167}
   slotCollider: {fileID: 146657688860976791}
   slotHitProxy: {fileID: 8018868386476497072}
   firePoint: {fileID: 3426771816609809558}
@@ -8011,6 +8446,7 @@ GameObject:
   - component: {fileID: 2554977929555380301}
   - component: {fileID: 630939254399516354}
   - component: {fileID: 4502623849557930475}
+  - component: {fileID: 2977387947647459248}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -8082,7 +8518,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &4502623849557930475
@@ -8106,6 +8542,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2977387947647459248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5854865571853952431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 8280259514998980800}
 --- !u!1 &5932111828127273780
 GameObject:
   m_ObjectHideFlags: 0
@@ -8330,6 +8779,7 @@ GameObject:
   - component: {fileID: 4356312593858107659}
   - component: {fileID: 3198347877494948207}
   - component: {fileID: 7710938145311964233}
+  - component: {fileID: 5505806793550467189}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -8401,7 +8851,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7710938145311964233
@@ -8425,6 +8875,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5505806793550467189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6141436830689273551}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 955274738161582855}
 --- !u!1 &6167940717505385353
 GameObject:
   m_ObjectHideFlags: 0
@@ -8505,6 +8968,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 7183971682172838296}
   soldierAnimator: {fileID: 1890113030407493009}
+  animationEventProxy: {fileID: 5356878072718990086}
   slotCollider: {fileID: 1215986790267182426}
   slotHitProxy: {fileID: 7526851524601414833}
   firePoint: {fileID: 8267696072470826796}
@@ -8519,6 +8983,7 @@ GameObject:
   - component: {fileID: 6196502746954947922}
   - component: {fileID: 5465288145122147746}
   - component: {fileID: 3693888869468573356}
+  - component: {fileID: 3556511092394343206}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -8590,7 +9055,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3693888869468573356
@@ -8614,6 +9079,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3556511092394343206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6259029008716671045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6032353876893065247}
 --- !u!1 &6293101554026912186
 GameObject:
   m_ObjectHideFlags: 0
@@ -8656,6 +9134,7 @@ GameObject:
   - component: {fileID: 5775622038186022976}
   - component: {fileID: 476934242728424388}
   - component: {fileID: 6831695102908555713}
+  - component: {fileID: 4296200612005275674}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -8727,7 +9206,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &6831695102908555713
@@ -8751,6 +9230,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4296200612005275674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6336254411499198788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 15052447995800748}
 --- !u!1 &6448638842214753638
 GameObject:
   m_ObjectHideFlags: 0
@@ -8831,6 +9323,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 4350295620115520163}
   soldierAnimator: {fileID: 8071142070940440401}
+  animationEventProxy: {fileID: 8995071141302528805}
   slotCollider: {fileID: 2609959059993548315}
   slotHitProxy: {fileID: 8496315288224955887}
   firePoint: {fileID: 6946832752739398514}
@@ -9005,6 +9498,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 82062102776713606}
   soldierAnimator: {fileID: 4434856671472027317}
+  animationEventProxy: {fileID: 4046405890747236344}
   slotCollider: {fileID: 6213197055926889532}
   slotHitProxy: {fileID: 6883726161052318294}
   firePoint: {fileID: 3946417762815026703}
@@ -9057,6 +9551,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 1255232892322991785}
   soldierAnimator: {fileID: 1374559822284041488}
+  animationEventProxy: {fileID: 4016086533164609956}
   slotCollider: {fileID: 1645141223898702141}
   slotHitProxy: {fileID: 9177784819233330811}
   firePoint: {fileID: 6864070779149353564}
@@ -9109,6 +9604,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8663810057919238030}
   soldierAnimator: {fileID: 1649559761352172746}
+  animationEventProxy: {fileID: 1851554815886395}
   slotCollider: {fileID: 6782985541424785547}
   slotHitProxy: {fileID: 1362917160482304855}
   firePoint: {fileID: 6119389204687191950}
@@ -9123,6 +9619,7 @@ GameObject:
   - component: {fileID: 572555903475380125}
   - component: {fileID: 946192420220507204}
   - component: {fileID: 3353419884818165973}
+  - component: {fileID: 5716015920310966900}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -9194,7 +9691,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3353419884818165973
@@ -9218,6 +9715,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5716015920310966900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6826161330515223658}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6607637847833147773}
 --- !u!1 &6862113303489663186
 GameObject:
   m_ObjectHideFlags: 0
@@ -9567,6 +10077,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 1276111321549010155}
   soldierAnimator: {fileID: 822380447549284217}
+  animationEventProxy: {fileID: 3875483502119346234}
   slotCollider: {fileID: 19753142623395950}
   slotHitProxy: {fileID: 1260699809556613358}
   firePoint: {fileID: 4326343372452412471}
@@ -9619,6 +10130,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 1165560087313062205}
   soldierAnimator: {fileID: 3946066851091378459}
+  animationEventProxy: {fileID: 6719845516272902819}
   slotCollider: {fileID: 7725725274016579221}
   slotHitProxy: {fileID: 5533988962869681465}
   firePoint: {fileID: 7759313409288366198}
@@ -9633,6 +10145,7 @@ GameObject:
   - component: {fileID: 4201661907727429049}
   - component: {fileID: 6717025563179025072}
   - component: {fileID: 1182075209585093491}
+  - component: {fileID: 6189738577325037995}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -9704,7 +10217,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1182075209585093491
@@ -9728,6 +10241,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6189738577325037995
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6979232497543555366}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 7167685971760239690}
 --- !u!1 &7004236591353164448
 GameObject:
   m_ObjectHideFlags: 0
@@ -9868,6 +10394,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 2376096266679795300}
   soldierAnimator: {fileID: 862487598186054783}
+  animationEventProxy: {fileID: 5967672891899980195}
   slotCollider: {fileID: 4725931185828127793}
   slotHitProxy: {fileID: 7400805107491241052}
   firePoint: {fileID: 571419366786433503}
@@ -9920,6 +10447,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8352731428140273022}
   soldierAnimator: {fileID: 344184217556294526}
+  animationEventProxy: {fileID: 4310383167050333871}
   slotCollider: {fileID: 3291910125462102326}
   slotHitProxy: {fileID: 5990821034209322665}
   firePoint: {fileID: 6848145934808329303}
@@ -10300,6 +10828,7 @@ GameObject:
   - component: {fileID: 1517555117446257691}
   - component: {fileID: 3598762116554183892}
   - component: {fileID: 1890113030407493009}
+  - component: {fileID: 5356878072718990086}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -10371,7 +10900,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1890113030407493009
@@ -10395,6 +10924,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5356878072718990086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7183971682172838296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5684522608298708859}
 --- !u!1 &7292438752518177324
 GameObject:
   m_ObjectHideFlags: 0
@@ -10535,6 +11077,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 6259029008716671045}
   soldierAnimator: {fileID: 3693888869468573356}
+  animationEventProxy: {fileID: 3556511092394343206}
   slotCollider: {fileID: 8259574029108001566}
   slotHitProxy: {fileID: 1737331407529790052}
   firePoint: {fileID: 2212377362455149221}
@@ -10549,6 +11092,7 @@ GameObject:
   - component: {fileID: 6702064037437064318}
   - component: {fileID: 8483647592475887301}
   - component: {fileID: 3767768539944847301}
+  - component: {fileID: 6430275602096079583}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -10620,7 +11164,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3767768539944847301
@@ -10644,6 +11188,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6430275602096079583
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7347262995791995943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 4071331800738770184}
 --- !u!1 &7357061665900519359
 GameObject:
   m_ObjectHideFlags: 0
@@ -10693,6 +11250,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 7998809134628888892}
   soldierAnimator: {fileID: 3692834995565307405}
+  animationEventProxy: {fileID: 5176529782034987988}
   slotCollider: {fileID: 5978009791741437719}
   slotHitProxy: {fileID: 7670930809630623254}
   firePoint: {fileID: 2046916199970647133}
@@ -10745,6 +11303,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 7706165710957398361}
   soldierAnimator: {fileID: 1908062446796820962}
+  animationEventProxy: {fileID: 8567121910693116860}
   slotCollider: {fileID: 2759629985492099404}
   slotHitProxy: {fileID: 8590075412206264049}
   firePoint: {fileID: 3010535065648478958}
@@ -10881,6 +11440,7 @@ GameObject:
   - component: {fileID: 8395107917050365540}
   - component: {fileID: 4226935571938095628}
   - component: {fileID: 1908062446796820962}
+  - component: {fileID: 8567121910693116860}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -10952,7 +11512,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1908062446796820962
@@ -10976,6 +11536,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &8567121910693116860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7706165710957398361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 3569666168683805197}
 --- !u!1 &7763961787391764702
 GameObject:
   m_ObjectHideFlags: 0
@@ -11207,6 +11780,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 244065800893458375}
   soldierAnimator: {fileID: 3411012713745286538}
+  animationEventProxy: {fileID: 3391338125916779403}
   slotCollider: {fileID: 6023144873137641964}
   slotHitProxy: {fileID: 8018593634515061898}
   firePoint: {fileID: 2844211700539682241}
@@ -11381,6 +11955,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8311416922374106399}
   soldierAnimator: {fileID: 323757979842918739}
+  animationEventProxy: {fileID: 8697262538526690059}
   slotCollider: {fileID: 5147368871666783571}
   slotHitProxy: {fileID: 7237666233221207135}
   firePoint: {fileID: 2453704275970861243}
@@ -11433,6 +12008,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8330105489733875133}
   soldierAnimator: {fileID: 4852094802880042257}
+  animationEventProxy: {fileID: 2763378336708462677}
   slotCollider: {fileID: 5220914570212898863}
   slotHitProxy: {fileID: 3937036989836460318}
   firePoint: {fileID: 7631273617240819903}
@@ -11447,6 +12023,7 @@ GameObject:
   - component: {fileID: 4303566990065199263}
   - component: {fileID: 6811950652204470972}
   - component: {fileID: 1535757227120440106}
+  - component: {fileID: 1448305391268620549}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -11518,7 +12095,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1535757227120440106
@@ -11542,6 +12119,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1448305391268620549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7989303659003376074}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2786336667025080705}
 --- !u!1 &7998809134628888892
 GameObject:
   m_ObjectHideFlags: 0
@@ -11553,6 +12143,7 @@ GameObject:
   - component: {fileID: 9059771102257543358}
   - component: {fileID: 8996340987269766992}
   - component: {fileID: 3692834995565307405}
+  - component: {fileID: 5176529782034987988}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -11624,7 +12215,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3692834995565307405
@@ -11648,6 +12239,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5176529782034987988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7998809134628888892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1924162954464951757}
 --- !u!1 &8084238453431846951
 GameObject:
   m_ObjectHideFlags: 0
@@ -11788,6 +12392,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 2747952055213682820}
   soldierAnimator: {fileID: 2488026223680729508}
+  animationEventProxy: {fileID: 4253652462194134001}
   slotCollider: {fileID: 1865413828273814404}
   slotHitProxy: {fileID: 5349174675392063721}
   firePoint: {fileID: 3247009644835082873}
@@ -12044,6 +12649,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 6979232497543555366}
   soldierAnimator: {fileID: 1182075209585093491}
+  animationEventProxy: {fileID: 6189738577325037995}
   slotCollider: {fileID: 7321814921027863797}
   slotHitProxy: {fileID: 6485640682216874327}
   firePoint: {fileID: 3483920424555462959}
@@ -12058,6 +12664,7 @@ GameObject:
   - component: {fileID: 2199821296716808716}
   - component: {fileID: 5753308417434485183}
   - component: {fileID: 6665154500981042773}
+  - component: {fileID: 6782023887917571450}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12129,7 +12736,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &6665154500981042773
@@ -12153,6 +12760,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6782023887917571450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8275824560857565569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6066901117550737556}
 --- !u!1 &8285641112267163206
 GameObject:
   m_ObjectHideFlags: 0
@@ -12195,6 +12815,7 @@ GameObject:
   - component: {fileID: 5241015454678664885}
   - component: {fileID: 2929676532315444633}
   - component: {fileID: 2397741452526601814}
+  - component: {fileID: 1042101383553659374}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12266,7 +12887,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &2397741452526601814
@@ -12290,6 +12911,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1042101383553659374
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8304004312292267915}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 6034414029816696150}
 --- !u!1 &8311416922374106399
 GameObject:
   m_ObjectHideFlags: 0
@@ -12301,6 +12935,7 @@ GameObject:
   - component: {fileID: 1804390776688620260}
   - component: {fileID: 4882733771488511628}
   - component: {fileID: 323757979842918739}
+  - component: {fileID: 8697262538526690059}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12372,7 +13007,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &323757979842918739
@@ -12396,6 +13031,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &8697262538526690059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8311416922374106399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2842055503738746273}
 --- !u!1 &8322564374539331378
 GameObject:
   m_ObjectHideFlags: 0
@@ -12438,6 +13086,7 @@ GameObject:
   - component: {fileID: 8979927797084851028}
   - component: {fileID: 6163830491795122109}
   - component: {fileID: 4852094802880042257}
+  - component: {fileID: 2763378336708462677}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12509,7 +13158,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &4852094802880042257
@@ -12533,6 +13182,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2763378336708462677
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8330105489733875133}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1662199586404663423}
 --- !u!1 &8332003274826238047
 GameObject:
   m_ObjectHideFlags: 0
@@ -12544,6 +13206,7 @@ GameObject:
   - component: {fileID: 1384610661696201497}
   - component: {fileID: 7530869666769011056}
   - component: {fileID: 7175772519913670230}
+  - component: {fileID: 1439029105400122320}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12615,7 +13278,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7175772519913670230
@@ -12639,6 +13302,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1439029105400122320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8332003274826238047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 5932612839630975241}
 --- !u!1 &8351969502664919150
 GameObject:
   m_ObjectHideFlags: 0
@@ -12650,6 +13326,7 @@ GameObject:
   - component: {fileID: 9177335335588945269}
   - component: {fileID: 356280851491898627}
   - component: {fileID: 7330894175913703518}
+  - component: {fileID: 7533700629768307826}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12721,7 +13398,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &7330894175913703518
@@ -12745,6 +13422,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7533700629768307826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8351969502664919150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 868298507391516046}
 --- !u!1 &8352731428140273022
 GameObject:
   m_ObjectHideFlags: 0
@@ -12756,6 +13446,7 @@ GameObject:
   - component: {fileID: 1805395342695042443}
   - component: {fileID: 1572770513288840331}
   - component: {fileID: 344184217556294526}
+  - component: {fileID: 4310383167050333871}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12827,7 +13518,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &344184217556294526
@@ -12851,6 +13542,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4310383167050333871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8352731428140273022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 2702817519149780874}
 --- !u!1 &8364282910760333580
 GameObject:
   m_ObjectHideFlags: 0
@@ -12862,6 +13566,7 @@ GameObject:
   - component: {fileID: 3678401686064160967}
   - component: {fileID: 4954610320599184208}
   - component: {fileID: 3343809471111024300}
+  - component: {fileID: 3261317178735438401}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -12933,7 +13638,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3343809471111024300
@@ -12957,6 +13662,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3261317178735438401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8364282910760333580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 4137496563644857819}
 --- !u!1 &8364612288515292256
 GameObject:
   m_ObjectHideFlags: 0
@@ -13090,6 +13808,7 @@ GameObject:
   - component: {fileID: 7320777416171731916}
   - component: {fileID: 3652117402684715095}
   - component: {fileID: 3544738330620620042}
+  - component: {fileID: 6375372351756376457}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -13161,7 +13880,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &3544738330620620042
@@ -13185,6 +13904,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6375372351756376457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8445284385408490850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 4387147215341719060}
 --- !u!1 &8496259092262407898
 GameObject:
   m_ObjectHideFlags: 0
@@ -13325,6 +14057,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 3446256712169567679}
   soldierAnimator: {fileID: 7496017383550479065}
+  animationEventProxy: {fileID: 6170451218097135186}
   slotCollider: {fileID: 2110174460190525214}
   slotHitProxy: {fileID: 9110909745223654593}
   firePoint: {fileID: 4606193027539757647}
@@ -13499,6 +14232,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 6336254411499198788}
   soldierAnimator: {fileID: 6831695102908555713}
+  animationEventProxy: {fileID: 4296200612005275674}
   slotCollider: {fileID: 7630973195908508853}
   slotHitProxy: {fileID: 2463950230543056633}
   firePoint: {fileID: 4294035325504466589}
@@ -13544,6 +14278,7 @@ GameObject:
   - component: {fileID: 7126862135714703904}
   - component: {fileID: 5916143314167819981}
   - component: {fileID: 1649559761352172746}
+  - component: {fileID: 1851554815886395}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -13615,7 +14350,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1649559761352172746
@@ -13639,6 +14374,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1851554815886395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8663810057919238030}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1159322787849551448}
 --- !u!1 &8690048933034814832
 GameObject:
   m_ObjectHideFlags: 0
@@ -13719,6 +14467,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 8364282910760333580}
   soldierAnimator: {fileID: 3343809471111024300}
+  animationEventProxy: {fileID: 3261317178735438401}
   slotCollider: {fileID: 3920344347800354815}
   slotHitProxy: {fileID: 3636078787438945746}
   firePoint: {fileID: 8929210834888710248}
@@ -14226,6 +14975,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 1598653498597373795}
   soldierAnimator: {fileID: 7324912565635915639}
+  animationEventProxy: {fileID: 7129976826730166302}
   slotCollider: {fileID: 5481426161855254219}
   slotHitProxy: {fileID: 1895850870920710485}
   firePoint: {fileID: 1972429902837832212}
@@ -14278,6 +15028,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soldierVisual: {fileID: 6141436830689273551}
   soldierAnimator: {fileID: 7710938145311964233}
+  animationEventProxy: {fileID: 5505806793550467189}
   slotCollider: {fileID: 7943570640383924726}
   slotHitProxy: {fileID: 3883192417234383989}
   firePoint: {fileID: 3283048269391523737}
@@ -14385,6 +15136,7 @@ GameObject:
   - component: {fileID: 535247365305750518}
   - component: {fileID: 3696573469046715750}
   - component: {fileID: 8613920315645930247}
+  - component: {fileID: 1101805115784779127}
   m_Layer: 0
   m_Name: SoldierVisual
   m_TagString: Untagged
@@ -14456,7 +15208,7 @@ SpriteRenderer:
   m_Size: {x: 0.9382325, y: 1.6679688}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &8613920315645930247
@@ -14480,3 +15232,16 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1101805115784779127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9172430008758308039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5d9131878fca4448009a9bf95609e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 561252369668309525}

@@ -19,6 +19,7 @@ MonoBehaviour:
   enemyApproachY: 0
   despawnY: -9
   elementDurationSecondsPerDamage: 1
+  ikunBasketballConfigId: 3
   enemySpawns:
   - spawnTime: 29.3
     spawnPosition: 0

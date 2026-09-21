@@ -66,7 +66,7 @@ GameplayScene 的 Canvas 直属节点顺序保持 TouchDragArea、BattleHud、Le
 PF_Army_000 [ArmyController]
 └── Slots
     ├── Slot_00 [ArmySlotView]
-    │   ├── SoldierVisual [SpriteRenderer；Animator]
+    │   ├── SoldierVisual [SpriteRenderer；Animator；ArmySlotAnimationEventProxy]
     │   ├── SlotCollider [Collider2D；ArmySlot Layer；ArmySlotHitProxy]
     │   └── FirePoint [Transform]
     └── Slot_XX ...
@@ -74,10 +74,10 @@ PF_Army_000 [ArmyController]
 
 - ArmyController 显式绑定有序 `ArmySlotView[] slots`。
 - ArmyController 额外显式绑定唯一的 `WeaponId -> AnimatorOverrideController` 数组，固定覆盖 WeaponId 0～9；ID 不得重复，引用不得为空。
-- ArmySlotView 显式绑定 `soldierVisual`、`soldierAnimator`、`slotCollider`、`slotHitProxy`、`firePoint`；Animator 必须作用于当前 SoldierVisual 的 SpriteRenderer。
+- ArmySlotView 显式绑定 `soldierVisual`、`soldierAnimator`、`animationEventProxy`、`slotCollider`、`slotHitProxy`、`firePoint`；代理与 Animator 必须位于 SoldierVisual，并显式回指当前槽位。
 - `ArmySlotHitProxy` 与 SlotCollider 位于同一 GameObject，并显式绑定当前 ArmySlotView；Army 初始化时注入固定 ArmyId 与数组下标 SlotIndex。
 - 数组顺序就是稳定 SlotIndex；不得运行时扫描或排序。
-- `AC_Army_Base` 固定提供 Idle、MoveLeft、MoveRight、Attack、Victory 五个无参数、无 Transition 的状态；每个 WeaponId 使用预创建的 OverrideController 覆盖五个 Clip。ArmyController 通过状态哈希显式播放，换武器更新所有槽位并保持当前战斗状态，包括当前隐藏槽位；不运行时创建 OverrideController 或按路径加载。
+- `AC_Army_Base` 固定提供 Idle、MoveLeft、MoveRight、Attack、Victory、Death 六个无参数、无 Transition 的状态；每个 WeaponId 使用预创建的 OverrideController 覆盖六个 Clip。Death 非循环且结束时间恰好包含一个 `OnDeathAnimationFinished()`，只结束槽位死亡表现，不重复结算人数。ArmyController 通过状态哈希显式播放，换武器更新所有非 Dying 槽位并让 Dying 槽位缓存最新 Controller；不运行时创建 OverrideController 或按路径加载。
 - Army 不通过 AnimationEvent 生成子弹。Idle、Attack、MoveLeft、MoveRight 循环；后三者都是持续攻击姿态并与 FireInterval 解耦，Victory 非循环。移动状态依据道路限位后的实际 X 位移选择。
 
 ## Bullet
@@ -150,15 +150,15 @@ PF_Monster_Ikun [IkunMonster；Animator；Kinematic Rigidbody2D]
 └── LightningEffectRoot [默认关闭；后续特效挂点]
 ```
 
-- 三个根 GameObject 都同时挂载具体 Monster 根脚本、Animator 和 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
+- 四个根 GameObject 都同时挂载具体 Monster 根脚本、Animator 和 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
 - Hen/Rooster/Ikun 另外绑定 `attackCollider`；Chick 不绑定 AttackCollider。Ikun 还必须绑定直属 `basketballSpawnPoint` 与正数生成间隔。
-- 三种 Prefab 均不创建 TargetSensor。
-- 三种 Prefab 根脚本都显式绑定三个互不重复的直属元素效果子节点。节点自身默认关闭且不带玩法组件；后续具体表现只能挂在对应节点内部，不替换根脚本引用。
+- 四种 Prefab 均不创建 TargetSensor。
+- 四种 Prefab 根脚本都显式绑定三个互不重复的直属元素效果子节点。节点自身默认关闭且不带玩法组件；后续具体表现只能挂在对应节点内部，不替换根脚本引用。
 - `blockingGap` 只来自当前规范 Prefab，不进入 Luban 或 LevelConfig。
-- 三种 Prefab 的 Animator 使用相同的默认 Move、Attack Trigger 和 Death Trigger 语义；Move Clip 循环，Attack/Death Clip 非循环。每种 Prefab 直接绑定本类型 Controller 或基于公共状态机的预创建 OverrideController。
-- 三种非循环 Attack Clip 都必须包含恰好一个调用 `OnAttackFrame()` 的命中关键帧事件，以及末帧一个调用 `OnAttackAnimationFinished()` 的结束事件。AnimationEvent 只登记请求，实际伤害由 EnemyManager.ResolveAttacks 执行。
-- 三种非循环 Death Clip 的末帧都必须包含一个调用 `OnDeathAnimationFinished()` 的事件。该事件只向 EnemyManager 登记延后回收，不负责减少存活数、发布 `MonsterKilled` 或直接操作对象池。
-- Hen/Rooster 的 AttackCollider 可以保持启用作为查询形状；它不参与自动碰撞，只在 ResolveAttacks 消费关键帧请求时执行显式查询。
+- 四种 Prefab 的 Animator 使用相同的默认 Move、Attack Trigger、Death Trigger 和整数 `DeathVariant` 语义；Move Clip 循环，Attack 与普通/火/冰/雷 Death Clip 非循环。每种 Prefab 绑定基于公共状态机的本类型 OverrideController。
+- 四种非循环 Attack Clip 都必须包含恰好一个调用 `OnAttackFrame()` 的命中关键帧事件，以及末帧一个调用 `OnAttackAnimationFinished()` 的结束事件。AnimationEvent 只登记请求，实际伤害由 EnemyManager.ResolveAttacks 执行。
+- 每类敌人的四种非循环 Death Clip 都必须在结束时间包含一个调用 `OnDeathAnimationFinished()` 的事件。该事件只向 EnemyManager 登记延后回收，不负责减少存活数、发布 `MonsterKilled` 或直接操作对象池。
+- Hen/Rooster/Ikun 的 AttackCollider 可以保持启用作为查询形状；它不参与自动碰撞，只在 ResolveAttacks 消费关键帧请求时执行显式查询。
 
 ## Gate
 
@@ -185,22 +185,29 @@ PF_Gate_Element [ElementGate；Animator；Kinematic Rigidbody2D]
 ## Prop
 
 ```text
-PF_Prop_Weapon [WeaponProp；Kinematic Rigidbody2D]
+PF_Prop_Weapon [WeaponProp；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
 └── DebugText [TMP_Text；可选占位表现]
 
-PF_Prop_Basketball [BasketballProp；Kinematic Rigidbody2D]
+PF_Prop_Basketball [BasketballProp；Animator；Kinematic Rigidbody2D]
+├── Visual [SpriteRenderer 或占位视觉]
+├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
+└── DebugText [TMP_Text；可选占位表现]
+
+PF_Prop_GooseCage [GooseCageProp；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
 └── DebugText [TMP_Text；可选占位表现]
 ```
 
-- WeaponProp 与 BasketballProp 根节点都提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy` 和视觉引用。BasketballProp 另外提供正数生命、正数接触伤害和非负有限移动速度。
+- 三种 Prop 根节点都提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、视觉引用和 Animator。HP、接触伤害、移动速度及类型专用奖励均从 `PropConfigSnapshot` 注入。
+- `PF_Prop_Basketball` 绑定只有 `Basketball_Loop` 的 `AC_Prop_Basketball`；`PF_Prop_Weapon` 绑定 `AC_Prop_Weapon`，该 Controller 以整数参数 `WeaponId` 选择 `Weapon_000_Loop`、`Weapon_001_Loop`、`Weapon_002_Loop`。两个 Controller 都由根 Animator 驱动 `Visual` 子节点的 SpriteRenderer。
+- Prop 循环 Clip 不包含玩法 AnimationEvent。对象池借出时在激活前准备身份，激活当帧从第 0 帧播放；归还和跨局复用不得残留旧状态、参数或 Sprite。
 
 上述六个子弹目标根节点的 Rigidbody2D 固定为 Kinematic、Simulated、关闭 Full Kinematic Contacts、Gravity Scale 0、Discrete、无插值并冻结旋转。BodyCollider 继续为 Trigger，自动碰撞矩阵保持关闭；适配刚体不驱动 Transform、推挤或玩法结算。Bullet Prefab 不挂 Rigidbody2D。
-- 首轮可以使用 DebugText 显示 WeaponId，或使用 Inspector 绑定的简单占位 Sprite；二者都不参与效果选择。
-- MaxHp、ContactDamage、MoveSpeed 和 WeaponId 从 Prop 配置快照注入。
+- 武器箱正式帧未到位时允许三个空 Clip；DebugText 继续用于诊断，但不参与效果选择。篮球正式帧接入后不再依赖 WeaponProp 占位 Sprite。
+- `PF_Prop_GooseCage` 绑定仅含 `GooseCage_Loop` 的 `AC_Prop_GooseCage`；正式帧未到位时空 Clip 不写入 null Sprite 曲线，保留 Prefab 占位图。
 
 ## Road
 
@@ -226,8 +233,8 @@ PF_UI_TouchDragArea [RectTransform；Image；TouchDragInput]
 ## 首轮校验结果
 
 - 任一必需根脚本、引用、Collider、身份代理、Layer、Animator、Controller、ID 映射或数值非法时直接输出错误并停止 Gameplay Ready。`BulletHitProxy`/`ArmySlotHitProxy` 必须与对应 Collider 位于同一节点并显式绑定目标，不使用父级搜索补齐。
-- 正式 Sprite 尚未到位时允许临时占位 Clip，但 Army 五状态与十套 WeaponId Override、十个 BulletId 循环状态、加法门和三种元素门循环状态、三种 Monster Move/Attack/Death 以及全部必需 Controller/参数必须完整；不得用默认 Sprite 或错误 ID 回退继续 Ready。
-- 三种 Monster 的非循环 Attack/Death Clip 及其 `OnAttackFrame()` / `OnAttackAnimationFinished()` / `OnDeathAnimationFinished()` 事件必须完整绑定。
+- 正式 Sprite 尚未到位时允许临时占位 Clip，但 Army 五状态与十套 WeaponId Override、十个 BulletId 循环状态、加法门和三种元素门循环状态、四种 Monster Move/Attack/四类 Death 以及全部必需 Controller/参数必须完整；不得用默认 Sprite 或错误 ID 回退继续 Ready。
+- 四种 Monster 的非循环 Attack/Death Clip 及其 `OnAttackFrame()` / `OnAttackAnimationFinished()` / `OnDeathAnimationFinished()` 事件必须完整绑定。
 - 对象池 Prefab 必须保持一个具体根类型对应一个规范 Prefab。
 - 三种元素组合 Prefab 的根脚本、LineRenderer 数量、玩法参数和显示时长必须完整；三元素掩码不使用其中任一 Prefab。
 - 首轮通过合理的速度、Collider 尺寸和关卡编排避免离散阶段模型中的高速穿透，不额外实现相对运动扫掠或子步进。

@@ -131,9 +131,24 @@ namespace Game.Tools.Editor
         private const string SpritePropertyName = "m_Sprite";
         private const string ArmyBaseControllerPath =
             "Assets/Animations/Army/Base/AC_Army_Base.controller";
+        private const string MonsterBaseControllerPath =
+            "Assets/Animations/Monsters/Base/AC_Monster_Base.controller";
         private const string BulletControllerPath =
             "Assets/Animations/Bullets/Controllers/AC_Bullet.controller";
+        private const string BasketballControllerPath =
+            "Assets/Animations/Props/Basketball/Controllers/AC_Prop_Basketball.controller";
+        private const string WeaponPropControllerPath =
+            "Assets/Animations/Props/WeaponProp/Controllers/AC_Prop_Weapon.controller";
+        private const string GooseCageControllerPath =
+            "Assets/Animations/Props/GooseCage/Controllers/AC_Prop_GooseCage.controller";
         private const string ArmyPrefabPath = "Assets/Prefabs/Army/PF_Army_000.prefab";
+        private const string BasketballPrefabPath =
+            "Assets/Prefabs/Prop/PF_Prop_Basketball.prefab";
+        private const string WeaponPropPrefabPath =
+            "Assets/Prefabs/Prop/PF_Prop_Weapon.prefab";
+        private const string GooseCagePrefabPath =
+            "Assets/Prefabs/Prop/PF_Prop_GooseCage.prefab";
+        private const int WeaponPropCount = 3;
 
         private sealed class WeaponDefinition
         {
@@ -153,14 +168,57 @@ namespace Game.Tools.Editor
 
         private sealed class ArmyActionDefinition
         {
-            public ArmyActionDefinition(string name, bool loop)
+            public ArmyActionDefinition(string name, bool loop, bool completesDeath = false)
             {
                 Name = name;
                 Loop = loop;
+                CompletesDeath = completesDeath;
             }
 
             public string Name { get; }
             public bool Loop { get; }
+            public bool CompletesDeath { get; }
+            public string CompletionEventName => CompletesDeath
+                ? "OnDeathAnimationFinished"
+                : null;
+        }
+
+        private sealed class MonsterDefinition
+        {
+            public MonsterDefinition(string technicalName, string prefabPath)
+            {
+                TechnicalName = technicalName;
+                PrefabPath = prefabPath;
+            }
+
+            public string TechnicalName { get; }
+            public string PrefabPath { get; }
+        }
+
+        private sealed class MonsterActionDefinition
+        {
+            public MonsterActionDefinition(
+                string name,
+                string spriteSubfolder,
+                string stateName,
+                bool loop,
+                int? deathVariant = null)
+            {
+                Name = name;
+                SpriteSubfolder = spriteSubfolder;
+                StateName = stateName;
+                Loop = loop;
+                DeathVariant = deathVariant;
+            }
+
+            public string Name { get; }
+            public string SpriteSubfolder { get; }
+            public string StateName { get; }
+            public bool Loop { get; }
+            public int? DeathVariant { get; }
+            public string CompletionEventName => DeathVariant.HasValue
+                ? "OnDeathAnimationFinished"
+                : null;
         }
 
         private static readonly WeaponDefinition[] Weapons =
@@ -183,7 +241,31 @@ namespace Game.Tools.Editor
             new ArmyActionDefinition("Victory", false),
             new ArmyActionDefinition("Attack", true),
             new ArmyActionDefinition("MoveLeft", true),
-            new ArmyActionDefinition("MoveRight", true)
+            new ArmyActionDefinition("MoveRight", true),
+            new ArmyActionDefinition("Death", false, true)
+        };
+
+        private static readonly MonsterDefinition[] Monsters =
+        {
+            new MonsterDefinition("Normal", "Assets/Prefabs/Monster/PF_Monster_Chick.prefab"),
+            new MonsterDefinition("Elite", "Assets/Prefabs/Monster/PF_Monster_Hen.prefab"),
+            new MonsterDefinition("Boss", "Assets/Prefabs/Monster/PF_Monster_Rooster.prefab"),
+            new MonsterDefinition("Ikun", "Assets/Prefabs/Monster/PF_Monster_Ikun.prefab")
+        };
+
+        private static readonly MonsterActionDefinition[] MonsterActions =
+        {
+            new MonsterActionDefinition("Move", "Move", "Move", true),
+            new MonsterActionDefinition("Attack", "Attack", "Attack", false),
+            new MonsterActionDefinition("Death", "Death", "Death", false, 0),
+            new MonsterActionDefinition("Death_Fire", "Death/Fire", "DeathFire", false, 1),
+            new MonsterActionDefinition("Death_Ice", "Death/Ice", "DeathIce", false, 2),
+            new MonsterActionDefinition(
+                "Death_Lightning",
+                "Death/Lightning",
+                "DeathLightning",
+                false,
+                3)
         };
 
         private static readonly Regex FrameNumberRegex = new Regex(
@@ -210,6 +292,7 @@ namespace Game.Tools.Editor
             public string BindingPath { get; }
             public bool Loop { get; }
             public int FrameRate { get; }
+            public string CompletionEventName { get; }
 
             public SequenceDefinition(
                 string id,
@@ -219,7 +302,8 @@ namespace Game.Tools.Editor
                 string spritePrefix,
                 string bindingPath,
                 bool loop,
-                int frameRate = DefaultFrameRate)
+                int frameRate = DefaultFrameRate,
+                string completionEventName = null)
             {
                 Id = id;
                 Label = label;
@@ -229,6 +313,7 @@ namespace Game.Tools.Editor
                 BindingPath = bindingPath;
                 Loop = loop;
                 FrameRate = frameRate;
+                CompletionEventName = completionEventName;
             }
         }
 
@@ -323,34 +408,153 @@ namespace Game.Tools.Editor
                     }
                 }
 
-                var baseController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
-                    ArmyBaseControllerPath);
-                if (baseController == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Army base controller is missing: {ArmyBaseControllerPath}");
-                }
+                EnsureMonsterAnimationAssets(
+                    ref createdFolderCount,
+                    ref createdClipCount,
+                    ref createdControllerCount);
 
-                foreach (var weapon in Weapons)
-                {
-                    var weaponFolder = $"Assets/Animations/Army/Weapons/{weapon.Folder}";
-                    createdFolderCount += EnsureFolder(weaponFolder);
-                    createdFolderCount += EnsureFolder($"{weaponFolder}/Clips");
-                    var controllerPath =
-                        $"{weaponFolder}/AOC_Army_{weapon.ShortId}_{weapon.AssetName}.overrideController";
-                    if (AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(controllerPath) == null)
-                    {
-                        CreateArmyOverrideController(weapon, baseController, controllerPath);
-                        createdControllerCount++;
-                    }
-                }
+                EnsureArmyAnimationAssets(
+                    ref createdFolderCount,
+                    ref createdClipCount,
+                    ref createdControllerCount);
 
                 EnsureBulletControllerStates();
-                EnsureArmyPrefabBindings();
+                EnsurePropAnimationAssets(ref createdFolderCount, ref createdControllerCount);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
                 Debug.Log(
                     $"[SequenceAnimationBuilder] Registered animation assets ready: " +
+                    $"{createdFolderCount} folders, {createdClipCount} clips and " +
+                    $"{createdControllerCount} controllers created.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Create Missing Prop Animation Assets")]
+        public static void CreateMissingPropAnimationAssets()
+        {
+            try
+            {
+                var createdFolderCount = 0;
+                var createdClipCount = 0;
+                var createdControllerCount = 0;
+                foreach (var definition in Definitions.Where(
+                             candidate => candidate.Id.StartsWith("Prop_", StringComparison.Ordinal)))
+                {
+                    createdFolderCount += EnsureFolder(definition.SpriteFolder);
+                    createdFolderCount += EnsureFolder(
+                        (Path.GetDirectoryName(definition.ClipPath) ?? string.Empty).Replace('\\', '/'));
+                    if (AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath) == null)
+                    {
+                        CreateEmptyClip(definition);
+                        createdClipCount++;
+                    }
+                }
+
+                EnsurePropAnimationAssets(ref createdFolderCount, ref createdControllerCount);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log(
+                    $"[SequenceAnimationBuilder] Prop animation assets ready: " +
+                    $"{createdFolderCount} folders, {createdClipCount} clips and " +
+                    $"{createdControllerCount} controllers created.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Apply Prop Pending")]
+        public static void ApplyPropPending()
+        {
+            var results = Definitions
+                .Where(definition => definition.Id.StartsWith("Prop_", StringComparison.Ordinal))
+                .Select(Scan)
+                .ToArray();
+            var invalid = results.Where(result => result.Status == SequenceStatus.Invalid).ToArray();
+            if (invalid.Length > 0)
+            {
+                Debug.LogError(BuildInvalidMessage(invalid));
+                return;
+            }
+
+            Apply(results
+                .Where(result => result.Status == SequenceStatus.Pending)
+                .Select(result => result.Definition.Id));
+        }
+
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Create Missing Army Death Assets")]
+        public static void CreateMissingArmyDeathAssets()
+        {
+            try
+            {
+                var createdFolderCount = 0;
+                var createdClipCount = 0;
+                var createdControllerCount = 0;
+                foreach (var definition in Definitions.Where(candidate =>
+                             candidate.Id.StartsWith("Army_", StringComparison.Ordinal) &&
+                             !string.IsNullOrEmpty(candidate.CompletionEventName)))
+                {
+                    createdFolderCount += EnsureFolder(definition.SpriteFolder);
+                    createdFolderCount += EnsureFolder(
+                        (Path.GetDirectoryName(definition.ClipPath) ?? string.Empty).Replace('\\', '/'));
+                    if (AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath) == null)
+                    {
+                        CreateEmptyClip(definition);
+                        createdClipCount++;
+                    }
+                }
+
+                EnsureArmyAnimationAssets(
+                    ref createdFolderCount,
+                    ref createdClipCount,
+                    ref createdControllerCount);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log(
+                    $"[SequenceAnimationBuilder] Army death animation assets ready: " +
+                    $"{createdFolderCount} folders, {createdClipCount} clips and " +
+                    $"{createdControllerCount} override controllers created or updated.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        [MenuItem("Tools/Game Jam/Sequence Animation Builder/Create Missing Monster Death Assets")]
+        public static void CreateMissingMonsterDeathAssets()
+        {
+            try
+            {
+                var createdFolderCount = 0;
+                var createdClipCount = 0;
+                var createdControllerCount = 0;
+                foreach (var definition in Definitions.Where(
+                             candidate => candidate.Id.StartsWith("Monster_", StringComparison.Ordinal)))
+                {
+                    createdFolderCount += EnsureFolder(definition.SpriteFolder);
+                    createdFolderCount += EnsureFolder(
+                        (Path.GetDirectoryName(definition.ClipPath) ?? string.Empty).Replace('\\', '/'));
+                    if (AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath) == null)
+                    {
+                        CreateEmptyClip(definition);
+                        createdClipCount++;
+                    }
+                }
+
+                EnsureMonsterAnimationAssets(
+                    ref createdFolderCount,
+                    ref createdClipCount,
+                    ref createdControllerCount);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log(
+                    $"[SequenceAnimationBuilder] Monster animation assets ready: " +
                     $"{createdFolderCount} folders, {createdClipCount} clips and " +
                     $"{createdControllerCount} override controllers created.");
             }
@@ -638,6 +842,11 @@ namespace Game.Tools.Editor
                 }
             }
 
+            if (!HasExpectedCompletionEvent(definition, clip))
+            {
+                return false;
+            }
+
             return true;
         }
 
@@ -773,7 +982,12 @@ namespace Game.Tools.Editor
             clipSettings.FindPropertyRelative("m_LoopTime").boolValue = definition.Loop;
             serializedClip.ApplyModifiedPropertiesWithoutUndo();
 
-            AnimationUtility.SetAnimationEvents(clip, existingEvents);
+            AnimationUtility.SetAnimationEvents(
+                clip,
+                NormalizeCompletionEvents(
+                    definition,
+                    existingEvents,
+                    (float)frames.Count / definition.FrameRate));
             EditorUtility.SetDirty(clip);
         }
 
@@ -846,23 +1060,30 @@ namespace Game.Tools.Editor
                 name = Path.GetFileNameWithoutExtension(definition.ClipPath),
                 frameRate = definition.FrameRate
             };
-            var binding = new EditorCurveBinding
+
+            // 武器道具的正式帧会后续导入；空 Clip 不写入 null Sprite，避免过渡期清空 Prefab 占位图。
+            if (!definition.Id.StartsWith("Prop_Weapon_", StringComparison.Ordinal) &&
+                !definition.Id.StartsWith("Prop_GooseCage_", StringComparison.Ordinal))
             {
-                path = definition.BindingPath,
-                type = typeof(SpriteRenderer),
-                propertyName = SpritePropertyName
-            };
-            AnimationUtility.SetObjectReferenceCurve(
-                clip,
-                binding,
-                new[]
+                var binding = new EditorCurveBinding
                 {
-                    new ObjectReferenceKeyframe
+                    path = definition.BindingPath,
+                    type = typeof(SpriteRenderer),
+                    propertyName = SpritePropertyName
+                };
+                AnimationUtility.SetObjectReferenceCurve(
+                    clip,
+                    binding,
+                    new[]
                     {
-                        time = 0f,
-                        value = null
-                    }
-                });
+                        new ObjectReferenceKeyframe
+                        {
+                            time = 0f,
+                            value = null
+                        }
+                    });
+            }
+
             AssetDatabase.CreateAsset(clip, definition.ClipPath);
 
             var serializedClip = new SerializedObject(clip);
@@ -872,18 +1093,219 @@ namespace Game.Tools.Editor
                 1f / definition.FrameRate;
             clipSettings.FindPropertyRelative("m_LoopTime").boolValue = definition.Loop;
             serializedClip.ApplyModifiedPropertiesWithoutUndo();
+            AnimationUtility.SetAnimationEvents(
+                clip,
+                NormalizeCompletionEvents(
+                    definition,
+                    Array.Empty<AnimationEvent>(),
+                    1f / definition.FrameRate));
             EditorUtility.SetDirty(clip);
         }
 
-        private static void CreateArmyOverrideController(
+        private static void ClearEmptyWeaponPropPlaceholderCurves()
+        {
+            foreach (var definition in Definitions.Where(candidate =>
+                         candidate.Id.StartsWith("Prop_Weapon_", StringComparison.Ordinal) &&
+                         Scan(candidate).Status == SequenceStatus.Empty))
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath);
+                if (clip == null)
+                {
+                    continue;
+                }
+
+                foreach (var binding in AnimationUtility.GetObjectReferenceCurveBindings(clip)
+                             .Where(IsSpriteBinding))
+                {
+                    var keyframes = AnimationUtility.GetObjectReferenceCurve(clip, binding);
+                    if (keyframes.Length != 1 || keyframes[0].value != null)
+                    {
+                        continue;
+                    }
+
+                    AnimationUtility.SetObjectReferenceCurve(clip, binding, null);
+                    EditorUtility.SetDirty(clip);
+                }
+            }
+        }
+
+        private static bool HasExpectedCompletionEvent(
+            SequenceDefinition definition,
+            AnimationClip clip)
+        {
+            if (string.IsNullOrEmpty(definition.CompletionEventName))
+            {
+                return true;
+            }
+
+            var expectedTime = new SerializedObject(clip)
+                .FindProperty("m_AnimationClipSettings")
+                .FindPropertyRelative("m_StopTime")
+                .floatValue;
+            var matchingEvents = AnimationUtility.GetAnimationEvents(clip)
+                .Where(animationEvent =>
+                    animationEvent.functionName == definition.CompletionEventName)
+                .ToArray();
+            return matchingEvents.Length == 1 &&
+                   Mathf.Abs(matchingEvents[0].time - expectedTime) <= 0.0001f;
+        }
+
+        private static AnimationEvent[] NormalizeCompletionEvents(
+            SequenceDefinition definition,
+            IEnumerable<AnimationEvent> existingEvents,
+            float completionTime)
+        {
+            var events = (existingEvents ?? Array.Empty<AnimationEvent>()).ToList();
+            if (string.IsNullOrEmpty(definition.CompletionEventName))
+            {
+                return events.ToArray();
+            }
+
+            events.RemoveAll(animationEvent =>
+                animationEvent.functionName == definition.CompletionEventName);
+            events.Add(new AnimationEvent
+            {
+                functionName = definition.CompletionEventName,
+                time = completionTime
+            });
+            return events.OrderBy(animationEvent => animationEvent.time).ToArray();
+        }
+
+        private static void EnsureArmyAnimationAssets(
+            ref int createdFolderCount,
+            ref int createdClipCount,
+            ref int createdControllerCount)
+        {
+            createdFolderCount += EnsureFolder("Assets/Animations/Army/Base");
+            foreach (var action in ArmyActions)
+            {
+                var baseClipPath = GetArmyBaseClipPath(action);
+                if (AssetDatabase.LoadAssetAtPath<AnimationClip>(baseClipPath) == null)
+                {
+                    CreateArmyBasePlaceholderClip(action, baseClipPath);
+                    createdClipCount++;
+                }
+            }
+
+            foreach (var definition in Definitions.Where(candidate =>
+                         candidate.Id.StartsWith("Army_", StringComparison.Ordinal) &&
+                         !string.IsNullOrEmpty(candidate.CompletionEventName)))
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath);
+                if (clip == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Army death clip is missing: {definition.ClipPath}");
+                }
+
+                EnsureCompletionEvent(definition, clip);
+            }
+
+            var baseController = EnsureArmyBaseController();
+            foreach (var weapon in Weapons)
+            {
+                var weaponFolder = $"Assets/Animations/Army/Weapons/{weapon.Folder}";
+                createdFolderCount += EnsureFolder(weaponFolder);
+                createdFolderCount += EnsureFolder($"{weaponFolder}/Clips");
+                var controllerPath =
+                    $"{weaponFolder}/AOC_Army_{weapon.ShortId}_{weapon.AssetName}.overrideController";
+                if (EnsureArmyOverrideController(weapon, baseController, controllerPath))
+                {
+                    createdControllerCount++;
+                }
+            }
+
+            EnsureArmyPrefabBindings();
+        }
+
+        private static void CreateArmyBasePlaceholderClip(
+            ArmyActionDefinition action,
+            string clipPath)
+        {
+            var clip = new AnimationClip
+            {
+                name = Path.GetFileNameWithoutExtension(clipPath),
+                frameRate = DefaultFrameRate
+            };
+            AssetDatabase.CreateAsset(clip, clipPath);
+
+            var serializedClip = new SerializedObject(clip);
+            var clipSettings = serializedClip.FindProperty("m_AnimationClipSettings");
+            clipSettings.FindPropertyRelative("m_StartTime").floatValue = 0f;
+            clipSettings.FindPropertyRelative("m_StopTime").floatValue =
+                1f / DefaultFrameRate;
+            clipSettings.FindPropertyRelative("m_LoopTime").boolValue = action.Loop;
+            serializedClip.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(clip);
+        }
+
+        private static AnimatorController EnsureArmyBaseController()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(
+                ArmyBaseControllerPath);
+            if (controller == null || controller.layers.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Army controller is missing or malformed: {ArmyBaseControllerPath}");
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            for (var index = 0; index < ArmyActions.Length; index++)
+            {
+                var action = ArmyActions[index];
+                var state = stateMachine.states
+                    .Select(child => child.state)
+                    .FirstOrDefault(candidate => candidate.name == action.Name);
+                if (state == null)
+                {
+                    var column = index % 3;
+                    var row = index / 3;
+                    state = stateMachine.AddState(
+                        action.Name,
+                        new Vector3(180f + column * 220f, 60f + row * 100f, 0f));
+                }
+
+                var baseClipPath = GetArmyBaseClipPath(action);
+                var baseClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(baseClipPath);
+                if (baseClip == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Army base animation clip is missing: {baseClipPath}");
+                }
+
+                state.motion = baseClip;
+                state.writeDefaultValues = true;
+                if (action.Name == "Idle")
+                {
+                    stateMachine.defaultState = state;
+                }
+            }
+
+            EditorUtility.SetDirty(stateMachine);
+            EditorUtility.SetDirty(controller);
+            return controller;
+        }
+
+        private static bool EnsureArmyOverrideController(
             WeaponDefinition weapon,
             RuntimeAnimatorController baseController,
             string controllerPath)
         {
-            var controller = new AnimatorOverrideController(baseController)
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(
+                controllerPath);
+            var created = controller == null;
+            if (created)
             {
-                name = Path.GetFileNameWithoutExtension(controllerPath)
-            };
+                controller = new AnimatorOverrideController(baseController)
+                {
+                    name = Path.GetFileNameWithoutExtension(controllerPath)
+                };
+            }
+            else if (controller.runtimeAnimatorController != baseController)
+            {
+                controller.runtimeAnimatorController = baseController;
+            }
+
             var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
             controller.GetOverrides(overrides);
             for (var index = 0; index < overrides.Count; index++)
@@ -913,7 +1335,313 @@ namespace Game.Tools.Editor
             }
 
             controller.ApplyOverrides(overrides);
-            AssetDatabase.CreateAsset(controller, controllerPath);
+            if (created)
+            {
+                AssetDatabase.CreateAsset(controller, controllerPath);
+            }
+            else
+            {
+                EditorUtility.SetDirty(controller);
+            }
+
+            return created;
+        }
+
+        private static string GetArmyBaseClipPath(ArmyActionDefinition action)
+        {
+            return $"Assets/Animations/Army/Base/AN_Army_Base_{action.Name}.anim";
+        }
+
+        private static void EnsureMonsterAnimationAssets(
+            ref int createdFolderCount,
+            ref int createdClipCount,
+            ref int createdControllerCount)
+        {
+            createdFolderCount += EnsureFolder("Assets/Animations/Monsters/Base");
+            foreach (var action in MonsterActions)
+            {
+                var baseClipPath = GetMonsterBaseClipPath(action);
+                if (AssetDatabase.LoadAssetAtPath<AnimationClip>(baseClipPath) == null)
+                {
+                    CreateMonsterBasePlaceholderClip(action, baseClipPath);
+                    createdClipCount++;
+                }
+            }
+
+            foreach (var definition in Definitions.Where(
+                         candidate => !string.IsNullOrEmpty(candidate.CompletionEventName)))
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(definition.ClipPath);
+                if (clip == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Monster death clip is missing: {definition.ClipPath}");
+                }
+
+                EnsureCompletionEvent(definition, clip);
+            }
+
+            var baseController = EnsureMonsterBaseController();
+            foreach (var monster in Monsters)
+            {
+                var monsterFolder =
+                    $"Assets/Animations/Monsters/Types/{monster.TechnicalName}";
+                createdFolderCount += EnsureFolder(monsterFolder);
+                createdFolderCount += EnsureFolder($"{monsterFolder}/Clips");
+                var controllerPath =
+                    $"{monsterFolder}/AOC_Monster_{monster.TechnicalName}.overrideController";
+                if (EnsureMonsterOverrideController(monster, baseController, controllerPath))
+                {
+                    createdControllerCount++;
+                }
+
+                EnsureMonsterPrefabController(monster, controllerPath);
+            }
+        }
+
+        private static void CreateMonsterBasePlaceholderClip(
+            MonsterActionDefinition action,
+            string clipPath)
+        {
+            var clip = new AnimationClip
+            {
+                name = Path.GetFileNameWithoutExtension(clipPath),
+                frameRate = DefaultFrameRate
+            };
+            AssetDatabase.CreateAsset(clip, clipPath);
+
+            var serializedClip = new SerializedObject(clip);
+            var clipSettings = serializedClip.FindProperty("m_AnimationClipSettings");
+            clipSettings.FindPropertyRelative("m_StartTime").floatValue = 0f;
+            clipSettings.FindPropertyRelative("m_StopTime").floatValue =
+                1f / DefaultFrameRate;
+            clipSettings.FindPropertyRelative("m_LoopTime").boolValue = action.Loop;
+            serializedClip.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(clip);
+        }
+
+        private static AnimatorController EnsureMonsterBaseController()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(
+                MonsterBaseControllerPath);
+            if (controller == null || controller.layers.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Monster controller is missing or malformed: {MonsterBaseControllerPath}");
+            }
+
+            var deathVariantParameter = controller.parameters.FirstOrDefault(
+                parameter => parameter.name == "DeathVariant");
+            if (deathVariantParameter == null)
+            {
+                controller.AddParameter("DeathVariant", AnimatorControllerParameterType.Int);
+            }
+            else if (deathVariantParameter.type != AnimatorControllerParameterType.Int)
+            {
+                throw new InvalidOperationException(
+                    "Monster controller DeathVariant parameter must be Int.");
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            var unusedDeathTransitions = stateMachine.anyStateTransitions
+                .Where(candidate => candidate.conditions.Any(
+                    condition => condition.parameter == "Death"))
+                .ToList();
+
+            var deathActions = MonsterActions.Where(action => action.DeathVariant.HasValue).ToArray();
+            for (var index = 0; index < deathActions.Length; index++)
+            {
+                var action = deathActions[index];
+                var state = stateMachine.states
+                    .Select(child => child.state)
+                    .FirstOrDefault(candidate => candidate.name == action.StateName);
+                if (state == null)
+                {
+                    state = stateMachine.AddState(
+                        action.StateName,
+                        new Vector3(520f, 40f + index * 90f, 0f));
+                }
+
+                var baseClipPath = GetMonsterBaseClipPath(action);
+                var baseClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(baseClipPath);
+                if (baseClip == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Monster base animation clip is missing: {baseClipPath}");
+                }
+
+                state.motion = baseClip;
+                state.writeDefaultValues = true;
+                var transition = unusedDeathTransitions.FirstOrDefault(candidate =>
+                    candidate.destinationState == state &&
+                    IsMonsterDeathTransition(candidate, action.DeathVariant.Value));
+                if (transition == null)
+                {
+                    transition = stateMachine.AddAnyStateTransition(state);
+                    transition.AddCondition(AnimatorConditionMode.If, 0f, "Death");
+                    transition.AddCondition(
+                        AnimatorConditionMode.Equals,
+                        action.DeathVariant.Value,
+                        "DeathVariant");
+                }
+                else
+                {
+                    unusedDeathTransitions.Remove(transition);
+                }
+
+                transition.duration = 0f;
+                transition.hasExitTime = false;
+                transition.canTransitionToSelf = false;
+            }
+
+            foreach (var transition in unusedDeathTransitions)
+            {
+                stateMachine.RemoveAnyStateTransition(transition);
+            }
+
+            EditorUtility.SetDirty(stateMachine);
+            EditorUtility.SetDirty(controller);
+            return controller;
+        }
+
+        private static bool IsMonsterDeathTransition(
+            AnimatorStateTransition transition,
+            int deathVariant)
+        {
+            var conditions = transition.conditions;
+            return conditions.Length == 2 &&
+                   conditions.Any(condition =>
+                       condition.parameter == "Death" &&
+                       condition.mode == AnimatorConditionMode.If) &&
+                   conditions.Any(condition =>
+                       condition.parameter == "DeathVariant" &&
+                       condition.mode == AnimatorConditionMode.Equals &&
+                       Mathf.Approximately(condition.threshold, deathVariant));
+        }
+
+        private static bool EnsureMonsterOverrideController(
+            MonsterDefinition monster,
+            RuntimeAnimatorController baseController,
+            string controllerPath)
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(
+                controllerPath);
+            var created = controller == null;
+            if (created)
+            {
+                controller = new AnimatorOverrideController(baseController)
+                {
+                    name = Path.GetFileNameWithoutExtension(controllerPath)
+                };
+            }
+            else if (controller.runtimeAnimatorController != baseController)
+            {
+                controller.runtimeAnimatorController = baseController;
+            }
+
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+            controller.GetOverrides(overrides);
+            for (var index = 0; index < overrides.Count; index++)
+            {
+                var baseClip = overrides[index].Key;
+                var action = MonsterActions.FirstOrDefault(candidate =>
+                    baseClip != null &&
+                    baseClip.name == $"AN_Monster_Base_{candidate.Name}");
+                if (action == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot map Monster base clip {baseClip?.name ?? "<null>"}.");
+                }
+
+                var clipPath =
+                    $"Assets/Animations/Monsters/Types/{monster.TechnicalName}/Clips/" +
+                    $"AN_Monster_{monster.TechnicalName}_{action.Name}.anim";
+                var overrideClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+                if (overrideClip == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Monster override clip is missing: {clipPath}");
+                }
+
+                overrides[index] = new KeyValuePair<AnimationClip, AnimationClip>(
+                    baseClip,
+                    overrideClip);
+            }
+
+            controller.ApplyOverrides(overrides);
+            if (created)
+            {
+                AssetDatabase.CreateAsset(controller, controllerPath);
+            }
+            else
+            {
+                EditorUtility.SetDirty(controller);
+            }
+
+            return created;
+        }
+
+        private static void EnsureMonsterPrefabController(
+            MonsterDefinition monster,
+            string controllerPath)
+        {
+            var expectedController = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(
+                controllerPath);
+            if (expectedController == null)
+            {
+                throw new InvalidOperationException(
+                    $"Monster override controller is missing: {controllerPath}");
+            }
+
+            var root = PrefabUtility.LoadPrefabContents(monster.PrefabPath);
+            try
+            {
+                var animator = root.GetComponent<Animator>();
+                if (animator == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Animator is missing from monster prefab root: {monster.PrefabPath}");
+                }
+
+                if (animator.runtimeAnimatorController == expectedController)
+                {
+                    return;
+                }
+
+                animator.runtimeAnimatorController = expectedController;
+                EditorUtility.SetDirty(animator);
+                PrefabUtility.SaveAsPrefabAsset(root, monster.PrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static void EnsureCompletionEvent(
+            SequenceDefinition definition,
+            AnimationClip clip)
+        {
+            if (HasExpectedCompletionEvent(definition, clip))
+            {
+                return;
+            }
+
+            var clipSettings = new SerializedObject(clip)
+                .FindProperty("m_AnimationClipSettings");
+            var stopTime = clipSettings.FindPropertyRelative("m_StopTime").floatValue;
+            AnimationUtility.SetAnimationEvents(
+                clip,
+                NormalizeCompletionEvents(
+                    definition,
+                    AnimationUtility.GetAnimationEvents(clip),
+                    stopTime));
+            EditorUtility.SetDirty(clip);
+        }
+
+        private static string GetMonsterBaseClipPath(MonsterActionDefinition action)
+        {
+            return $"Assets/Animations/Monsters/Base/AN_Monster_Base_{action.Name}.anim";
         }
 
         private static void EnsureBulletControllerStates()
@@ -969,6 +1697,244 @@ namespace Game.Tools.Editor
             EditorUtility.SetDirty(controller);
         }
 
+        private static void EnsurePropAnimationAssets(
+            ref int createdFolderCount,
+            ref int createdControllerCount)
+        {
+            createdFolderCount += EnsureFolder("Assets/Animations/Props/Basketball/Controllers");
+            createdFolderCount += EnsureFolder("Assets/Animations/Props/WeaponProp/Controllers");
+            createdFolderCount += EnsureFolder("Assets/Animations/Props/GooseCage/Controllers");
+            ClearEmptyWeaponPropPlaceholderCurves();
+
+            var basketballController = AssetDatabase.LoadAssetAtPath<AnimatorController>(
+                BasketballControllerPath);
+            if (basketballController == null)
+            {
+                basketballController = AnimatorController.CreateAnimatorControllerAtPath(
+                    BasketballControllerPath);
+                createdControllerCount++;
+            }
+
+            EnsureBasketballControllerState(basketballController);
+
+            var weaponController = AssetDatabase.LoadAssetAtPath<AnimatorController>(
+                WeaponPropControllerPath);
+            if (weaponController == null)
+            {
+                weaponController = AnimatorController.CreateAnimatorControllerAtPath(
+                    WeaponPropControllerPath);
+                createdControllerCount++;
+            }
+
+            EnsureWeaponPropControllerStates(weaponController);
+            var gooseCageController = AssetDatabase.LoadAssetAtPath<AnimatorController>(
+                GooseCageControllerPath);
+            if (gooseCageController == null)
+            {
+                gooseCageController = AnimatorController.CreateAnimatorControllerAtPath(
+                    GooseCageControllerPath);
+                createdControllerCount++;
+            }
+
+            EnsureSinglePropControllerState(
+                gooseCageController,
+                GooseCageControllerPath,
+                "GooseCage_Loop",
+                "Assets/Animations/Props/GooseCage/Clips/AN_Prop_GooseCage_Loop.anim");
+            EnsurePropPrefabBindings(
+                BasketballPrefabPath,
+                basketballController,
+                typeof(BasketballProp));
+            EnsurePropPrefabBindings(
+                WeaponPropPrefabPath,
+                weaponController,
+                typeof(WeaponProp));
+            EnsurePropPrefabBindings(
+                GooseCagePrefabPath,
+                gooseCageController,
+                typeof(GooseCageProp));
+        }
+
+        private static void EnsureSinglePropControllerState(
+            AnimatorController controller,
+            string controllerPath,
+            string stateName,
+            string clipPath)
+        {
+            if (controller == null || controller.layers.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Prop controller is missing or malformed: {controllerPath}");
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            var state = stateMachine.states
+                .Select(child => child.state)
+                .FirstOrDefault(candidate => candidate.name == stateName);
+            if (state == null)
+            {
+                state = stateMachine.AddState(stateName, new Vector3(240f, 120f, 0f));
+            }
+
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+            if (clip == null)
+            {
+                throw new InvalidOperationException($"Prop loop clip is missing: {clipPath}");
+            }
+
+            state.motion = clip;
+            state.writeDefaultValues = true;
+            stateMachine.defaultState = state;
+            EditorUtility.SetDirty(stateMachine);
+            EditorUtility.SetDirty(controller);
+        }
+
+        private static void EnsureBasketballControllerState(AnimatorController controller)
+        {
+            if (controller == null || controller.layers.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Basketball controller is missing or malformed: {BasketballControllerPath}");
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            var state = stateMachine.states
+                .Select(child => child.state)
+                .FirstOrDefault(candidate => candidate.name == "Basketball_Loop");
+            if (state == null)
+            {
+                state = stateMachine.AddState("Basketball_Loop", new Vector3(240f, 120f, 0f));
+            }
+
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(
+                "Assets/Animations/Props/Basketball/Clips/AN_Prop_Basketball_Loop.anim");
+            if (clip == null)
+            {
+                throw new InvalidOperationException("Basketball loop clip is missing.");
+            }
+
+            state.motion = clip;
+            state.writeDefaultValues = true;
+            stateMachine.defaultState = state;
+            EditorUtility.SetDirty(stateMachine);
+            EditorUtility.SetDirty(controller);
+        }
+
+        private static void EnsureWeaponPropControllerStates(AnimatorController controller)
+        {
+            if (controller == null || controller.layers.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Weapon prop controller is missing or malformed: {WeaponPropControllerPath}");
+            }
+
+            var weaponParameter = controller.parameters.FirstOrDefault(
+                parameter => parameter.name == "WeaponId");
+            if (weaponParameter == null)
+            {
+                controller.AddParameter("WeaponId", AnimatorControllerParameterType.Int);
+            }
+            else if (weaponParameter.type != AnimatorControllerParameterType.Int)
+            {
+                throw new InvalidOperationException("Weapon prop controller WeaponId parameter must be Int.");
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            for (var weaponId = 0; weaponId < WeaponPropCount; weaponId++)
+            {
+                var stateName = $"Weapon_{weaponId:000}_Loop";
+                var state = stateMachine.states
+                    .Select(child => child.state)
+                    .FirstOrDefault(candidate => candidate.name == stateName);
+                if (state == null)
+                {
+                    state = stateMachine.AddState(
+                        stateName,
+                        new Vector3(200f + weaponId * 220f, 120f, 0f));
+                }
+
+                var clipPath =
+                    $"Assets/Animations/Props/WeaponProp/Clips/AN_Prop_Weapon_{weaponId:000}_Loop.anim";
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+                if (clip == null)
+                {
+                    throw new InvalidOperationException($"Weapon prop animation clip is missing: {clipPath}");
+                }
+
+                state.motion = clip;
+                state.writeDefaultValues = true;
+                var hasTransition = stateMachine.anyStateTransitions.Any(
+                    transition => transition.destinationState == state &&
+                                  transition.conditions.Any(
+                                      condition => condition.mode == AnimatorConditionMode.Equals &&
+                                                   condition.parameter == "WeaponId" &&
+                                                   Mathf.Approximately(condition.threshold, weaponId)));
+                if (!hasTransition)
+                {
+                    var transition = stateMachine.AddAnyStateTransition(state);
+                    transition.duration = 0f;
+                    transition.hasExitTime = false;
+                    transition.canTransitionToSelf = false;
+                    transition.AddCondition(AnimatorConditionMode.Equals, weaponId, "WeaponId");
+                }
+
+                if (weaponId == 0)
+                {
+                    stateMachine.defaultState = state;
+                }
+            }
+
+            EditorUtility.SetDirty(stateMachine);
+            EditorUtility.SetDirty(controller);
+        }
+
+        private static void EnsurePropPrefabBindings(
+            string prefabPath,
+            RuntimeAnimatorController controller,
+            Type expectedPropType)
+        {
+            var root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var prop = root.GetComponent(expectedPropType) as BreakablePropBase;
+                if (prop == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{prefabPath} requires a {expectedPropType.Name} root component.");
+                }
+
+                var animator = root.GetComponent<Animator>();
+                if (animator == null)
+                {
+                    animator = root.AddComponent<Animator>();
+                }
+
+                animator.runtimeAnimatorController = controller;
+                animator.applyRootMotion = false;
+                var serializedProp = new SerializedObject(prop);
+                var animatorProperty = serializedProp.FindProperty("animator");
+                var visualProperty = serializedProp.FindProperty("visual");
+                var visual = visualProperty?.objectReferenceValue as SpriteRenderer;
+                if (animatorProperty == null || visual == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{expectedPropType.Name}.animator and visual must be serialized.");
+                }
+
+                animatorProperty.objectReferenceValue = animator;
+                serializedProp.ApplyModifiedPropertiesWithoutUndo();
+                visual.color = Color.white;
+                EditorUtility.SetDirty(animator);
+                EditorUtility.SetDirty(visual);
+                EditorUtility.SetDirty(prop);
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
         private static void EnsureArmyPrefabBindings()
         {
             var root = PrefabUtility.LoadPrefabContents(ArmyPrefabPath);
@@ -979,6 +1945,35 @@ namespace Game.Tools.Editor
                 {
                     throw new InvalidOperationException(
                         $"ArmyController is missing from prefab root: {ArmyPrefabPath}");
+                }
+
+                var slotViews = root.GetComponentsInChildren<ArmySlotView>(true);
+                for (var index = 0; index < slotViews.Length; index++)
+                {
+                    var slotView = slotViews[index];
+                    var serializedSlot = new SerializedObject(slotView);
+                    var animatorProperty = serializedSlot.FindProperty("soldierAnimator");
+                    var proxyProperty = serializedSlot.FindProperty("animationEventProxy");
+                    var animator = animatorProperty?.objectReferenceValue as Animator;
+                    if (animator == null || proxyProperty == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Army slot animation bindings are missing: {slotView.name}");
+                    }
+
+                    var proxy = animator.GetComponent<ArmySlotAnimationEventProxy>();
+                    if (proxy == null)
+                    {
+                        proxy = animator.gameObject.AddComponent<ArmySlotAnimationEventProxy>();
+                    }
+
+                    var serializedProxy = new SerializedObject(proxy);
+                    serializedProxy.FindProperty("target").objectReferenceValue = slotView;
+                    serializedProxy.ApplyModifiedPropertiesWithoutUndo();
+                    proxyProperty.objectReferenceValue = proxy;
+                    serializedSlot.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(proxy);
+                    EditorUtility.SetDirty(slotView);
                 }
 
                 var serializedArmy = new SerializedObject(army);
@@ -1046,29 +2041,26 @@ namespace Game.Tools.Editor
                         $"Assets/Animations/Army/Weapons/{weapon.Folder}/Clips/AN_Army_{weapon.ShortId}_{action.Name}.anim",
                         $"SPR_Army_{weapon.ShortId}_{action.Name}",
                         string.Empty,
-                        action.Loop));
+                        action.Loop,
+                        DefaultFrameRate,
+                        action.CompletionEventName));
                 }
             }
 
-            var monsterTypes = new[] { "Normal", "Elite", "Boss" };
-            var monsterActions = new[]
+            foreach (var monster in Monsters)
             {
-                new { Name = "Move", Loop = true },
-                new { Name = "Attack", Loop = false },
-                new { Name = "Death", Loop = false }
-            };
-            foreach (var monsterType in monsterTypes)
-            {
-                foreach (var action in monsterActions)
+                foreach (var action in MonsterActions)
                 {
                     definitions.Add(new SequenceDefinition(
-                        $"Monster_{monsterType}_{action.Name}",
-                        $"Monster {monsterType} {action.Name}",
-                        $"Assets/Art/Sprites/Monsters/{monsterType}/{action.Name}",
-                        $"Assets/Animations/Monsters/Types/{monsterType}/Clips/AN_Monster_{monsterType}_{action.Name}.anim",
-                        $"SPR_Monster_{monsterType}_{action.Name}",
+                        $"Monster_{monster.TechnicalName}_{action.Name}",
+                        $"Monster {monster.TechnicalName} {action.Name}",
+                        $"Assets/Art/Sprites/Monsters/{monster.TechnicalName}/{action.SpriteSubfolder}",
+                        $"Assets/Animations/Monsters/Types/{monster.TechnicalName}/Clips/AN_Monster_{monster.TechnicalName}_{action.Name}.anim",
+                        $"SPR_Monster_{monster.TechnicalName}_{action.Name}",
                         "Visual",
-                        action.Loop));
+                        action.Loop,
+                        DefaultFrameRate,
+                        action.CompletionEventName));
                 }
             }
 
@@ -1102,6 +2094,37 @@ namespace Game.Tools.Editor
                     $"Assets/Art/Sprites/Gates/Element/{element}/Loop",
                     $"Assets/Animations/Gates/Clips/AN_Gate_{element}_Loop.anim",
                     $"SPR_Gate_{element}_Loop",
+                    "Visual",
+                    true));
+            }
+
+            definitions.Add(new SequenceDefinition(
+                "Prop_Basketball_Loop",
+                "Prop Basketball Loop",
+                "Assets/Art/Sprites/Props/Basketball/Loop",
+                "Assets/Animations/Props/Basketball/Clips/AN_Prop_Basketball_Loop.anim",
+                "SPR_Prop_Basketball_Loop",
+                "Visual",
+                true));
+
+            definitions.Add(new SequenceDefinition(
+                "Prop_GooseCage_Loop",
+                "Prop Goose Cage Loop",
+                "Assets/Art/Sprites/Props/GooseCage/Loop",
+                "Assets/Animations/Props/GooseCage/Clips/AN_Prop_GooseCage_Loop.anim",
+                "SPR_Prop_GooseCage_Loop",
+                "Visual",
+                true));
+
+            for (var weaponId = 0; weaponId < WeaponPropCount; weaponId++)
+            {
+                var weapon = Weapons[weaponId];
+                definitions.Add(new SequenceDefinition(
+                    $"Prop_Weapon_{weaponId:000}_Loop",
+                    $"Prop Weapon {weaponId:000} Loop",
+                    $"Assets/Art/Sprites/Props/WeaponProp/{weapon.Folder}/Loop",
+                    $"Assets/Animations/Props/WeaponProp/Clips/AN_Prop_Weapon_{weaponId:000}_Loop.anim",
+                    $"SPR_Prop_Weapon_{weaponId:000}_Loop",
                     "Visual",
                     true));
             }

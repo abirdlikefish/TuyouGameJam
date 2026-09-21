@@ -2,6 +2,11 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 新增并实现 ADR-067：`TbProp` 加入 WeaponBox/Basketball/GooseCage 类型与增员字段，篮球迁入统一配置，ikun 读取关卡篮球配置；新增 GooseCageProp、独立池/Prefab/Loop 动画骨架与关卡可配置生成，击破同步增员、未击破接触逐槽伤害并沿用 Failed 锁血；Luban、配置快照、事件、场景绑定和文档同步更新 | Prop、Army、Obstacle、Monster、Spawn、Level、Config、Luban、Animation、Prefab、Scene、共享契约、测试、ADR-067 | Codex |
+| 2026-09-21 | 为 BasketballProp 与 WeaponProp 接入池复用安全的序列帧表现：篮球导入 13 帧 8 FPS 循环，WeaponId 0/1/2 建立三个待填帧状态与不清空占位图的空 Clip；扩展 Prop 专用扫描应用入口、Controller、Prefab Animator 绑定与验收记录，不改变击破立即回收语义 | Prop、Animation、Prefab、资源管线、测试 | Codex |
+| 2026-09-21 | 新增并实施 ADR-066：Army 槽位采用 Alive/Dying/Empty 三态，致死立即结算但保留对应 WeaponId 的 Death 至末帧；Dying 关闭受击、发射并退出增减员选择，GameOver 保留最终死亡表现；扩展序列帧工具、六状态 AOC 与十个死亡帧目录 | Army、Level、Animation、Prefab、共享契约、测试 | Codex |
+| 2026-09-21 | 修复 BasketballProp Inspector 配置字段与 BreakablePropBase 运行时字段同名导致的 Unity 热重载序列化冲突；基类字段改用 runtime 前缀，不改变 Prefab 字段或数值 | Prop、Prefab、Unity 序列化 | Codex |
+| 2026-09-21 | 新增并实施 ADR-065：敌人死亡时按致命伤害元素或最近元素剩余时间选择普通/火/冰/雷死亡动画，同值固定火→冰→雷；扩展 Monster Controller、四类 AOC 与序列帧工具，并为四类敌人创建元素死亡帧目录和空 Clip | Monster、Animation、Prefab、资源管线、测试 | Codex |
 | 2026-09-21 | 新增并实现 ADR-064：加入范围攻击 ikun 与无击破收益篮球；第一球等待完整间隔、仅在 MovingDown 阶段周期生成，ikun 死亡后已有篮球保留；篮球沿用 WeaponProp 的一次接触 Failed 语义且不阻止胜利，运行时生成使用同步接口而非事实事件；Level_020 接入首个 ikun，正式动画与篮球美术后补 | Monster、Prop、Obstacle、Spawn、Pool、Luban、Prefab、Level、共享契约、测试 | Codex |
 | 2026-09-21 | 新增 `ImageNumberText` 与 `PF_UI_ImageNumberText`，集中序列化绑定 0～9 和冒号 11 张 Sprite，运行时复用 UGUI Image 显示纯数字或时间；Gameplay HUD 的关卡 ID、耗时、当前击杀数及 BattleResult 的耗时、击杀数改用图片数字，关卡显示直接取非负 LevelId 以保证纯数字 | UI、Gameplay Scene、Prefab | Codex |
 | 2026-09-21 | 新增 ADR-063；LevelSelect 改为 Inspector 显式绑定预放节点与 LevelId，节点可自由布局，并按已通关、仅解锁、未解锁三态显示 CompletedState/UnlockedState | LevelSelect、UI、场景、Prefab、测试 | Codex |

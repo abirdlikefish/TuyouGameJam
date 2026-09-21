@@ -91,20 +91,26 @@ namespace Game.Contracts
     {
         public PropConfigSnapshot(
             int id,
+            PropType propType,
             int weaponId,
+            int armyAddition,
             int maxHp,
             int contactDamage,
             float moveSpeed)
         {
             Id = id;
+            PropType = propType;
             WeaponId = weaponId;
+            ArmyAddition = armyAddition;
             MaxHp = maxHp;
             ContactDamage = contactDamage;
             MoveSpeed = moveSpeed;
         }
 
         public int Id { get; }
+        public PropType PropType { get; }
         public int WeaponId { get; }
+        public int ArmyAddition { get; }
         public int MaxHp { get; }
         public int ContactDamage { get; }
         public float MoveSpeed { get; }

@@ -164,21 +164,24 @@ namespace Game.Contracts
         public PropSpawned(
             int levelRunId,
             int runtimeInstanceId,
+            int spawnEntryIndex,
             int configId,
-            int weaponId,
+            PropType propType,
             Vector2 worldPosition)
         {
             LevelRunId = levelRunId;
             RuntimeInstanceId = runtimeInstanceId;
+            SpawnEntryIndex = spawnEntryIndex;
             ConfigId = configId;
-            WeaponId = weaponId;
+            PropType = propType;
             WorldPosition = worldPosition;
         }
 
         public int LevelRunId { get; }
         public int RuntimeInstanceId { get; }
+        public int SpawnEntryIndex { get; }
         public int ConfigId { get; }
-        public int WeaponId { get; }
+        public PropType PropType { get; }
         public Vector2 WorldPosition { get; }
     }
 
@@ -251,17 +254,20 @@ namespace Game.Contracts
             int levelRunId,
             int runtimeInstanceId,
             int sourceEnemyRuntimeInstanceId,
+            int configId,
             Vector2 worldPosition)
         {
             LevelRunId = levelRunId;
             RuntimeInstanceId = runtimeInstanceId;
             SourceEnemyRuntimeInstanceId = sourceEnemyRuntimeInstanceId;
+            ConfigId = configId;
             WorldPosition = worldPosition;
         }
 
         public int LevelRunId { get; }
         public int RuntimeInstanceId { get; }
         public int SourceEnemyRuntimeInstanceId { get; }
+        public int ConfigId { get; }
         public Vector2 WorldPosition { get; }
     }
 
@@ -271,18 +277,44 @@ namespace Game.Contracts
             int levelRunId,
             int runtimeInstanceId,
             int sourceEnemyRuntimeInstanceId,
+            int configId,
             BulletDamageContext damageContext)
         {
             LevelRunId = levelRunId;
             RuntimeInstanceId = runtimeInstanceId;
             SourceEnemyRuntimeInstanceId = sourceEnemyRuntimeInstanceId;
+            ConfigId = configId;
             DamageContext = damageContext;
         }
 
         public int LevelRunId { get; }
         public int RuntimeInstanceId { get; }
         public int SourceEnemyRuntimeInstanceId { get; }
+        public int ConfigId { get; }
         public BulletDamageContext DamageContext { get; }
+    }
+
+    public readonly struct GooseCageBroken
+    {
+        public GooseCageBroken(
+            int levelRunId,
+            int runtimeInstanceId,
+            int configId,
+            BulletDamageContext damageContext,
+            ArmyAdditionResult additionResult)
+        {
+            LevelRunId = levelRunId;
+            RuntimeInstanceId = runtimeInstanceId;
+            ConfigId = configId;
+            DamageContext = damageContext;
+            AdditionResult = additionResult;
+        }
+
+        public int LevelRunId { get; }
+        public int RuntimeInstanceId { get; }
+        public int ConfigId { get; }
+        public BulletDamageContext DamageContext { get; }
+        public ArmyAdditionResult AdditionResult { get; }
     }
 
     public readonly struct ObstacleRecycled

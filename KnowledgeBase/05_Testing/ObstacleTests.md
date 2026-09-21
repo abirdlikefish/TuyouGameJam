@@ -42,5 +42,8 @@
 - [ ] Gate/Prop 都以根 GameObject 中心 `y <= DespawnY` 判定离场，Collider/Renderer 尺寸不参与阈值计算。
 - [ ] 已注销对象不再出现在活动快照中。
 - [ ] 归还对象池前数字、HP、`PostDepletionDamage`、奖励锁定状态、接触状态和运行时 ID 已重置。
-- [ ] `AdditiveGate`、`ElementGate`、`WeaponProp` 类型池均返回未激活对象；ObstacleManager 完成 Transform、配置、ID、回调和登记后才激活。
+- [ ] `AdditiveGate`、`ElementGate`、`WeaponProp`、`BasketballProp`、`GooseCageProp` 类型池均返回未激活对象；ObstacleManager 完成 Transform、配置、ID、回调和登记后才激活。
+- [x] 鹅笼 Pending 状态 HP 首次归零只调用一次 `AddArmy`；`GooseCageBroken` 正确记录请求量、实际量和剩余人数（2026-09-21 编辑器瞬态验证通过；真实 Army 上限截断仍纳入完整玩法手测）。
+- [x] 鹅笼未击破接触时逐槽伤害一次并进入 Failed；后续子弹锁 HP 至少为 1，不发布 `GooseCageBroken` 且不增员（2026-09-21 编辑器瞬态验证通过）。
+- [x] ConfigService 已验证配置 ID 3/4 分别为 Basketball/GooseCage，且 Level_020 的 ikun 只引用 Basketball 配置 ID 3（2026-09-21 初始化验证通过；时间轴实际生成画面待加入具体条目后手测）。
 - [ ] Gate/Prop 不在 `OnDisable`、`OnDestroy` 中归还自身；ObstacleManager 主动失活后归还，类型池再次防御性失活且重复归还不改变状态。

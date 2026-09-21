@@ -83,7 +83,9 @@ public readonly struct EnemyConfigSnapshot
 public readonly struct PropConfigSnapshot
 {
     public int Id { get; }
+    public PropType PropType { get; }
     public int WeaponId { get; }
+    public int ArmyAddition { get; }
     public int MaxHp { get; }
     public int ContactDamage { get; }
     public float MoveSpeed { get; }
@@ -215,6 +217,7 @@ public sealed class LevelConfigSnapshot
     public IReadOnlyList<EnemySpawnEntrySnapshot> EnemySpawns { get; }
     public IReadOnlyList<GateSpawnEntrySnapshot> GateSpawns { get; }
     public IReadOnlyList<PropSpawnEntrySnapshot> PropSpawns { get; }
+    public int IkunBasketballConfigId { get; }
     public float ElementDurationSecondsPerDamage { get; }
 }
 
@@ -387,6 +390,7 @@ public interface IArmyRunController : IArmyController
     void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
     void TickMovementAndFire(int levelRunId, float gameplayDeltaTime);
     void EnterVictoryPresentation(int levelRunId);
+    void EnterDefeatPresentation(int levelRunId);
     void StopRun(int levelRunId);
 }
 
@@ -405,7 +409,7 @@ public interface IGameplayInputController : IGameplayInputGate
 
 `ArmyWeaponChanged` 携带 `ArmyWeaponChangeReason`；`WeaponPickup` 与 `ElementActivated` 的 `SourceRuntimeInstanceId` 有值，`ElementExpired` 为 `null`。元素获得或过期只有在实际 WeaponId 改变时才发布该事件。
 
-`EnterVictoryPresentation(levelRunId)` 只接受当前会话，停止 Army 后续移动、射击和玩法命令，保留活动 SoldierVisual 并播放 Victory。它不发布 Victory 事实、不决定终局，也不替代 `StopRun`；Gameplay 场景卸载或显式清理仍调用 `StopRun` 复位身份、Collider、数值和视觉。GameOver 不调用该入口。
+`EnterVictoryPresentation(levelRunId)` 只接受当前会话，停止 Army 后续移动、射击和玩法命令，保留活动 SoldierVisual 并播放 Victory。`EnterDefeatPresentation(levelRunId)` 同样停止玩法命令，但不覆盖正在播放的槽位 Death，使 GameOver 结果页仍可显示最终死亡动画。两个入口都不发布结果事实、不决定终局，也不替代 `StopRun`；Gameplay 场景卸载或显式清理仍调用 `StopRun` 复位身份、Collider、数值和视觉。
 
 `IGameplayInputController` 由 GameplayInputAdapter 实现并通过 Composition 注入 LevelManager。LevelManager 在每个 Playing 帧、Army 移动与发射之前调用一次 `TickInput(unscaledDeltaTime)`。禁用必须幂等，并立即重置 Pointer 状态、调用当前接收者的 `SetHorizontalInput(0)`；这些接口只控制当前场景输入适配器，不创建全局 InputService。
 
@@ -733,11 +737,12 @@ public readonly struct BasketballSpawnRequest
 {
     public int LevelRunId { get; }
     public int SourceEnemyRuntimeInstanceId { get; }
+    public int ConfigId { get; }
     public Vector2 WorldPosition { get; }
 }
 ```
 
-`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`EnemySpawnRequest.ConfigId` 与 `PropSpawnRequest.ConfigId` 分别引用 `TbEnemy.Id`、`TbProp.Id`。这三类时间轴请求的 `SpawnEntryIndex` 都是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。`BasketballSpawnRequest` 由存活且仍处于接近线前的 Ikun 同步提交，不进入 LevelConfig 或 TbProp，并以来源敌人运行时 ID 供诊断关联。
+`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`EnemySpawnRequest.ConfigId` 与 `PropSpawnRequest.ConfigId` 分别引用 `TbEnemy.Id`、`TbProp.Id`。时间轴请求的 `SpawnEntryIndex` 只用于本局来源诊断。`BasketballSpawnRequest` 由存活且仍处于接近线前的 Ikun 同步提交，携带 `LevelConfigSnapshot.IkunBasketballConfigId` 与来源敌人运行时 ID，不伪造时间轴索引。
 
 ## BulletManager 接口
 
@@ -771,7 +776,7 @@ BulletManager 通过 Inspector 持有唯一 Bullet 规范 Prefab，并以具体 
 ```csharp
 public interface IEnemyManager
 {
-    void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
+    void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout, int ikunBasketballConfigId);
     void Spawn(EnemySpawnRequest request);
     void TickMovement(int levelRunId, float monsterDeltaTime);
     void ResolveAttacks(int levelRunId, float monsterDeltaTime);

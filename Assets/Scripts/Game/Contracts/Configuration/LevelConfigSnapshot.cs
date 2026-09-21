@@ -15,6 +15,7 @@ namespace Game.Contracts
             IReadOnlyList<EnemySpawnEntrySnapshot> enemySpawns,
             IReadOnlyList<GateSpawnEntrySnapshot> gateSpawns,
             IReadOnlyList<PropSpawnEntrySnapshot> propSpawns,
+            int ikunBasketballConfigId,
             float elementDurationSecondsPerDamage)
         {
             LevelId = levelId;
@@ -26,6 +27,7 @@ namespace Game.Contracts
             EnemySpawns = Copy(enemySpawns, nameof(enemySpawns));
             GateSpawns = Copy(gateSpawns, nameof(gateSpawns));
             PropSpawns = Copy(propSpawns, nameof(propSpawns));
+            IkunBasketballConfigId = ikunBasketballConfigId;
             ElementDurationSecondsPerDamage = elementDurationSecondsPerDamage;
         }
 
@@ -38,6 +40,7 @@ namespace Game.Contracts
         public IReadOnlyList<EnemySpawnEntrySnapshot> EnemySpawns { get; }
         public IReadOnlyList<GateSpawnEntrySnapshot> GateSpawns { get; }
         public IReadOnlyList<PropSpawnEntrySnapshot> PropSpawns { get; }
+        public int IkunBasketballConfigId { get; }
         public float ElementDurationSecondsPerDamage { get; }
 
         private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> source, string parameterName)

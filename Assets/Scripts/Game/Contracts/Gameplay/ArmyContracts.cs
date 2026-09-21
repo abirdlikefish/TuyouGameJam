@@ -34,6 +34,7 @@ namespace Game.Contracts
         void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
         void TickMovementAndFire(int levelRunId, float gameplayDeltaTime);
         void EnterVictoryPresentation(int levelRunId);
+        void EnterDefeatPresentation(int levelRunId);
         void StopRun(int levelRunId);
     }
 

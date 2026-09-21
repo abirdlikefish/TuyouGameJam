@@ -6,7 +6,33 @@ namespace Game.Gameplay
 {
     public sealed class WeaponProp : BreakablePropBase
     {
+        private static readonly int WeaponIdParameter = Animator.StringToHash("WeaponId");
+        private static readonly int Weapon000LoopState =
+            Animator.StringToHash("Base Layer.Weapon_000_Loop");
+        private static readonly int Weapon001LoopState =
+            Animator.StringToHash("Base Layer.Weapon_001_Loop");
+        private static readonly int Weapon002LoopState =
+            Animator.StringToHash("Base Layer.Weapon_002_Loop");
+
         private PropConfigSnapshot config;
+
+        public override bool TryValidate(out string error)
+        {
+            if (!base.TryValidate(out error))
+            {
+                return false;
+            }
+
+            if (gameObject.activeInHierarchy &&
+                !HasAnimatorParameter(WeaponIdParameter, AnimatorControllerParameterType.Int))
+            {
+                error = $"{name}.animator controller requires an Int parameter named WeaponId.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
 
         internal void InitializeRuntime(
             PropSpawnRequest request,
@@ -17,9 +43,9 @@ namespace Game.Gameplay
             Action<IRoadObstacleRuntime, ObstacleRecycleReason> onRecycleRequested,
             Transform parent)
         {
-            if (request.ConfigId != propConfig.Id)
+            if (request.ConfigId != propConfig.Id || propConfig.PropType != PropType.WeaponBox)
             {
-                throw new ArgumentException("Prop config ID does not match its spawn request.");
+                throw new ArgumentException("WeaponProp requires a matching WeaponBox config.");
             }
 
             config = propConfig;
@@ -36,6 +62,7 @@ namespace Game.Gameplay
                 initializedEventBus,
                 onRecycleRequested,
                 parent);
+            PrepareAnimation(GetAnimationState(config.WeaponId));
         }
 
         protected override void OnBroken(BulletDamageContext damage)
@@ -59,6 +86,44 @@ namespace Game.Gameplay
         protected override void OnPrepareForPool()
         {
             config = default(PropConfigSnapshot);
+        }
+
+        protected override void ConfigureAnimatorForPlayback(Animator targetAnimator)
+        {
+            RequireAnimatorParameter();
+            targetAnimator.SetInteger(WeaponIdParameter, config.WeaponId);
+        }
+
+        protected override void ResetAnimatorForPool(Animator targetAnimator)
+        {
+            targetAnimator.SetInteger(WeaponIdParameter, 0);
+        }
+
+        private static int GetAnimationState(int weaponId)
+        {
+            switch (weaponId)
+            {
+                case 0:
+                    return Weapon000LoopState;
+                case 1:
+                    return Weapon001LoopState;
+                case 2:
+                    return Weapon002LoopState;
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(weaponId),
+                        weaponId,
+                        "Only WeaponId 0 through 2 have weapon prop animation states.");
+            }
+        }
+
+        private void RequireAnimatorParameter()
+        {
+            if (!HasAnimatorParameter(WeaponIdParameter, AnimatorControllerParameterType.Int))
+            {
+                throw new InvalidOperationException(
+                    $"{name}.animator controller requires an Int parameter named WeaponId.");
+            }
         }
     }
 }

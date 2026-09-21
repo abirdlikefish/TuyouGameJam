@@ -42,7 +42,7 @@
 | DES-028 | EventBus 分发语义 | Accepted | EventBus、全部事件消费者、测试 | 见 ADR-021；同步、注册顺序、异常隔离、独立 Token、取消幂等 |
 | DES-029 | Unity 资源注册表键命名 | Accepted | Config、资源、Spawn、Army、Monster、Gate、Prop、Bullet | 见 ADR-021、ADR-031；使用大小写敏感的 `类别/身份` 键维护非池身份资源，PoolService 不以资源键选择 Prefab |
 | DES-030 | Layer Collision Matrix 最终关系 | Accepted | Bullet、Army、Gate、Prop、Monster、Project Settings | 见 ADR-037；固定六个 Gameplay Layer，自动物理矩阵默认全部关闭，只保留显式查询；EnemyBody 与 ArmySlot 不建立移动碰撞关系 |
-| DES-031 | 道具击破效果目录、单个/组合方式、目标与叠加规则 | Partially Accepted | Prop、Army、Config、事件、UI、测试 | ADR-064 增加固定无收益 BasketballProp，并保持 WeaponProp 的武器切换效果；通用效果目录、组合、叠加与数据驱动结构仍延后，见 ADR-022、ADR-064 |
+| DES-031 | 道具击破效果目录、单个/组合方式、目标与叠加规则 | Partially Accepted | Prop、Army、Config、事件、UI、测试 | ADR-067 增加 `PropType`、配置化 BasketballProp 与 GooseCageProp 固定增员效果，并保持 WeaponProp 武器切换；通用多效果组合、叠加与任意目标结构仍延后，见 ADR-022、ADR-064、ADR-067 |
 | DES-032 | 生成对象的横向出生位置表达 | Accepted | Level、Spawn、Monster、Gate、Prop、Config | 见 ADR-023；移除三路生成点 ID，所有生成项改用 `[0,1]` 的 `spawnPosition` |
 | DES-033 | 程序集分层与跨层通信方式 | Accepted（实现延后） | 架构、全局服务、全部 Gameplay、UI、AudioVFX | 见 ADR-024、ADR-026；当前不创建 `.asmdef`，后续以粗粒度程序集强制单向依赖，同步接口用于必须执行的操作，事件只传递已发生的事实 |
 | DES-034 | MVP 全局服务范围、访问方式与应用流程服务边界 | Accepted | 全局服务、Input、Time、AudioVFX、Save、测试 | 见 ADR-027、ADR-062；服务由 Composition 以应用级唯一实例持有并显式注入，不普遍使用静态单例；Save 现作为关卡进度旁路启用，Audio/Debug 仍延后 |

@@ -45,7 +45,7 @@ namespace Game.Contracts
 
     public interface IEnemyManager
     {
-        void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
+        void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout, int ikunBasketballConfigId);
         void Spawn(EnemySpawnRequest request);
         void TickMovement(int levelRunId, float monsterDeltaTime);
         void ApplyPendingDisplacements(int levelRunId);

@@ -16,7 +16,7 @@ MonoBehaviour:
   - levelConfig: {fileID: 11400000, guid: 8cb3d321d56d783419d4e2561e041a64, type: 2}
     initiallyUnlocked: 1
   - levelConfig: {fileID: 11400000, guid: c3808b0fa56d4973ba8b0e7a41b035d0, type: 2}
-    initiallyUnlocked: 0
+    initiallyUnlocked: 1
   - levelConfig: {fileID: 11400000, guid: c849b5c95df2441b8c4eb019b723a45d, type: 2}
     initiallyUnlocked: 0
   - levelConfig: {fileID: 11400000, guid: 49d00a3851b640ce8f9f80af4518ae48, type: 2}

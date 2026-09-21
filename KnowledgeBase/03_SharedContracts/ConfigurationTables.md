@@ -44,11 +44,11 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 ### `TbProp`
 
-初始字段：`Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed`。
+字段：`Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed`、`PropType`、`ArmyAddition`。
 
-`TbProp` 当前只描述武器箱，其装备效果和表现由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱共用一个 `WeaponProp` 根类型、规范 Prefab 和类型池，ObstacleManager 通过 Inspector 绑定 Prefab，初始化时按 `WeaponId` 绑定表现；不同武器必须使用不同的 `WeaponId`。ADR-064 的唯一篮球使用 `BasketballProp` 规范 Prefab上的固定参数，不占用 `TbProp` 行，也不伪造 WeaponId。通用效果目录和数据驱动结构仍保持待决。
+`PropType` 固定为 `WeaponBox=0`、`Basketball=1`、`GooseCage=2`。配置 ID `0~2` 保持三种武器箱，ID `3` 为篮球，ID `4` 为鹅笼。ObstacleManager 按类型选择 `WeaponProp`、`BasketballProp` 或 `GooseCageProp` 的规范 Prefab与类型池；关卡 `propSpawns` 对三类道具统一引用 `TbProp.Id`。
 
-每条 `TbProp` 必须具有有效且非负的 `WeaponId`、`MaxHp > 0`、`ContactDamage > 0`，以及有限且大于等于 `0`、单位为世界单位/秒的 `MoveSpeed`。
+每条 `TbProp` 必须满足 `MaxHp > 0`、`ContactDamage > 0`，以及有限非负的 `MoveSpeed`。武器箱要求有效 `WeaponId` 且 `ArmyAddition=0`；篮球要求中性 `WeaponId=0`、`ArmyAddition=0`；鹅笼要求中性 `WeaponId=0` 且 `ArmyAddition>0`。
 
 ### `TbBullet`
 
@@ -70,7 +70,7 @@ Luban 生成的 `cfg.Tables` 与表行编入 `Game.ConfigGenerated`，只供 Fou
 | `TbWeapon` | `IWeaponConfigProvider` | `WeaponConfigSnapshot(Id, FireInterval, BulletId)` |
 | `TbBullet` | `IBulletConfigProvider` | `BulletConfigSnapshot(Id, Damage, MoveSpeed)` |
 | `TbEnemy` | `IEnemyConfigProvider` | `EnemyConfigSnapshot(Id, EnemyType, MaxHp, AttackPower, MoveSpeed, AttackStartRange, AttackCooldown)` |
-| `TbProp` | `IPropConfigProvider` | `PropConfigSnapshot(Id, WeaponId, MaxHp, ContactDamage, MoveSpeed)` |
+| `TbProp` | `IPropConfigProvider` | `PropConfigSnapshot(Id, PropType, WeaponId, ArmyAddition, MaxHp, ContactDamage, MoveSpeed)` |
 
 Provider 使用必得 `GetXxxConfig(id)`；它只接受初始化引用链中已校验的 ID，不返回默认行或可变 Luban 对象。`TryGetLevelConfig` 只用于应用层验证关卡选择，不作为 Gameplay 数值表查询模式。
 
@@ -98,6 +98,7 @@ entries[].initiallyUnlocked bool
 - 固定道路只配置 `roadWidth`、`roadHeight`，中心永久为世界原点，四边由半宽和半高派生；ArmyRoot 初始世界坐标使用 `armySpawnPosition: Vector2`。
 - `spawnY`、`enemyApproachY`、`despawnY` 等关卡空间参数。
 - 本关元素门统一使用的 `elementDurationSecondsPerDamage`。
+- `ikunBasketballConfigId`：包含 ikun 时必须引用 `PropType.Basketball`；无 ikun 时使用中性值 `0`。
 - `enemySpawns`、`gateSpawns`、`propSpawns` 三个按本局开始时间编排的列表。
 
 `levelId` 必须为非负整数且在目录中唯一。`roadWidth`、`roadHeight` 必须有限且大于 0，`armySpawnPosition` 分量必须有限且位于派生道路边界内。ArmyRoot 每局从该坐标开始且只沿世界 X 轴移动。MVP 的 Y 顺序固定为 `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary`。道路只提供数值边界与视觉，不设置玩法 Collider。
@@ -132,8 +133,9 @@ LevelConfig 不保存敌人 HP、子弹伤害等表驱动的复用数值。Gate 
 LevelCatalog.entries[].levelConfig.levelId -> LevelId
 LevelConfig.enemySpawns[].configId -> TbEnemy.Id
 LevelConfig.propSpawns[].configId  -> TbProp.Id
+LevelConfig.ikunBasketballConfigId -> TbProp.Id（仅 ikun 关卡，且必须是 Basketball）
 TbWeapon.bulletId          -> TbBullet.Id
-TbProp.weaponId            -> TbWeapon.Id
+TbProp.weaponId            -> TbWeapon.Id（仅 WeaponBox）
 ```
 
 参与玩法碰撞的 Prefab 必须按 `CollisionRules.md` 配置对应的 `Collider2D`、职责 Layer 和稳定职责名称。池化规范 Prefab 由对应 Manager 的 Inspector 引用提供，一个具体池化根类型只绑定一个 Prefab；Prefab、碰撞形状、阵型槽位、发射点与对象生命周期属于 Unity 资源或运行时状态，不写入 Luban 数值表，MVP 不通过 Luban `PrefabKey` 间接引用这些对象。
