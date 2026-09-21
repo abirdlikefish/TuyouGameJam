@@ -11,12 +11,13 @@ namespace Game.Presentation
     public sealed class BattleHudView : MonoBehaviour
     {
         [Header("战斗信息")]
-        [SerializeField] private TMP_Text levelNameText;
-        [SerializeField] private TMP_Text elapsedTimeText;
+        [SerializeField] private ImageNumberText levelNameNumber;
+        [SerializeField] private ImageNumberText elapsedTimeNumber;
         [SerializeField] private TMP_Text fireDurationText;
         [SerializeField] private TMP_Text iceDurationText;
         [SerializeField] private TMP_Text lightningDurationText;
-        [SerializeField] private TMP_Text killProgressText;
+        [SerializeField] private Image killProgressImage;
+        [SerializeField] private ImageNumberText killedEnemyCountNumber;
 
         [Header("退出")]
         [SerializeField] private Button exitButton;
@@ -26,12 +27,10 @@ namespace Game.Presentation
 
         private IGameplayHudSource hudSource;
         private IGameStateService gameStateService;
-        private string cachedLevelName;
-        private string cachedElapsedTime;
         private string cachedFireDuration;
         private string cachedIceDuration;
         private string cachedLightningDuration;
-        private string cachedKillProgress;
+        private float cachedKillProgress = -1f;
         private bool actionRequested;
         private bool initialized;
 
@@ -63,12 +62,16 @@ namespace Game.Presentation
 
         public bool TryValidate(out string error)
         {
-            if (!RequireText(levelNameText, nameof(levelNameText), out error) ||
-                !RequireText(elapsedTimeText, nameof(elapsedTimeText), out error) ||
+            if (!RequireImageNumber(levelNameNumber, nameof(levelNameNumber), out error) ||
+                !RequireImageNumber(elapsedTimeNumber, nameof(elapsedTimeNumber), out error) ||
                 !RequireText(fireDurationText, nameof(fireDurationText), out error) ||
                 !RequireText(iceDurationText, nameof(iceDurationText), out error) ||
                 !RequireText(lightningDurationText, nameof(lightningDurationText), out error) ||
-                !RequireText(killProgressText, nameof(killProgressText), out error) ||
+                !RequireFilledImage(killProgressImage, nameof(killProgressImage), out error) ||
+                !RequireImageNumber(
+                    killedEnemyCountNumber,
+                    nameof(killedEnemyCountNumber),
+                    out error) ||
                 !RequireButton(exitButton, nameof(exitButton), out error) ||
                 !RequireButton(confirmExitButton, nameof(confirmExitButton), out error) ||
                 !RequireButton(cancelExitButton, nameof(cancelExitButton), out error))
@@ -152,8 +155,8 @@ namespace Game.Presentation
 
         private void Refresh(GameplayHudSnapshot snapshot, bool force)
         {
-            SetText(levelNameText, snapshot.DisplayName, ref cachedLevelName, force);
-            SetText(elapsedTimeText, FormatElapsedTime(snapshot.ElapsedTime), ref cachedElapsedTime, force);
+            levelNameNumber.SetNumber(snapshot.LevelId);
+            elapsedTimeNumber.SetText(FormatElapsedTime(snapshot.ElapsedTime));
             SetText(fireDurationText, FormatDuration(snapshot.FireRemainingDuration), ref cachedFireDuration, force);
             SetText(iceDurationText, FormatDuration(snapshot.IceRemainingDuration), ref cachedIceDuration, force);
             SetText(
@@ -161,11 +164,12 @@ namespace Game.Presentation
                 FormatDuration(snapshot.LightningRemainingDuration),
                 ref cachedLightningDuration,
                 force);
-            SetText(
-                killProgressText,
-                $"KILLS: {snapshot.KilledEnemyCount} / {snapshot.TotalEnemyCount}",
+            SetProgress(
+                killProgressImage,
+                CalculateKillProgress(snapshot.KilledEnemyCount, snapshot.TotalEnemyCount),
                 ref cachedKillProgress,
                 force);
+            killedEnemyCountNumber.SetNumber(snapshot.KilledEnemyCount);
         }
 
         private void HandleExitClicked()
@@ -227,11 +231,50 @@ namespace Game.Presentation
             return true;
         }
 
+        private bool RequireImageNumber(
+            ImageNumberText imageNumber,
+            string fieldName,
+            out string error)
+        {
+            if (imageNumber == null || !imageNumber.transform.IsChildOf(transform))
+            {
+                error = $"BattleHudView.{fieldName} must belong to the BattleHud hierarchy.";
+                return false;
+            }
+
+            if (!imageNumber.TryValidate(out var imageNumberError))
+            {
+                error = $"BattleHudView.{fieldName} is invalid. {imageNumberError}";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
         private bool RequireButton(Button button, string fieldName, out string error)
         {
             if (button == null || !button.transform.IsChildOf(transform))
             {
                 error = $"BattleHudView.{fieldName} must belong to the BattleHud hierarchy.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private bool RequireFilledImage(Image image, string fieldName, out string error)
+        {
+            if (image == null || !image.transform.IsChildOf(transform))
+            {
+                error = $"BattleHudView.{fieldName} must belong to the BattleHud hierarchy.";
+                return false;
+            }
+
+            if (image.type != Image.Type.Filled)
+            {
+                error = $"BattleHudView.{fieldName} must use Image.Type.Filled.";
                 return false;
             }
 
@@ -265,14 +308,42 @@ namespace Game.Presentation
             return Mathf.Max(0f, duration).ToString("0.0", CultureInfo.InvariantCulture) + "s";
         }
 
+        private static float CalculateKillProgress(int killedEnemyCount, int totalEnemyCount)
+        {
+            if (totalEnemyCount <= 0)
+            {
+                return 0f;
+            }
+
+            if (killedEnemyCount >= totalEnemyCount)
+            {
+                return 1f;
+            }
+
+            return Mathf.Clamp01((float)killedEnemyCount / totalEnemyCount);
+        }
+
+        private static void SetProgress(
+            Image target,
+            float value,
+            ref float cachedValue,
+            bool force)
+        {
+            if (!force && Mathf.Approximately(cachedValue, value))
+            {
+                return;
+            }
+
+            cachedValue = value;
+            target.fillAmount = value;
+        }
+
         private void ClearTextCache()
         {
-            cachedLevelName = null;
-            cachedElapsedTime = null;
             cachedFireDuration = null;
             cachedIceDuration = null;
             cachedLightningDuration = null;
-            cachedKillProgress = null;
+            cachedKillProgress = -1f;
         }
 
         private void OnDestroy()

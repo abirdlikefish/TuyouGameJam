@@ -31,6 +31,7 @@ namespace Game.Composition
         private PoolService poolService;
         private SceneService sceneService;
         private GameStateService gameStateService;
+        private JsonPlayerProgressStore playerProgressStore;
         private bool created;
         private bool connected;
         private bool started;
@@ -96,10 +97,12 @@ namespace Game.Composition
                 persistentPoolRoot,
                 message => Debug.LogError($"[PoolService] {message}"));
             sceneService = new SceneService(eventBus, sceneRuntime);
+            playerProgressStore = new JsonPlayerProgressStore(Application.persistentDataPath);
             gameStateService = new GameStateService(
                 configService,
                 sceneService,
-                eventBus);
+                eventBus,
+                playerProgressStore);
             created = true;
             Debug.Log("[GlobalBootstrap] Phase=Create; Succeeded=True");
         }

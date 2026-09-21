@@ -1,6 +1,5 @@
 using System;
 using Game.Contracts;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,22 +8,20 @@ namespace Game.Presentation
     [DisallowMultipleComponent]
     public sealed class LevelSelectNodeView : MonoBehaviour
     {
-        [Header("关卡信息")]
-        [SerializeField] private TMP_Text levelNameText;
-
-        [Header("解锁状态")]
-        [SerializeField] private GameObject unlockedState;
+        [Header("关卡状态")]
         [SerializeField] private GameObject lockedState;
+        [SerializeField] private GameObject unlockedState;
         [SerializeField] private Button startButton;
 
         private Action<int> levelRequested;
         private int levelId;
-        private bool unlocked;
+        private bool selectable;
         private bool initialized;
 
         public void Initialize(
             LevelDescriptor descriptor,
             bool isUnlocked,
+            bool isCompleted,
             Action<int> onLevelRequested)
         {
             if (initialized)
@@ -43,31 +40,24 @@ namespace Game.Presentation
             }
 
             levelId = descriptor.LevelId;
-            unlocked = isUnlocked;
+            selectable = isUnlocked || isCompleted;
             levelRequested = onLevelRequested;
-            levelNameText.text = descriptor.DisplayName;
-            unlockedState.SetActive(isUnlocked);
             lockedState.SetActive(!isUnlocked);
-            startButton.interactable = isUnlocked;
+            unlockedState.SetActive(isUnlocked && !isCompleted);
+            startButton.interactable = selectable;
             startButton.onClick.AddListener(HandleStartClicked);
             initialized = true;
         }
 
         public bool TryValidate(out string error)
         {
-            if (levelNameText == null)
-            {
-                error = "LevelSelectNodeView.levelNameText is not assigned.";
-                return false;
-            }
-
-            if (unlockedState == null || lockedState == null)
+            if (lockedState == null || unlockedState == null)
             {
                 error = "LevelSelectNodeView state roots are not fully assigned.";
                 return false;
             }
 
-            if (unlockedState == lockedState)
+            if (lockedState == unlockedState)
             {
                 error = "LevelSelectNodeView state roots must reference different objects.";
                 return false;
@@ -79,9 +69,8 @@ namespace Game.Presentation
                 return false;
             }
 
-            if (!levelNameText.transform.IsChildOf(transform) ||
+            if (!lockedState.transform.IsChildOf(transform) ||
                 !unlockedState.transform.IsChildOf(transform) ||
-                !lockedState.transform.IsChildOf(transform) ||
                 !startButton.transform.IsChildOf(transform))
             {
                 error = "LevelSelectNodeView bindings must belong to the node hierarchy.";
@@ -96,7 +85,7 @@ namespace Game.Presentation
         {
             if (startButton != null)
             {
-                startButton.interactable = initialized && unlocked && enabled;
+                startButton.interactable = initialized && selectable && enabled;
             }
         }
 
@@ -108,15 +97,25 @@ namespace Game.Presentation
                 startButton.interactable = false;
             }
 
+            if (lockedState != null)
+            {
+                lockedState.SetActive(false);
+            }
+
+            if (unlockedState != null)
+            {
+                unlockedState.SetActive(false);
+            }
+
             levelRequested = null;
             levelId = 0;
-            unlocked = false;
+            selectable = false;
             initialized = false;
         }
 
         private void HandleStartClicked()
         {
-            if (initialized && unlocked)
+            if (initialized && selectable)
             {
                 levelRequested(levelId);
             }

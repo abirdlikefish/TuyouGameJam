@@ -54,7 +54,7 @@ Accepted（生成位置部分由 ADR-023 替代）
 
 ### 与应用流程的衔接
 
-- 当前只支持一个关卡，`unlockedLevelIds` 只记录通关后的解锁结果，不执行下一关跳转。
+- 本 ADR 原定当前只支持一个关卡，`unlockedLevelIds` 只记录通关后的解锁结果；下一关行为现由 ADR-058 修订为使用过滤后列表首项。
 - Victory 或 GameOver 后停止本局输入、射击、攻击和未来生成。
 - 本 ADR 只定义 Gameplay 内的终局判定，不再规定终局后的页面跳转或等待时间。
 - 终局后的应用流程、会话清理和重新进入同一关由 `ADR-011-ApplicationFlowAndGameplaySession.md` 定义。

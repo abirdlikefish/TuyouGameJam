@@ -3,7 +3,7 @@
 ## 当前阶段
 
 - 阶段：工程实现 / 批次 7 资源、动画与场景装配
-- 工程状态：批次 7.5A～7.5C 已完成；批次 7.6 已完成现有素材基线的结构与运行态专项验证。12 个已填帧 Clip（554 帧）、Controller/AOC、Weapon/Enemy/Bullet/Gate 身份映射、Monster AnimationEvent、显式 Army 状态切换及三类池对象复用均通过；19 个未收到素材的正式 Clip 仍为空占位。ADR-061 双元素命中效果已完成代码、场景与最小 Prefab 装配并通过静态编译/引用检查，尚未进行 Unity 导入或运行态验证
+- 工程状态：批次 7.5A～7.5C 已完成；批次 7.6 已完成现有素材基线的结构与运行态专项验证。12 个已填帧 Clip（554 帧）、Controller/AOC、Weapon/Enemy/Bullet/Gate 身份映射、Monster AnimationEvent、显式 Army 状态切换及三类池对象复用均通过；19 个未收到素材的正式 Clip 仍为空占位。ADR-061 双元素命中效果已完成代码、场景与最小 Prefab 装配并通过静态编译/引用检查；ADR-062 移动端本地关卡进度已完成代码、Unity 编译和 JSON/备份往返测试，目标设备完整流程待验收
 - 目标：完成批次 7.6 剩余的竖屏目标分辨率实机验证与 19 个动作素材补齐；之后进入批次 8 完整命中、接触、胜负和重开闭环验收
 
 ## 推荐阅读顺序
@@ -33,6 +33,7 @@
 | 设计单个玩法模块 | `02_Modules/README.md`、目标模块 README | 目标模块目录，必要时更新契约 |
 | 修改跨模块接口 | `03_SharedContracts`、相关 ADR | 共享契约、ADR、受影响模块 README |
 | 设计架构或服务 | `01_Architecture` | 对应架构文档、ADR |
+| 修改本地关卡进度 | `../02_Modules/Save/README.md`、`../06_Decisions/ADR-062-MobileLocalPlayerProgress.md` | Save、Application、Bootstrap、相关共享契约与测试记录 |
 | 制定验收标准 | `05_Testing` | 测试清单和关联模块文档 |
 | 导入动画或绑定 Animator | `../04_Assets/AnimationPipeline.md`、`../04_Assets/PrefabSpecifications.md` | `Assets/Art`、`Assets/Animations`、目标 Prefab 与直接相关表现适配记录 |
 | 生成代码或组织并行窗口 | `ImplementationPlan.md`、目标模块 README | 已认领代码目录、直接相关实现记录 |

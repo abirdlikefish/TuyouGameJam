@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7167844249211869465
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 743334679987064304}
+  - component: {fileID: 6118480569787690876}
+  m_Layer: 0
+  m_Name: PF_UI_ImageNumberText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &743334679987064304
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7167844249211869465}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 260, y: 55}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &6118480569787690876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7167844249211869465}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ec2a4a7f11d4e6e95ef1184146e7022, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  digit0: {fileID: 21300000, guid: aae4c4712316fe940828fa50bbf4f030, type: 3}
+  digit1: {fileID: 21300000, guid: 099eb8e26f3387648a3fb22dd6de0d1d, type: 3}
+  digit2: {fileID: 21300000, guid: 5527884948e89b44fab2951bc7d9b768, type: 3}
+  digit3: {fileID: 21300000, guid: 39f42cf882791914094f40d32cf5418d, type: 3}
+  digit4: {fileID: 21300000, guid: a43fe13c4e63e23499e8a5b30bf534cf, type: 3}
+  digit5: {fileID: 21300000, guid: 5d0784917c9b64a42969c402f80d6769, type: 3}
+  digit6: {fileID: 21300000, guid: 22a0f001abf8caf4685099a0a749ffa3, type: 3}
+  digit7: {fileID: 21300000, guid: ef643cbf5ca2de2418dbf7d3d8242e62, type: 3}
+  digit8: {fileID: 21300000, guid: 7f15ec7047b1e1f42baa479bd1c4cf9d, type: 3}
+  digit9: {fileID: 21300000, guid: 947154eba1003cc47a2ee9c4db5008fc, type: 3}
+  colon: {fileID: 21300000, guid: 526708d58e1ac2a45a35913a02ced09e, type: 3}
+  characterSpacing: 2
+  alignment: 1
+  useSpriteAspectRatio: 1

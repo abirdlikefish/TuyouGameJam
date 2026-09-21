@@ -15,3 +15,41 @@ MonoBehaviour:
   entries:
   - levelConfig: {fileID: 11400000, guid: 8cb3d321d56d783419d4e2561e041a64, type: 2}
     initiallyUnlocked: 1
+  - levelConfig: {fileID: 11400000, guid: c3808b0fa56d4973ba8b0e7a41b035d0, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: c849b5c95df2441b8c4eb019b723a45d, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 49d00a3851b640ce8f9f80af4518ae48, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 80257d7cbce44b0e9fe843d79d25cc8a, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 81aced1a22894cc29b1d91f667199fa1, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 0da69f6674dd4dcf8fda4db1a7d54e28, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 761d5c5e4f174ff2b9d957c63321ed72, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 7ad522388a46411cac9bfa8303a6e6b9, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: c7f70bcd135144cf8f71d14050b0ca88, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 07603f1abe594eb3be3cecca340a13e6, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: d2ebd3c353f14c8aa307952b51e7a8a2, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 0335b3ccd5e74f559830c6641296e2d4, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 4576082e3efe43df9b774350c2e6d2ad, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 67100fd1be584315b8e0cec8b430c527, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: ab41e7e50744433a9f08a23555be95dc, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: c37370c58e10460e9d4b901dc921d5f9, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 939eb5305cbc4eeabd797f3fe44f4fe4, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 544dba4048b64ff694d8d69db622dcd5, type: 2}
+    initiallyUnlocked: 0
+  - levelConfig: {fileID: 11400000, guid: 220ab0f08be344249424c28df7264d31, type: 2}
+    initiallyUnlocked: 0

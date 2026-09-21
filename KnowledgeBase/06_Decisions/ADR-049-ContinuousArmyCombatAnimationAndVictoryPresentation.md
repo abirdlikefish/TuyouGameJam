@@ -42,7 +42,7 @@ ADR-048 最初把 Army Attack 定义为每次实际发射后触发的非循环�
 
 - Army 不通过 AnimationEvent 驱动发射，玩法逻辑保持权威；ADR-060 进一步要求三种战斗 Clip 时长与 `FireInterval` 一致并共享攻击周期相位。
 - Army Animator Controller 更简单，三套武器仍共用同一状态结构和预创建 AOC。
-- 胜利表现拥有可延长的生命周期边界，但当前应用流程仍直接返回 LevelSelect。
+- 胜利表现拥有可延长的生命周期边界；后续 ADR-058 已把离开结算的路径扩展为返回 LevelSelect 或进入下一关。
 - Attack 改为循环后需要检查素材首尾接缝；这属于视觉验收，不改变射击结果。
 
 ## 验收标准

@@ -10,6 +10,8 @@ Accepted
 
 > 后续决策：ADR-051 与 ADR-053 分别为 MainMenu、LevelSelect 增加场景内 View 和按钮命令，但不增加跨场景输入服务；两者均不再使用临时自动推进。
 
+> 后续决策：ADR-062 已启用由 Composition 注入的 `JsonPlayerProgressStore`，取代本文关于 SaveService 和本地关卡进度继续延后的部分；Audio、Debug 和设置持久化仍延后。
+
 ## 背景
 
 现有全局服务清单同时包含 MVP 必需能力、建议能力和后续扩展，容易让实现阶段误以为每个服务都需要在首个可玩版本中创建。时间系统的公共接口也保留了暂停、倍率和局部时停能力，但这些能力并不属于当前 MVP；测试清单却仍包含相应验收项。另一方面，`GameStateService` 与 `SceneService` 共同完成应用流程，但二者的状态所有权和 Unity 场景操作职责不能因此混为一体。
@@ -18,7 +20,7 @@ Accepted
 
 ## 决策
 
-### MVP 不实现音频、存档和调试服务
+### MVP 当时不实现音频、存档和调试服务
 
 - MVP 完全无声音，不创建或初始化 `AudioService`、`AudioRoot`、`AudioMixer`、音频事件监听器、音量设置或 AudioClip 绑定。
 - `SaveService` 继续按 ADR-017 延后；MVP 不创建存档文件，也不持久化关卡进度或设置。

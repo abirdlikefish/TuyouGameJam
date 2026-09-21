@@ -30,8 +30,8 @@
 | `MonsterDamaged` | Monster | UI、VFX | `LevelRunId`、运行时敌人实例 ID、`EnemyDamageContext`（来源子弹、组合类型、直接/效果伤害、元素、命中位置与方向）、剩余生命值、是否致命 |
 | `MonsterAttackLanded` | EnemyManager | VFX | `LevelRunId`、运行时敌人实例 ID、攻击类型、命中槽位索引、已提交的 `AttackPower`；范围攻击对每个有效槽位各发布一条，实际 HP 与人数损失见 `SoldierHit` |
 | `MonsterKilled` | EnemyManager | LevelManager、VFX | `LevelRunId`、运行时敌人实例 ID、造成击杀的 `EnemyDamageContext`；Monster 先通过必执行回调报告死亡，EnemyManager 完成死亡去重和存活计数后发布；LevelManager 只累计当前会话的 HUD 击杀数，并在帧末同步查询 AliveEnemyCount |
-| `Victory` | GameStateService | Gameplay 结果 UI | `LevelId`、`LevelRunId`、ConfigService 已按 ADR-044 过滤的 `unlockedLevelIds`（仅本局结果数据）；进入 `GameplayResult` 后发布，等待玩家显式返回 |
-| `GameOver` | GameStateService | Gameplay 结果 UI | `LevelId`、`LevelRunId`、`GameOverReason`；进入 `GameplayResult` 后发布，等待玩家显式返回 |
+| `Victory` | GameStateService | Gameplay 结果 UI | `LevelId`、`LevelRunId`、ConfigService 已按 ADR-044 过滤的 `unlockedLevelIds`（首项为下一关目标）；进入 `GameplayResult` 后发布并等待玩家选择返回或下一关 |
+| `GameOver` | GameStateService | Gameplay 结果 UI | `LevelId`、`LevelRunId`、`GameOverReason`；进入 `GameplayResult` 后发布并等待玩家选择返回或重试 |
 
 ## 事件约束
 

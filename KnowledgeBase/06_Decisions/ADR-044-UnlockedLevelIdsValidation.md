@@ -10,7 +10,7 @@ Accepted
 
 ## 背景
 
-`LevelConfig.unlockedLevelIds` 表示通关当前关卡后应作为本局结果发布的解锁关卡 ID。当前 MVP 不执行下一关跳转，也不保存玩家进度，但 `GameStateService` 仍会在 Victory 中发布该列表。
+`LevelConfig.unlockedLevelIds` 表示通关当前关卡后应作为本局结果发布的解锁关卡 ID。ADR-058 扩展后，`GameStateService` 除了在 Victory 中发布该列表，也把过滤后列表首项作为结算页“挑战下一关”的目标；项目仍不保存玩家进度。
 
 既有配置规则要求 ConfigService 对 LevelCatalog、LevelConfig 和已确认引用执行启动期校验，并在配置错误时 Fail-Fast。这里需要区分两类问题：重复 ID 或自引用表示当前关卡资产自身存在明确错误；目录中暂不存在的 ID 则可能是策划提前填写的未来关卡。如果把后一类也视为致命错误，会阻止尚未完整录入未来关卡时验证当前 MVP。
 
@@ -44,7 +44,7 @@ ConfigService 必须先对原始 `unlockedLevelIds` 执行重复和自引用校�
 
 ### 运行时结果
 
-ConfigService 按原始顺序把目录中实际存在的有效 ID 防御性复制进 `LevelConfigSnapshot.UnlockedLevelIds`。GameStateService 在 Victory 时只从该已过滤快照复制结果；LevelManager、LevelSelect、UI 和未来存档消费者都不再处理原始资产列表或缺失 ID。
+ConfigService 按原始顺序把目录中实际存在的有效 ID 防御性复制进 `LevelConfigSnapshot.UnlockedLevelIds`。GameStateService 在 Victory 时只从该已过滤快照复制结果，并在列表非空时把首项作为下一关目标；LevelManager、LevelSelect、UI 和未来存档消费者都不再处理原始资产列表或缺失 ID。
 
 ## 对 ADR-041 的修订
 

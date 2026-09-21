@@ -12,7 +12,7 @@
 2. **Unity 编译检查**：每批脚本导入后必须无编译错误，再开始下一批依赖代码。
 3. **规则边界验证**：按测试清单使用最小配置、结构化日志、Inspector 状态和可复现操作验证代表性输入、边界值、重复调用与过期会话。
 4. **资源与场景装配验证**：由用户完成 Sprite 导入、Clip/Controller、Prefab、Collider、Layer、Animator 参数与 Event、ScriptableObject 和场景引用后，验证 ID 到动画映射、Preparing/Ready、池复用、失败阻断和清理。
-5. **完整游玩闭环**：验证启动、MainMenu、LevelSelect、Gameplay、Victory/GameOver、返回选关和重新开始，且上一局对象与回调不残留。
+5. **完整游玩闭环**：验证启动、MainMenu、LevelSelect、Gameplay、Victory/GameOver、返回选关、失败重试和胜利下一关，且上一局对象与回调不残留。
 
 ## 为未来自动化保留的代码边界
 

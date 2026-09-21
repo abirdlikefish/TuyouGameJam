@@ -12,6 +12,7 @@
 | `SceneService` | MainMenu、LevelSelect、Gameplay 场景切换、入口绑定和卸载协调 | 必需（薄协调器） | `ApplicationFlow.md`、`SceneStructure.md` |
 | `ConfigService` | 读取并校验 `LevelCatalog`、全部 `LevelConfig`、唯一 Luban `cfg.Tables` 与资源注册表，生成不可变运行时快照 | 必需 | `ConfigurationSystem.md` |
 | `PoolService` | 按具体 MonoBehaviour 类型持有和复用实例 | 必需（ContractReady） | `PoolSystem.md` |
+| `JsonPlayerProgressStore` | 移动端本地关卡完成与解锁进度的版本化 JSON 读写 | 必需 | `../02_Modules/Save/README.md` |
 
 ## 实例所有权与访问方式
 
@@ -33,6 +34,7 @@ GlobalBootstrap / Composition Root
 ├── 创建 ConfigService(EventBus)
 ├── 创建 SceneService(EventBus, UnitySceneRuntime)
 ├── 创建 GameStateService(ConfigService, SceneService, EventBus)
+├── 创建 JsonPlayerProgressStore(Application.persistentDataPath)
 └── 创建 PoolService(PersistentPoolRoot, 诊断委托)
 ```
 
@@ -43,6 +45,7 @@ GlobalBootstrap / Composition Root
 | `ConfigService` | `LevelCatalog`、`cfg.Tables`、`IResourceRegistry` | 完整校验并复制五类只读快照；失败时记录首个错误、进入 Failed 并立即退出，不依赖 Gameplay 模块或配置失败事件 |
 | `PoolService` | `PersistentPoolRoot`、可选诊断委托 | 按具体类型持有类型池和空闲实例；不依赖资源注册表、SpawnManager 或玩法状态 |
 | `TimeService`、`EventBus` | 无业务服务依赖 | 作为基础叶节点，不反向依赖玩法或表现层 |
+| `JsonPlayerProgressStore` | 应用持久目录 | 只读写版本化关卡进度，不拥有解锁规则或订阅结果事件 |
 
 需要立即执行、返回值、失败结果或确定顺序的操作使用注入的类型化接口；已经发生且允许零个监听者的通知使用 `EventBus`。不得用事件伪装必须执行的命令，也不得为省略注入而引入静态单例。
 
@@ -58,7 +61,7 @@ Bootstrap → Create 服务 → Connect 明确依赖 → Start 并注册事件
 
 - 只有 `GlobalRoot`、Composition Root 和服务实例具有应用级生命周期；Gameplay Controller、Manager 和池对象均不得做成跨场景单例。
 - MVP 服务初始化使用固定屏障：Create 创建实例且不产生业务副作用；Connect 注入明确类型依赖并校验场景与序列化配置；Start 先注册应用流程事件，再由 Composition 调用具体 ConfigService 初始化资产与表并启动应用流程。选关后只把 `LevelConfigSnapshot` 交给 Gameplay。
-- MVP 不创建或初始化 `AudioService`、`SaveService`、`DebugService`，也不创建音频根节点、音量设置或调试命令入口。
+- MVP 不创建或初始化 `AudioService`、设置存储或 `DebugService`；ADR-062 只启用最小 `JsonPlayerProgressStore` 保存关卡完成与解锁进度。
 - 场景重载时不得创建重复的 `GlobalRoot`。
 - MainMenu、LevelSelect 和 Gameplay 都使用实际 Additive 场景及固定根 SceneEntry；`Initializing`、`GameplayLoading` 仍只是流程状态。MainMenu 和 LevelSelect 场景 Ready 后都等待 UI 命令。
 - `ConfigService` 初始化失败时使用 `Debug.LogError` 输出首个稳定来源与原因，将状态置为 `Failed`，随后在 Player 退出应用、在 Editor 停止 Play Mode；不进入 MainMenu，不使用默认值，不自动恢复或重试，也不发布配置失败事件。

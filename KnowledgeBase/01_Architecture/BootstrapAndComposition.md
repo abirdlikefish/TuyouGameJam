@@ -15,6 +15,7 @@ Integration（批次 7.5C 已完成 GlobalRoot、场景资产、资源注册表�
 - 通过 UnitySceneRuntime 的 Inspector 字段绑定并校验 `BootstrapScene`、`MainMenuScene`、`LevelSelectScene`、`GameplayScene` 的稳定场景标识；确认目标场景已加入 Build Settings。场景标识不直接引用尚未加载场景中的 Entry 组件。
 - 绑定唯一的 `PersistentPoolRoot`，创建全局 PoolService；具体池化 Prefab 由 Gameplay Manager 在 Inspector 绑定并在场景装配时注册为类型池。
 - 在 ConfigService 为 `Ready` 后，调用一次 `GameStateService.NotifyInitializationReady()`。
+- 使用 `Application.persistentDataPath` 创建唯一 `JsonPlayerProgressStore` 并注入 `GameStateService`；具体读取发生在 ConfigService Ready 后、请求 MainMenu 前。
 - 在应用退出或入口销毁时取消全局订阅和定时任务，并按初始化逆序释放已创建服务。
 
 `GlobalBootstrap` 不选择关卡、不推进 MainMenu/LevelSelect/Gameplay 状态，也不直接操作具体 SceneEntry 或承担玩法规则。它只创建并连接 SceneService 使用的 Unity 场景适配器。
@@ -31,10 +32,11 @@ GlobalRoot
     ├── GameStateService
     ├── SceneService
     ├── ConfigService
+    ├── JsonPlayerProgressStore
     └── PoolService
 ```
 
-Gameplay 场景模块不进入 `ServiceHost`。MVP 也不创建 `AudioService`、`SaveService` 或 `DebugService`。
+Gameplay 场景模块不进入 `ServiceHost`。MVP 不创建 `AudioService`、设置存储或 `DebugService`；仅按 ADR-062 创建关卡进度存储。
 
 服务可以是纯 C# 对象，不要求每个服务对应一个 GameObject。`ServiceHost` 表示所有权和注册位置，不是新的通用 `GameManager`。
 
@@ -56,7 +58,8 @@ Create
 ├── 创建 EventBus，并注入异常报告委托
 ├── 创建 TimeService、ConfigService 与 UnitySceneRuntime
 ├── 创建 SceneService，并注入 IEventBus 与 UnitySceneRuntime
-├── 创建 GameStateService，并注入 IConfigService、ISceneService 与 IEventBus
+├── 创建 JsonPlayerProgressStore，并使用 Application.persistentDataPath
+├── 创建 GameStateService，并注入 IConfigService、ISceneService、IEventBus 与 IPlayerProgressStore
 └── 创建 PoolService，并注入 PersistentPoolRoot 与诊断委托
 
 Connect
@@ -67,7 +70,7 @@ Start
 ├── 应用级服务注册事件并保存 SubscriptionToken
 ├── ConfigService.Initialize(LevelCatalog, Tables, ResourceRegistry)
 ├── 确认 ConfigService Ready
-└── GameStateService.NotifyInitializationReady()，由它请求切换 MainMenuScene
+└── GameStateService.NotifyInitializationReady()，加载并合并玩家进度后请求切换 MainMenuScene
 ```
 
 具体 `LevelConfig` 资产在全局初始化时由 ConfigService 校验并复制为 `LevelConfigSnapshot`；LevelSelect 确定关卡后只查询快照，再经 SceneService 注入 Gameplay。`GlobalBootstrap` 直接调用具体 `ConfigService.Initialize(...)`，该初始化入口不属于 `IConfigService`。
@@ -80,6 +83,7 @@ Start
 - Luban 表、LevelCatalog、LevelConfig 或其必需引用无效时，ConfigService 按 ADR-041 只记录首个可定位错误并立即终止应用；不得保持一个可继续操作的错误页面或重试循环。ADR-044 允许的 `unlockedLevelIds` 目录缺失 ID 只使用 `Debug.LogWarning` 并从快照中过滤，不属于初始化失败。
 - 必需 Inspector 引用、场景标识、Build Settings 或场景装配资源无效时，启动失败并阻止对应 Ready；这类装配错误不由 Gameplay Manager 使用默认值补齐。
 - 初始化失败时直接使用 `Debug.LogError` 输出稳定来源、字段或对象路径和原因；不得调用 `NotifyInitializationReady`，不得加载任何应用场景，也不得使用缺省配置、自动补组件、降级或重试继续运行。
+- 玩家进度文件不存在、损坏或版本不支持不属于配置初始化失败；GameStateService 记录警告并使用目录默认解锁继续启动。写入失败同样不阻断 GameplayResult。
 - 重复成功通知由 GameStateService 幂等拒绝，不能重复请求 MainMenuScene。
 - 已完成初始化的服务在清理时按逆序释放；只清理本入口实际创建的对象和订阅。
 - 全局服务不得长期持有已卸载 MainMenu、LevelSelect 或 Gameplay 场景对象的具体引用。

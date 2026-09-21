@@ -10,6 +10,8 @@ namespace Game.Foundation
         private readonly IConfigService configService;
         private readonly ISceneService sceneService;
         private readonly IEventBus eventBus;
+        private readonly IPlayerProgressStore playerProgressStore;
+        private readonly HashSet<int> completedLevelIds = new HashSet<int>();
         private readonly HashSet<int> unlockedLevelIds = new HashSet<int>();
 
         private SubscriptionToken sceneReadySubscription;
@@ -31,16 +33,20 @@ namespace Game.Foundation
         private bool initializationNotified;
         private bool started;
         private bool gameplayCompleted;
+        private LevelResult? completedResult;
         private bool disposed;
 
         public GameStateService(
             IConfigService configService,
             ISceneService sceneService,
-            IEventBus eventBus)
+            IEventBus eventBus,
+            IPlayerProgressStore playerProgressStore)
         {
             this.configService = configService ?? throw new ArgumentNullException(nameof(configService));
             this.sceneService = sceneService ?? throw new ArgumentNullException(nameof(sceneService));
             this.eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+            this.playerProgressStore = playerProgressStore ??
+                throw new ArgumentNullException(nameof(playerProgressStore));
         }
 
         public void Start()
@@ -92,7 +98,7 @@ namespace Game.Foundation
                 throw new InvalidOperationException("Configuration must be Ready before application initialization can complete.");
             }
 
-            InitializeUnlockedLevels();
+            InitializePlayerProgress();
             initializationNotified = true;
             RequestScene(AppSceneId.MainMenu, 0, 0, null);
         }
@@ -111,6 +117,11 @@ namespace Game.Foundation
         public bool IsLevelUnlocked(int levelId)
         {
             return !disposed && started && unlockedLevelIds.Contains(levelId);
+        }
+
+        public bool IsLevelCompleted(int levelId)
+        {
+            return !disposed && started && completedLevelIds.Contains(levelId);
         }
 
         public bool TrySelectLevel(int levelId)
@@ -144,11 +155,7 @@ namespace Game.Foundation
                 return false;
             }
 
-            currentLevelRunId = AllocateLevelRunId();
-            currentLevelConfig = levelConfig;
-            gameplayCompleted = false;
-            ChangeState(AppFlowState.GameplayLoading);
-            RequestScene(AppSceneId.Gameplay, selectedLevelId, currentLevelRunId, levelConfig);
+            StartGameplay(selectedLevelId, levelConfig);
             return true;
         }
 
@@ -164,6 +171,40 @@ namespace Game.Foundation
             return true;
         }
 
+        public bool TryRetryCurrentGameplay()
+        {
+            if (disposed || !started || state != AppFlowState.GameplayResult ||
+                pendingScene.IsValid || currentLevelConfig == null ||
+                completedResult != LevelResult.GameOver)
+            {
+                return false;
+            }
+
+            StartGameplay(currentLevelConfig.LevelId, currentLevelConfig);
+            return true;
+        }
+
+        public bool TryStartNextGameplay()
+        {
+            if (disposed || !started || state != AppFlowState.GameplayResult ||
+                pendingScene.IsValid || currentLevelConfig == null ||
+                completedResult != LevelResult.Victory ||
+                currentLevelConfig.UnlockedLevelIds.Count == 0)
+            {
+                return false;
+            }
+
+            var nextLevelId = currentLevelConfig.UnlockedLevelIds[0];
+            if (!unlockedLevelIds.Contains(nextLevelId) ||
+                !configService.TryGetLevelConfig(nextLevelId, out var nextLevelConfig))
+            {
+                return false;
+            }
+
+            StartGameplay(nextLevelId, nextLevelConfig);
+            return true;
+        }
+
         public void CompleteGameplay(LevelCompletion completion)
         {
             if (disposed || state != AppFlowState.Gameplay || gameplayCompleted ||
@@ -174,12 +215,20 @@ namespace Game.Foundation
             }
 
             gameplayCompleted = true;
+            completedResult = completion.Result;
             if (completion.Result == LevelResult.Victory)
             {
                 var unlockedCopy = CopyLevelIds(currentLevelConfig.UnlockedLevelIds);
+                var progressChanged = completedLevelIds.Add(completion.LevelId);
+                progressChanged |= unlockedLevelIds.Add(completion.LevelId);
                 for (var index = 0; index < unlockedCopy.Length; index++)
                 {
-                    unlockedLevelIds.Add(unlockedCopy[index]);
+                    progressChanged |= unlockedLevelIds.Add(unlockedCopy[index]);
+                }
+
+                if (progressChanged)
+                {
+                    PersistPlayerProgress();
                 }
 
                 ChangeState(AppFlowState.GameplayResult);
@@ -377,16 +426,100 @@ namespace Game.Foundation
             eventBus.Publish(new AppFlowChanged(previousState, newState, levelId, currentLevelRunId));
         }
 
-        private void InitializeUnlockedLevels()
+        private void InitializePlayerProgress()
         {
+            completedLevelIds.Clear();
             unlockedLevelIds.Clear();
             var descriptors = configService.GetLevelDescriptors();
+            var catalogLevelIds = new HashSet<int>();
             for (var index = 0; index < descriptors.Count; index++)
             {
+                catalogLevelIds.Add(descriptors[index].LevelId);
                 if (descriptors[index].InitiallyUnlocked)
                 {
                     unlockedLevelIds.Add(descriptors[index].LevelId);
                 }
+            }
+
+            PlayerProgressSnapshot progress;
+            string diagnostic;
+            try
+            {
+                if (!playerProgressStore.TryLoad(out progress, out diagnostic))
+                {
+                    Debug.LogWarning($"[GameStateService] PlayerProgressLoadFailed; Reason={diagnostic}");
+                    return;
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning(
+                    $"[GameStateService] PlayerProgressLoadFailed; Type={exception.GetType().Name}; " +
+                    $"Reason={exception.Message}");
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(diagnostic))
+            {
+                Debug.LogWarning($"[GameStateService] PlayerProgressRecovered; Detail={diagnostic}");
+            }
+
+            MergeProgressIds(
+                progress.CompletedLevelIds,
+                catalogLevelIds,
+                completedLevelIds,
+                "completedLevelIds");
+            MergeProgressIds(
+                progress.UnlockedLevelIds,
+                catalogLevelIds,
+                unlockedLevelIds,
+                "unlockedLevelIds");
+
+            foreach (var completedLevelId in completedLevelIds)
+            {
+                unlockedLevelIds.Add(completedLevelId);
+            }
+        }
+
+        private void PersistPlayerProgress()
+        {
+            var snapshot = new PlayerProgressSnapshot(
+                CopySortedLevelIds(completedLevelIds),
+                CopySortedLevelIds(unlockedLevelIds));
+
+            try
+            {
+                if (!playerProgressStore.TrySave(snapshot, out var diagnostic))
+                {
+                    Debug.LogError($"[GameStateService] PlayerProgressSaveFailed; Reason={diagnostic}");
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    $"[GameStateService] PlayerProgressSaveFailed; Type={exception.GetType().Name}; " +
+                    $"Reason={exception.Message}");
+            }
+        }
+
+        private static void MergeProgressIds(
+            IReadOnlyList<int> source,
+            HashSet<int> catalogLevelIds,
+            HashSet<int> destination,
+            string fieldName)
+        {
+            for (var index = 0; index < source.Count; index++)
+            {
+                var levelId = source[index];
+                if (levelId < 0 || !catalogLevelIds.Contains(levelId))
+                {
+                    Debug.LogWarning(
+                        $"[GameStateService] PlayerProgressLevelIgnored; " +
+                        $"Field={fieldName}; Index={index}; LevelId={levelId}");
+                    continue;
+                }
+
+                destination.Add(levelId);
             }
         }
 
@@ -401,11 +534,24 @@ namespace Game.Foundation
             return nextLevelRunId;
         }
 
+        private void StartGameplay(int levelId, LevelConfigSnapshot levelConfig)
+        {
+            selectedLevelId = levelId;
+            hasSelectedLevel = true;
+            currentLevelRunId = AllocateLevelRunId();
+            currentLevelConfig = levelConfig;
+            gameplayCompleted = false;
+            completedResult = null;
+            ChangeState(AppFlowState.GameplayLoading);
+            RequestScene(AppSceneId.Gameplay, levelId, currentLevelRunId, levelConfig);
+        }
+
         private void ClearCurrentSession()
         {
             currentLevelConfig = null;
             currentLevelRunId = 0;
             gameplayCompleted = false;
+            completedResult = null;
         }
 
         private void Unsubscribe(SubscriptionToken token)
@@ -432,6 +578,14 @@ namespace Game.Foundation
                 copy[index] = source[index];
             }
 
+            return copy;
+        }
+
+        private static int[] CopySortedLevelIds(HashSet<int> source)
+        {
+            var copy = new int[source.Count];
+            source.CopyTo(copy);
+            Array.Sort(copy);
             return copy;
         }
 

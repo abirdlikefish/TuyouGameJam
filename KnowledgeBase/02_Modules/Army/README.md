@@ -117,7 +117,7 @@ public sealed class ArmyPrefabBinding
 - 初始化 WeaponId=0 以及每次实际换武器时，把预创建的 OverrideController 应用到全部槽位，包括当前 `soldierVisual` 未激活的槽位。不得运行时创建 OverrideController、按路径加载或缺失时回退到武器 0。
 - `AC_Army_Base` 的五个状态不使用参数或 Transition。Preparing 播放 Idle；Playing 原地播放循环 Attack，实际左/右位移播放循环 MoveLeft/MoveRight。代码只在状态变化时显式播放，顶在道路边缘且实际位移为零时回到 Attack。
 - Army 动画持续表达攻击姿态，不通过 AnimationEvent 修改冷却、伤害或生成子弹。Attack、MoveLeft、MoveRight 共享由 `FireInterval` 派生的攻击周期相位，状态切换从已播放进度继续；实际换武器后全部槽位使用新 AOC，活动槽位从当前战斗状态第 0 帧重播并立即发射，不先进入 Idle。
-- Victory 只由关卡胜利表现入口触发，不参与 Level 终局判定；LevelManager 停止其他玩法模块但保留 SoldierVisual，场景卸载或显式 StopRun 时再最终清理。当前仍直接请求返回 LevelSelect，未来结算 UI 只延长该表现阶段。
+- Victory 只由关卡胜利表现入口触发，不参与 Level 终局判定；LevelManager 停止其他玩法模块但保留 SoldierVisual，玩家从结算页选择返回、重试或下一关并卸载场景时，再由显式 StopRun 最终清理。
 
 ## 测试标准
 

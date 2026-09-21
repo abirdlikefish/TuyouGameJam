@@ -73,7 +73,7 @@ Foundation 可使用 Luban 生成类型；Contracts、Gameplay 和 Presentation 
 
 ## 通用编码规则
 
-- 只实现当前 MVP 契约及 ADR-058 已追加确认的 Gameplay HUD/结算，不顺带加入音频、存档、暂停、调速、对象池预热、通用调试服务或复杂框架。
+- 只实现当前 MVP 契约、ADR-058 的 Gameplay HUD/结算与 ADR-062 的最小关卡进度存档；不顺带加入音频、云存档、多槽位、设置持久化、暂停、调速、对象池预热、通用调试服务或复杂框架。
 - MonoBehaviour 只承担 Unity 生命周期、序列化绑定、Transform/Physics2D/Animator 适配和阶段入口；可计算规则与状态转换优先放入纯 C# 类型。
 - 跨模块必须执行的命令和查询使用最小同步接口；EventBus 只发布已经发生的事实。
 - 依赖由 Composition、SceneEntry 或职责明确的场景装配器显式注入；不使用静态 `Instance`、通用 Service Locator、`Find` 或运行时父级搜索。
@@ -214,7 +214,7 @@ Unity 内的 Sprite、Clip、Controller、Prefab、配置资产、Scene、Projec
 
 ### 批次 8：集成、验收与修复
 
-按“初始化 → MainMenu → LevelSelect → Gameplay → Victory/GameOver → 清理 → 返回选关 → 重开”验证完整闭环，并执行 `05_Testing` 中与当前切片相关的代表性边界用例。
+按“初始化 → MainMenu → LevelSelect → Gameplay → Victory/GameOver → 结算选择 → 返回选关/失败重试/胜利下一关”验证完整闭环，并执行 `05_Testing` 中与当前切片相关的代表性边界用例。
 
 完成条件：
 

@@ -32,7 +32,7 @@
 | DES-018 | Config、Scene、Spawn、Manager、EventBus、Time 和 Pool 公共契约基线 | Accepted | 架构、全部 Gameplay 模块 | 见 ADR-014；Pool 的原始 `GameObject + string key` 契约已由 ADR-031 修订为具体组件类型池 |
 | DES-019 | 路线图勾选与设计成熟度的状态边界 | Accepted | 项目管理、全部模块 | 见 ADR-015；路线图复选框只表示工程实现和验证完成 |
 | DES-020 | 玩法碰撞形状、查询方式与敌人阻挡/绕行范围 | Accepted | Army、Bullet、Gate、Prop、Monster、Level | 见 ADR-016、ADR-037、ADR-046；所有玩法碰撞对象使用 Collider2D 与显式 Cast/Overlap，敌人阻挡只查询上一同步姿态并在 MVP 参数下尽量排队，不保证同帧绝对不重叠；Army/Enemy 允许重合，侧向绕行延后 |
-| DES-021 | 得分、存档和设置持久化是否进入当前 MVP | Accepted | 项目范围、事件、配置、全局服务、测试 | 见 ADR-017；当前不实现、不进入事件和验收，作为后续扩展 |
+| DES-021 | 得分、存档和设置持久化是否进入当前 MVP | Accepted（存档已启用） | 项目范围、事件、配置、全局服务、测试 | ADR-017 原先延后全部持久化；ADR-062 现启用移动端本地关卡进度，得分与设置持久化仍延后 |
 | DES-022 | Luban MVP 初始字段和 Unity 资源绑定边界 | Accepted | Config、Army、Monster、Gate、Prop、Bullet、资源 | 见 ADR-020、ADR-035、ADR-038；Army Prefab 与槽位容量由 Unity 序列化绑定，当前不建立 TbElement 或 TbGate，Gate 的关卡内联字段与 Prefab 参数按 ADR-038 分工 |
 | DES-023 | MVP Army 身份与时间倍率范围 | Accepted | Army、Time、事件、全部 Gameplay | 见 ADR-021、ADR-027、ADR-046；`ArmyId` 固定为首行 ID `0`，MVP 所有时间倍率固定为 `1`，倍率和暂停接口不进入当前契约 |
 | DES-024 | 同帧碰撞阶段与同距离命中优先级 | Accepted | Bullet、Gate、Prop、Monster、Level、碰撞契约 | 见 ADR-021、ADR-061；移动阻挡→首次同步→子弹/组合结算→冰火位移→第二次同步→Gate/Prop→敌人攻击→终局，同距离按 Enemy > Gate > Prop > RuntimeInstanceId |
@@ -45,7 +45,7 @@
 | DES-031 | 道具击破效果目录、单个/组合方式、目标与叠加规则 | Deferred（MVP 不实现） | Prop、Army、Config、事件、UI、测试 | 当前 MVP 只实现三种 WeaponId 武器箱；其他效果在扩展进入范围时再确认效果模型、配置结构、同步命令和事实事件载荷，见 ADR-022 |
 | DES-032 | 生成对象的横向出生位置表达 | Accepted | Level、Spawn、Monster、Gate、Prop、Config | 见 ADR-023；移除三路生成点 ID，所有生成项改用 `[0,1]` 的 `spawnPosition` |
 | DES-033 | 程序集分层与跨层通信方式 | Accepted（实现延后） | 架构、全局服务、全部 Gameplay、UI、AudioVFX | 见 ADR-024、ADR-026；当前不创建 `.asmdef`，后续以粗粒度程序集强制单向依赖，同步接口用于必须执行的操作，事件只传递已发生的事实 |
-| DES-034 | MVP 全局服务范围、访问方式与应用流程服务边界 | Accepted | 全局服务、Input、Time、AudioVFX、测试 | 见 ADR-027；服务由 Composition 以应用级唯一实例持有并显式注入，不普遍使用静态单例；Input 为场景适配器；Audio/Save/Debug 延后，GameState 与 Scene 保持分离，TimeService 使用精简接口 |
+| DES-034 | MVP 全局服务范围、访问方式与应用流程服务边界 | Accepted | 全局服务、Input、Time、AudioVFX、Save、测试 | 见 ADR-027、ADR-062；服务由 Composition 以应用级唯一实例持有并显式注入，不普遍使用静态单例；Save 现作为关卡进度旁路启用，Audio/Debug 仍延后 |
 | DES-035 | MVP 触屏横向移动的采集、归一化和模块通信 | Accepted | Input、Army、UI、测试 | 见 ADR-028；在 Gameplay UI 区域内读取相邻采样点的水平差，按区域宽度和未缩放帧时间归一化，原始滑动速度先限制到 `[-1,1]` 再乘 Inspector 系数，通过同步接口传给 Army，停手即归零 |
 | DES-036 | EventBus 实现、载荷类型和订阅生命周期 | Accepted | EventBus、Composition、全部事件发布者与监听者、测试 | 见 ADR-029；主线程同步精确类型分发、允许嵌套发布、Token 关联 Bus 身份、按领域组织事件，小型载荷用 `readonly struct`，大型快照用不可变 `sealed class` |
 | DES-037 | 时间域的当前归属、父子包含与重叠规则 | Accepted（实现延后） | Time、全部 Gameplay、VFX、UI、测试 | 见 ADR-030；MVP 保持扁平枚举且每次操作只选一个最具体域，未来时间控制采用单父级层次，不允许任意重叠归属 |
@@ -93,7 +93,7 @@
 - `../06_Decisions/ADR-014-SharedRuntimeContractBaseline.md`：定案跨模块服务、请求、事件和会话 ID 契约基线。
 - `../06_Decisions/ADR-015-RoadmapStatusSemantics.md`：定案路线图复选框只表示工程交付，设计成熟度继续由模块状态和待决清单表达。
 - `../06_Decisions/ADR-016-Collider2DCollisionQueries.md`：定案所有玩法碰撞对象使用 Collider2D 与显式查询；MVP 敌人只排队阻挡，侧向绕行延后。
-- `../06_Decisions/ADR-017-DeferScoreAndSave.md`：定案当前 MVP 不实现得分、存档和设置持久化，相关条目延后。
+- `../06_Decisions/ADR-017-DeferScoreAndSave.md`：原先延后得分、存档和设置持久化；关卡进度部分已由 ADR-062 取代，得分与设置仍延后。
 - `../06_Decisions/ADR-020-MinimalMvpConfigurationSurface.md`：定案 Luban 的 MVP 最小字段、固定规则和 Unity 资源绑定边界。
 - `../06_Decisions/ADR-019-ApplicationFlowContract.md`：定案应用流程公共命令、GameplayLoading 状态、场景就绪/卸载握手、会话 ID 所有权和流程定时器归属。
 - `../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`：定案 ArmyId、MVP 时间倍率、同帧碰撞顺序、世界坐标、Army 移动速度、状态映射、EventBus 和资源键；其 Layer Collision Matrix 待决项已由 ADR-037 关闭。
@@ -102,7 +102,7 @@
 - `../06_Decisions/ADR-024-LayerDependencyDirection.md`：定案表现层、玩法层和全局基础层的依赖方向，并将存档和设置改为旁路扩展。
 - `../06_Decisions/ADR-025-SceneHierarchyAndRuntimeRoleNaming.md`：定案常驻层与 Gameplay 单局层的场景层级，以及 Controller、Manager、Service、Root 和 Bootstrap 的职责命名。
 - `../06_Decisions/ADR-026-AssemblyBoundariesAndCommunication.md`：定案后续粗粒度程序集目标、Composition 装配边界，以及同步接口、事实事件、依赖倒置和协调器的选择规则；工程实现延后。
-- `../06_Decisions/ADR-027-MvpGlobalServiceScope.md`：定案全局服务的应用级唯一实例与显式注入、Input 场景适配器边界、MVP 完全无声音、Audio/Save/Debug 服务延后、GameStateService 与 SceneService 分离，以及 TimeService 使用精简公共接口。
+- `../06_Decisions/ADR-027-MvpGlobalServiceScope.md`：定案全局服务的应用级唯一实例与显式注入、Input 场景适配器边界、GameStateService 与 SceneService 分离及精简 TimeService；Save 延后部分已由 ADR-062 取代。
 - `../06_Decisions/ADR-028-MvpRelativeDragInput.md`：定案相对拖动输入、UI 采集与同步命令边界、帧率/分辨率归一化、Inspector 灵敏度系数和清理规则；其中键盘/手柄汇总与回退已由 ADR-036 延后。
 - `../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`：将首个工程切片收窄为单一相对拖拽输入，补齐最小接收接口、代码结构、同步 Tick 顺序、Prefab 与场景绑定。
 - `../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`：移除 TargetSensor，以目标位置距离作为攻击起始权威；允许 Army 槽位与敌人身体重合，并定案六个 Gameplay Layer、显式查询关系和默认关闭的自动碰撞矩阵。

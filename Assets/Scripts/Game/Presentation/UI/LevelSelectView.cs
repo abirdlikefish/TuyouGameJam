@@ -8,9 +8,18 @@ namespace Game.Presentation
     [DisallowMultipleComponent]
     public sealed class LevelSelectView : MonoBehaviour
     {
-        [Header("节点生成")]
-        [SerializeField] private RectTransform nodeContainer;
-        [SerializeField] private LevelSelectNodeView nodePrefab;
+        [Serializable]
+        private sealed class LevelNodeBinding
+        {
+            [SerializeField] private LevelSelectNodeView node;
+            [SerializeField] private int levelId;
+
+            public LevelSelectNodeView Node => node;
+            public int LevelId => levelId;
+        }
+
+        [Header("关卡节点绑定")]
+        [SerializeField] private LevelNodeBinding[] nodeBindings = new LevelNodeBinding[0];
 
         private readonly List<LevelSelectNodeView> nodes = new List<LevelSelectNodeView>();
         private IGameStateService gameStateService;
@@ -37,26 +46,19 @@ namespace Game.Presentation
             }
 
             gameStateService = service ?? throw new ArgumentNullException(nameof(service));
-            ValidateBindings();
-
-            var levelIds = new HashSet<int>();
             try
             {
-                for (var index = 0; index < descriptors.Count; index++)
+                var descriptorsById = ValidateBindings(descriptors);
+                for (var index = 0; index < nodeBindings.Length; index++)
                 {
-                    var descriptor = descriptors[index];
-                    if (!levelIds.Add(descriptor.LevelId))
-                    {
-                        throw new InvalidOperationException(
-                            $"LevelSelectView received duplicate LevelId {descriptor.LevelId}.");
-                    }
-
-                    var node = Instantiate(nodePrefab, nodeContainer, false);
-                    node.name = $"LevelNode_{descriptor.LevelId}";
+                    var binding = nodeBindings[index];
+                    var node = binding.Node;
+                    var descriptor = descriptorsById[binding.LevelId];
                     nodes.Add(node);
                     node.Initialize(
                         descriptor,
                         gameStateService.IsLevelUnlocked(descriptor.LevelId),
+                        gameStateService.IsLevelCompleted(descriptor.LevelId),
                         HandleLevelRequested);
                 }
 
@@ -81,7 +83,6 @@ namespace Game.Presentation
                 }
 
                 node.Cleanup();
-                Destroy(node.gameObject);
             }
 
             nodes.Clear();
@@ -90,37 +91,87 @@ namespace Game.Presentation
             initialized = false;
         }
 
-        private void ValidateBindings()
+        private Dictionary<int, LevelDescriptor> ValidateBindings(
+            IReadOnlyList<LevelDescriptor> descriptors)
         {
-            if (nodeContainer == null)
-            {
-                throw new InvalidOperationException("LevelSelectView.nodeContainer is not assigned.");
-            }
-
-            if (nodeContainer.gameObject.scene != gameObject.scene ||
-                !nodeContainer.IsChildOf(transform))
+            if (nodeBindings == null || nodeBindings.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "LevelSelectView.nodeContainer must belong to the LevelSelectView hierarchy.");
+                    "LevelSelectView requires at least one Inspector node binding.");
             }
 
-            if (nodeContainer.childCount != 0)
+            var descriptorsById = new Dictionary<int, LevelDescriptor>(descriptors.Count);
+            for (var index = 0; index < descriptors.Count; index++)
             {
-                throw new InvalidOperationException(
-                    "LevelSelectView.nodeContainer must be empty before initialization.");
+                var descriptor = descriptors[index];
+                if (!descriptorsById.TryAdd(descriptor.LevelId, descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView received duplicate descriptor LevelId {descriptor.LevelId}.");
+                }
             }
 
-            if (nodePrefab == null || nodePrefab.gameObject.scene.IsValid() ||
-                nodePrefab.transform.parent != null)
+            var boundNodes = new HashSet<LevelSelectNodeView>();
+            var boundLevelIds = new HashSet<int>();
+            for (var index = 0; index < nodeBindings.Length; index++)
             {
-                throw new InvalidOperationException(
-                    "LevelSelectView.nodePrefab must reference a prefab root asset.");
+                var binding = nodeBindings[index];
+                if (binding == null)
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}] is null.");
+                }
+
+                var node = binding.Node;
+                if (node == null)
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}].node is not assigned.");
+                }
+
+                if (node.gameObject.scene != gameObject.scene || !node.transform.IsChildOf(transform))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}].node must belong to the " +
+                        "LevelSelectView hierarchy.");
+                }
+
+                if (!boundNodes.Add(node))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}] repeats node '{node.name}'.");
+                }
+
+                if (!boundLevelIds.Add(binding.LevelId))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}] repeats LevelId {binding.LevelId}.");
+                }
+
+                if (!descriptorsById.ContainsKey(binding.LevelId))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}] references unknown LevelId " +
+                        $"{binding.LevelId}.");
+                }
+
+                if (!node.TryValidate(out var nodeError))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView.nodeBindings[{index}] is invalid: {nodeError}");
+                }
             }
 
-            if (!nodePrefab.TryValidate(out var prefabError))
+            foreach (var pair in descriptorsById)
             {
-                throw new InvalidOperationException(prefabError);
+                if (!boundLevelIds.Contains(pair.Key))
+                {
+                    throw new InvalidOperationException(
+                        $"LevelSelectView has no node binding for LevelId {pair.Key}.");
+                }
             }
+
+            return descriptorsById;
         }
 
         private void HandleLevelRequested(int levelId)

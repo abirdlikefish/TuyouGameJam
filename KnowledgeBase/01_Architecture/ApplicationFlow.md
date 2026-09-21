@@ -79,9 +79,9 @@ Assets/Tests/
 | `LevelSelect` | GameStateService | LevelSelectScene Ready | 玩家点击已解锁节点，选择有效关卡并请求开始新会话 |
 | `GameplayLoading` | GameStateService | 创建新 `LevelRunId` 并请求切换 Gameplay | 场景 Ready 后收到匹配的 `LevelIntroFinished`，或收到场景失败事实 |
 | `Gameplay` | GameStateService | GameplayScene Ready 且开场门禁结束，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver 后进入 `GameplayResult`，或玩家主动放弃并请求返回 LevelSelect |
-| `GameplayResult` | GameStateService | 当前 Gameplay 结果被接受、解锁处理完成 | 玩家点击结算返回按钮并请求切换 LevelSelect |
+| `GameplayResult` | GameStateService | 当前 Gameplay 结果被接受、解锁处理完成 | 玩家返回选关，或点击失败重试/胜利下一关并进入新的 `GameplayLoading` |
 
-`Initializing` 和 `GameplayLoading` 是流程状态，不对应同名场景。MainMenu 到 LevelSelect 的切换期间公开状态保持 `MainMenu`；Gameplay Ready 后在开场视频终止前仍保持 `GameplayLoading`；Gameplay 主动退出期间保持 `Gameplay`，结算返回期间保持 `GameplayResult`。
+`Initializing` 和 `GameplayLoading` 是流程状态，不对应同名场景。MainMenu 到 LevelSelect 的切换期间公开状态保持 `MainMenu`；Gameplay Ready 后在开场视频终止前仍保持 `GameplayLoading`；Gameplay 主动退出期间保持 `Gameplay`，结算返回选关期间保持 `GameplayResult`，重试或下一关请求被接受后立即进入新的 `GameplayLoading`。
 
 `Victory` 和 `GameOver` 仍是结果事实；`GameplayResult` 只表达结果界面正在等待玩家返回。Gameplay 单局内部的 `Preparing`、`Playing`、`Completed` 继续由 `LevelManager` 拥有。
 
@@ -118,6 +118,7 @@ GlobalBootstrap 完成 Create 与 Connect
 → ConfigService.Initialize
 → ConfigService Ready
 → GameStateService.NotifyInitializationReady()
+→ JsonPlayerProgressStore 读取存档，GameStateService 合并默认/已完成/已解锁集合
 → SceneService.SwitchToMainMenu()
 → 异步加载 MainMenuScene，完成后初始化 MainMenuSceneEntry
 → AppSceneReady(MainMenu)
@@ -129,7 +130,7 @@ GlobalBootstrap 完成 Create 与 Connect
 → GameStateService 进入 LevelSelect 并等待节点点击
 ```
 
-MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用命令，不直接调用 SceneManager；退出按钮在 Editor 停止 Play，在 Player 请求退出。LevelSelectView 按目录动态创建节点，查询 GameStateService 的运行期解锁状态并等待玩家点击。
+MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用命令，不直接调用 SceneManager；退出按钮在 Editor 停止 Play，在 Player 请求退出。LevelSelectView 初始化 Inspector 中与目录 LevelId 一一对应的预放节点，查询 GameStateService 的运行期完成/解锁状态并等待玩家点击；节点位置由各自 RectTransform 决定。
 
 ## 进入 Gameplay
 
@@ -158,20 +159,16 @@ MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用�
 LevelManager 完成当前会话并停止玩法逻辑
 → GameStateService.CompleteGameplay(completion)
 → 校验 LevelRunId 且只接受一次
-→ 胜利时更新运行期解锁集合
+→ 胜利时记录当前关卡完成、更新运行期解锁集合并同步保存变化后的进度
 → 进入 GameplayResult 并发布 Victory 或 GameOver
-→ BattleResult 显示冻结的耗时与击杀数并等待玩家点击返回
-→ GameStateService.TryReturnToLevelSelect()
-→ SceneService.SwitchToLevelSelect()
+→ BattleResult 根据结果和 UnlockedLevelIds 显示唯一匹配的结算根节点
+→ 玩家选择返回选关、失败重试或挑战下一关
+→ GameStateService 校验命令并请求对应场景切换
 → GameplaySceneEntry 清理当前会话
-→ 异步卸载 GameplayScene
-→ 异步加载并初始化 LevelSelectSceneEntry
-→ AppSceneReady(LevelSelect)
-→ GameStateService 清除当前会话并进入 LevelSelect
-→ LevelSelectView 使用最新解锁集合生成节点并等待选择
+→ 返回路径异步加载 LevelSelectScene；重试/下一关路径使用新 LevelRunId 异步重新加载 GameplayScene
 ```
 
-战斗中 HUD 也可通过 `TryReturnToLevelSelect()` 主动放弃本局；该路径不提交 `LevelCompletion`、不发布胜负且不解锁。`LevelManager` 不直接切换或卸载场景，`SceneService` 不自行决定回到 LevelSelect。
+战斗中 HUD 也可通过 `TryReturnToLevelSelect()` 主动放弃本局；该路径不提交 `LevelCompletion`、不发布胜负且不解锁。结算后的 `TryRetryCurrentGameplay()` 只在失败结果有效，目标仍为当前关；`TryStartNextGameplay()` 只在胜利且当前快照存在有效 `UnlockedLevelIds[0]` 时有效。两者都创建新的 `LevelRunId`、进入 `GameplayLoading` 并重新加载 GameplayScene。`LevelManager` 不直接切换或卸载场景，`SceneService` 不决定重试或下一关目标。
 
 ## 失败、重复与过期处理
 
@@ -184,6 +181,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 - 所有场景事实必须匹配当前 pending target；Gameplay 事实还必须匹配当前 `LevelRunId`。过期事实不能影响新会话。
 - 每个 UI 命令执行前再次检查当前状态和 pending target；过期或重复点击不得推进流程。
 - 全局服务不得长期持有已卸载场景对象的具体引用。
+- 关卡进度不存在或不可读时使用 `initiallyUnlocked` 默认集合继续启动；保存失败只记录错误并保留当前运行期状态，不阻断结果展示。
 
 ## 首轮日志验收
 

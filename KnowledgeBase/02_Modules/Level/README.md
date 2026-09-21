@@ -32,7 +32,7 @@
 - 不维护敌人、Gate、Prop 或 Bullet 的活动实例集合。
 - 不直接解析 Prefab。池化规范 Prefab 由对应 Manager 的 Inspector 引用；数值配置由对应 Manager 通过注入的 Bullet、Enemy、Prop 最小类型化 Provider 获取。
 - 不让事件监听者参与必须执行的帧阶段、伤害、死亡计数或终局结果。
-- 不实现下一关跳转；`unlockedLevelIds` 只作为 GameStateService 发布 Victory 时使用的本局结果数据，并且只消费 ConfigService 已过滤的运行时快照。
+- 不实现重试或下一关跳转；`unlockedLevelIds` 只作为 GameStateService 发布 Victory 和决定下一关目标时使用的本局结果数据，并且只消费 ConfigService 已过滤的运行时快照。
 
 ## 输入
 

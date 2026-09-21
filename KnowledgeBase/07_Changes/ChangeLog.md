@@ -2,6 +2,10 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 新增 `ImageNumberText` 与 `PF_UI_ImageNumberText`，集中序列化绑定 0～9 和冒号 11 张 Sprite，运行时复用 UGUI Image 显示纯数字或时间；Gameplay HUD 的关卡 ID、耗时、当前击杀数及 BattleResult 的耗时、击杀数改用图片数字，关卡显示直接取非负 LevelId 以保证纯数字 | UI、Gameplay Scene、Prefab | Codex |
+| 2026-09-21 | 新增 ADR-063；LevelSelect 改为 Inspector 显式绑定预放节点与 LevelId，节点可自由布局，并按已通关、仅解锁、未解锁三态显示 CompletedState/UnlockedState | LevelSelect、UI、场景、Prefab、测试 | Codex |
+| 2026-09-21 | 新增 ADR-062，启用 Android/iOS 单槽本地关卡进度：保存已完成与已解锁 LevelId，启动合并默认解锁，Victory 前同步写入版本化 JSON，并以临时文件/备份和非致命恢复处理移动端文件异常 | Save、Application、Bootstrap、共享契约、测试 | Codex |
+| 2026-09-21 | 扩展 ADR-058：Gameplay HUD 的击杀文本改为 Filled 进度条；BattleResult 拆分失败、有下一关胜利、无下一关胜利三个互斥根节点；增加失败重试和胜利挑战首个解锁关卡的应用命令，每次重新开局使用新的 LevelRunId | UI、Application、Level、共享契约、测试 | Codex |
 | 2026-09-21 | 为三种 Monster Prefab 增加 Fire/Ice/Lightning 三个默认关闭的表现挂点，并由 MonsterBase 按既有一秒最近元素记录控制独立显隐；死亡、初始化与回池统一关闭，具体特效资源留待后续装配 | Monster、ElementCombo、Prefab、VFX、测试、ADR-061 | Codex |
 | 2026-09-21 | 新增 ADR-061 并实施双元素命中派生效果：火雷同步范围爆炸、冰雷确定性随机闪电链、冰火固定 +Y 击退；玩法在 Bullet 阶段显式一次性结算，死亡目标只保留视觉覆盖，表现使用冻结坐标并独立完成；Monster 增加一秒最近元素记录与击退后的第二次物理同步 | Bullet、Monster、ElementCombo、VFX、Level、Pool、Prefab、Scene、事件、共享契约、测试 | Codex |
 | 2026-09-21 | 新增 ADR-060 并实现 Army 攻击周期与战斗动画同步：初始活动槽位在首个 Playing Tick 第 1 帧立即发射；Attack/MoveLeft/MoveRight 切换继承 `FireInterval` 周期相位；实际换武器重播第 0 帧并立即发射；大帧保留周期余量且单帧最多一弹；BulletManager 当前遍历隔离命中回调中新生成的子弹 | Army、Bullet、Animation、配置契约、测试、ADR-060 | Codex |

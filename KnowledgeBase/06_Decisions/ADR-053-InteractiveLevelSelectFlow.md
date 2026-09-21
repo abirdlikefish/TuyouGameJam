@@ -4,6 +4,10 @@
 - 日期：2026-09-21
 - 关联：ADR-011、ADR-032、ADR-044、ADR-051
 
+> 后续决策：ADR-062 已把 GameStateService 的运行期完成/解锁集合持久化；本文“退出应用后恢复目录初始状态”的后果不再适用。
+
+> 后续决策：ADR-063 已将动态生成与 GridLayout 排列替换为场景/界面 Prefab 中的预放节点和 Inspector 显式 LevelId 绑定；本文第 3 条及相关动态创建/清理描述不再适用。
+
 ## 背景
 
 LevelSelectScene 当前只有固定根和 SceneEntry。`GameStateService` 在收到 `AppSceneReady(LevelSelect)` 后自动选择唯一关卡，使用 RealTime 等待 1 秒并开始 Gameplay。该临时流程无法显示关卡目录、区分锁定状态或让玩家主动选择关卡。

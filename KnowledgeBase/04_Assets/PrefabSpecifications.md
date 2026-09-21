@@ -15,6 +15,20 @@ GlobalRoot
 
 AppCamera 保留唯一启用的 Camera 和 AudioListener，由 GlobalBootstrap 显式绑定并随 GlobalRoot 常驻。Camera 使用 Solid Color 清屏并渲染当前 Additive 应用场景；MainMenu、LevelSelect 和 Gameplay Canvas 均保持 Screen Space - Overlay。应用场景不得再创建自己的 Camera 或 AudioListener。
 
+## LevelSelect UI
+
+```text
+LevelSelectCanvas [LevelSelectView]
+└── LevelNodeContainer [不挂 LayoutGroup]
+    ├── LevelNode_0 [LevelSelectNodeView]
+    └── LevelNode_XX ...
+```
+
+- `LevelSelectView` 在 `LevelNodeBinding[]` 中显式绑定场景节点和唯一 LevelId；目录中的每个 LevelId 必须恰好出现一次。
+- 节点是预放对象，不在运行时生成或销毁；每个节点的 RectTransform 可以独立调整。
+- `PF_UI_LevelSelectNode` 显式绑定关卡名、按钮、`UnlockedState` 和 `CompletedState`。两个状态根互斥；未解锁时都隐藏，按钮禁用。
+- 节点及全部绑定对象必须属于当前 LevelSelectView 层级，不使用运行时查找或自动补组件。
+
 ## Gameplay 场景最小结构
 
 ```text
@@ -38,10 +52,13 @@ GameplayRoot [GameplaySceneEntry]
 │   ├── LevelIntroVideo [Image；VideoPlayer；LevelIntroVideoView]
 │   │   └── VideoRawImage [RawImage；AspectRatioFitter]
 │   └── BattleResult [BattleResultView]
+│       ├── GameOverRoot
+│       ├── VictoryWithNextRoot
+│       └── VictoryWithoutNextRoot
 └── EventSystem [EventSystem；StandaloneInputModule]
 ```
 
-GameplayScene 已在 Canvas 下按 TouchDragArea、BattleHud、LevelIntroVideo、BattleResult 的顺序创建节点；HUD/Result 使用基础布局和显式序列化引用，最终视觉样式延后。LevelIntroVideo 根节点全屏拉伸，黑色 Image 开启 Raycast Target，同节点 VideoPlayer 禁止 Play On Awake/Loop、使用 API Only 与无音频输出；子 RawImage 全屏拉伸并由 AspectRatioFitter 采用 Envelope Parent。GameplaySceneEntry 显式绑定 LevelIntroVideoView，并通过 `LevelIntroVideoBinding[]` 按 LevelId 绑定导入的 VideoClip。数组可为空；数组中的负数/重复 LevelId 或空 VideoClip 会阻止 Ready。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
+GameplayScene 的 Canvas 直属节点顺序保持 TouchDragArea、BattleHud、LevelIntroVideo、BattleResult；具体视觉样式和本轮新增绑定由用户在 Editor 中装配。BattleHud 必须绑定一个 `Image.Type.Filled` 的击杀进度 Image。BattleResult 下必须有失败、有下一关胜利、无下一关胜利三个互斥根节点：失败根绑定重试与返回按钮，有下一关胜利根绑定下一关与返回按钮，无下一关胜利根绑定返回按钮；共用总耗时和击杀文本仍属于 BattleResult 层级。LevelIntroVideo 根节点全屏拉伸，黑色 Image 开启 Raycast Target，同节点 VideoPlayer 禁止 Play On Awake/Loop、使用 API Only 与无音频输出；子 RawImage 全屏拉伸并由 AspectRatioFitter 采用 Envelope Parent。GameplaySceneEntry 显式绑定 LevelIntroVideoView，并通过 `LevelIntroVideoBinding[]` 按 LevelId 绑定导入的 VideoClip。数组可为空；数组中的负数/重复 LevelId 或空 VideoClip 会阻止 Ready。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
 
 ## Army
 

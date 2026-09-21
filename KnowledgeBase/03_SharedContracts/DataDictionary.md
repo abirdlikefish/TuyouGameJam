@@ -36,7 +36,9 @@
 | `EnemySpawnEntrySnapshot` | `readonly struct` | 敌人生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`ConfigId` |
 | `GateSpawnEntrySnapshot` | `readonly struct` | Gate 生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`GateType`、`InitialValue`、`ElementType`、`MaxHp` |
 | `PropSpawnEntrySnapshot` | `readonly struct` | Prop 生成项运行时副本 | `SpawnTime`、`SpawnPosition`、`ConfigId` |
-| `UnlockedLevelIds` | `List<int>` / 运行时 `IReadOnlyList<int>` | 当前关卡通关后记录的解锁关卡 ID | 首版只记录，不执行下一关跳转；空列表合法，运行时快照只保留 LevelCatalog 中存在且非重复、非自引用的 ID，并保持原顺序 |
+| `UnlockedLevelIds` | `List<int>` / 运行时 `IReadOnlyList<int>` | 当前关卡通关后记录的解锁关卡 ID | 空列表表示没有下一关；非空列表首项作为结算页下一关目标，其余项仍解锁；运行时快照只保留 LevelCatalog 中存在且非重复、非自引用的 ID，并保持原顺序 |
+| `PlayerProgressSnapshot` | 不可变 `sealed class` | 本地玩家关卡进度快照 | `CompletedLevelIds`、`UnlockedLevelIds`；写盘前去重并按 LevelId 升序 |
+| `PlayerProgressSchemaVersion` | `int` | 本地进度 JSON 格式版本 | 当前固定为 `1`；未知版本不读取 |
 | `AppFlowState` | `enum` | 应用级流程状态；`GameplayLoading` 仅为内部过渡，不是用户可见页面 | `Initializing`、`MainMenu`、`LevelSelect`、`GameplayLoading`、`Gameplay` |
 | `LevelRunState` | `enum` | 单局游玩状态 | `Preparing`、`Playing`、`Completed` |
 | `LevelResult` | `enum` | 单局结束结果 | `Victory`、`GameOver` |

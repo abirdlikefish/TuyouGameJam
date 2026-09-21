@@ -10,7 +10,9 @@
 - [ ] 配置数据非法时日志包含稳定来源、字段或条目索引并立即退出应用；Prefab、Collider、Layer 或必需 Inspector 引用非法时日志包含对象路径并阻止对应 Ready。两者都不使用默认值、自动补组件、降级或重试继续运行。
 - [ ] MainMenu Scene Ready 后持续停留且不创建自动计时；开始按钮只请求一次 LevelSelect 切换，快速重复点击无重复请求，旧场景异步卸载完成前不加载目标场景。
 - [ ] MainMenu 退出按钮在 Editor 停止 Play Mode，在 Player 退出应用；开始或退出请求接受后两个按钮立即不可交互。
-- [ ] LevelSelectSceneEntry 使用目录和运行期解锁集合生成节点；当前配置只生成一个名称为“第 1 关”的已解锁节点，停留超过 1 秒不自动开始关卡。
+- [ ] LevelSelectSceneEntry 使用目录、运行期完成集合和解锁集合初始化 Inspector 显式绑定的预放节点；当前关卡 `0` 恰好绑定一次，运行时不生成额外节点，停留超过 1 秒不自动开始关卡。
+- [ ] 每个选关节点保持自身 RectTransform 自由位置；已通关时只显示 CompletedState，仅解锁时只显示 UnlockedState，未解锁时两个状态根都隐藏且按钮不可交互。
+- [ ] LevelSelect 的空节点引用、重复节点、重复 LevelId、未知 LevelId 或目录漏配会阻止场景 Ready，并记录对应绑定索引或 LevelId。
 - [ ] 点击已解锁节点后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 异步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
 - [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才启动当前 LevelId 的开场视频；视频终止前保持 `GameplayLoading`、LevelManager `Preparing`、耗时为 0，输入、生成、移动和射击都不推进。
 - [ ] 视频正常结束后只发布一次匹配的 `LevelIntroFinished(Completed)`；GameStateService 随后进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
@@ -21,11 +23,13 @@
 - [ ] 根缺失、重名、入口类型错误或 Entry 初始化失败时，失败目标场景先完成清理，再发布 `AppSceneLoadFailed`；不得发布 Ready。
 - [ ] Gameplay 加载失败时不发布 `LevelRunStarted`，清除待启动会话并请求恢复 LevelSelectScene；只有 LevelSelect Ready 后才进入 LevelSelect。
 - [ ] 异步卸载失败发布 `AppSceneUnloadFailed`，停止本次切换且不加载目标场景。
-- [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 进入 `GameplayResult` 后停留在 GameplayScene，只有结算返回命令才切换 LevelSelect，LevelSelectSceneEntry Ready 后才清除当前会话并进入 LevelSelect。
-- [ ] `BattleHud` 在 Playing 与 GameplayResult 都保持显示；终局前显示实时耗时、三元素剩余时间和击杀进度，终局后全部数值冻结且 `BattleResult` 显示最终耗时与击杀数。
+- [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 进入 `GameplayResult` 后停留在 GameplayScene，等待返回选关、失败重试或胜利下一关命令。
+- [ ] `BattleHud` 在 Playing 与 GameplayResult 都保持显示；终局前显示实时耗时、三元素剩余时间和 Filled 击杀进度条，进度按 `KilledEnemyCount / TotalEnemyCount` 递增且 Victory 时为 `1`，不显示击杀文本；终局后全部数值冻结。
+- [ ] GameOver 只显示失败根节点，提供再次挑战当前关和返回选关；重试使用相同 LevelId、全新 LevelRunId，并经过 GameplayLoading 和开场门禁进入新一局。
+- [ ] Victory 的过滤后 `UnlockedLevelIds` 非空时只显示有下一关的成功根节点，挑战按钮以列表首项为目标并创建新 LevelRunId；列表为空时只显示无下一关的成功根节点且不存在下一关按钮。两种成功根节点都能返回选关。
 - [ ] 战斗中退出先显示二次确认；确认层显示期间玩法与计时继续但 Pointer 拖拽被遮挡，取消后恢复操作，确认后不发布 Victory/GameOver、不解锁并返回 LevelSelect。
-- [ ] 退出确认期间发生自然终局时确认层关闭且只显示 BattleResult；结算返回不二次确认，快速重复点击只接受一次场景请求。
-- [ ] 回到 LevelSelect 后只重建一组节点并等待再次选择；上一局的延迟事件、节点监听和池实例不会影响新会话。
+- [ ] 退出确认期间发生自然终局时确认层关闭且只显示唯一匹配的 BattleResult 根节点；任一结算按钮快速重复点击只接受一次场景请求。
+- [ ] 回到 LevelSelect 后只重新初始化预放节点并等待再次选择；上一局的延迟事件、节点监听和池实例不会影响新会话。
 - [ ] 快速重复点击只接受一次选择和开始命令，不能创建第二个会话或重复场景请求。
 - [ ] 结构化日志中每次加载恰好出现一次切换请求、Entry 初始化和 Ready；每次卸载恰好出现一次 Entry 清理和 Unloaded，Gameplay 日志包含 `LevelId`、`LevelRunId`。日志不参与流程控制。
 
@@ -153,10 +157,13 @@
 - [ ] 所有敌人生成项处理完且 `AliveEnemyCount == 0` 后进入 Victory。
 - [ ] Victory 不等待 Gate/Prop 时间轴或活动实例完成；未来 Gate/Prop 停止生成，活动对象在 StopRun 中回收，且不会补发接触、击破或奖励效果。
 - [ ] Victory 携带当前关卡 ID 和 ConfigService 已按 ADR-044 过滤的 `unlockedLevelIds`，不包含当前目录缺失 ID。
-- [ ] Victory 的 `unlockedLevelIds` 只作为本局结果传递，不创建或修改本地存档。
+- [ ] Victory 的 `unlockedLevelIds` 既作为本局结果传递，也由 GameStateService 合并到玩家进度；当前 LevelId 同时进入完成和解锁集合，集合变化时在发布 Victory 前保存。
+- [ ] 首次启动无存档时使用 `initiallyUnlocked`；重启后恢复已完成与已解锁集合，已完成关卡始终可选，失败和主动退出不修改存档。
+- [ ] 主存档损坏时读取有效备份；主文件与备份均不可读、版本不支持、ID 为负数或目录中不存在时记录诊断并继续启动，不让存档错误冒充 ConfigService 致命错误。
+- [ ] 写入失败保留运行期完成/解锁状态并继续 GameplayResult；重复通关不产生重复 ID，后续成功写入仍可恢复完整状态。
 - [ ] Army 归零后进入 GameOver。
 - [ ] 同一帧最后一只敌人死亡且 Army 归零时进入 GameOver。
-- [ ] Victory 和 GameOver 停止本局逻辑并清理当前会话；返回 LevelSelect 后等待玩家再次选择。
+- [ ] Victory 和 GameOver 停止本局逻辑并冻结结算数据；返回 LevelSelect 后等待玩家再次选择，重试或下一关则清理旧会话并以新 LevelRunId 启动目标关卡。
 
 ## 时间系统
 

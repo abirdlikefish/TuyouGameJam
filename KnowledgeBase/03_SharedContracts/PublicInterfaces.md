@@ -257,16 +257,31 @@ public interface IGameStateService
     void NotifyInitializationReady();
     bool TryEnterLevelSelect();
     bool IsLevelUnlocked(int levelId);
+    bool IsLevelCompleted(int levelId);
     bool TrySelectLevel(int levelId);
     bool TryStartSelectedGameplay();
     bool TryReturnToLevelSelect();
+    bool TryRetryCurrentGameplay();
+    bool TryStartNextGameplay();
     void CompleteGameplay(LevelCompletion completion);
 }
 ```
 
-`GameStateService` 是 `AppFlowState` 和运行期解锁集合的唯一所有者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`IsLevelUnlocked` 查询当前运行期集合，未知或未解锁 ID 返回 `false`；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。Gameplay Ready 后仍保持该状态，收到匹配的 `LevelIntroFinished` 才进入 `Gameplay` 并发布 `LevelRunStarted`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
+```csharp
+public interface IPlayerProgressStore
+{
+    bool TryLoad(out PlayerProgressSnapshot progress, out string diagnostic);
+    bool TrySave(PlayerProgressSnapshot progress, out string diagnostic);
+}
+```
 
-`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds`，进入 `GameplayResult` 后发布 Victory，LevelCompletion 不重复携带该集合。结果接受后保持 GameplayScene，直到 `TryReturnToLevelSelect` 接受命令才调用 `SceneService.SwitchToLevelSelect`。该命令在 `Gameplay` 中表示主动放弃且不产生结果，在 `GameplayResult` 中表示结束结果展示；收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
+`GameStateService` 是 `AppFlowState`、运行期完成集合和解锁集合的唯一所有者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，先通过 `IPlayerProgressStore` 加载并与目录默认状态合并，再请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`IsLevelUnlocked` 与 `IsLevelCompleted` 只查询规范化后的运行期集合。存储实现只负责版本化 JSON 文件，不判断解锁规则，也不订阅 Victory/GameOver。
+
+`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`TrySelectLevel` 只允许选择当前已解锁且仍能取得配置的关卡；`TryStartSelectedGameplay` 创建新的 `LevelRunId`、进入 `GameplayLoading` 并调用 SceneService。Gameplay Ready 后仍等待匹配的 `LevelIntroFinished`，随后才进入 Gameplay 并发布 `LevelRunStarted`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
+
+`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。接受 Victory 后把当前 LevelId 加入完成与解锁集合，再合并快照中已按 ADR-044 过滤的 `UnlockedLevelIds`；集合有变化时在发布 Victory 前同步保存。存储失败只记录错误，不撤销运行期状态或阻断 `GameplayResult`。GameOver 和主动退出不写进度。
+
+`TryReturnToLevelSelect` 在 `Gameplay` 中表示主动放弃且不产生结果，在 `GameplayResult` 中表示结束结果展示。`TryRetryCurrentGameplay` 只接受当前结果为 GameOver 的 `GameplayResult`，使用当前关卡配置和新的 `LevelRunId` 重新进入 `GameplayLoading`。`TryStartNextGameplay` 只接受当前结果为 Victory 且过滤后的 `UnlockedLevelIds` 非空的 `GameplayResult`，使用列表首项作为下一关；目标必须已进入运行期解锁集合且仍能取得配置。重试和下一关都通过 SceneService 重新加载 GameplayScene，任何重复点击、过期状态或已有 pending scene 时返回 `false`。
 
 ```csharp
 public interface ISceneService
@@ -548,7 +563,7 @@ public interface IGameplayHudSource
 }
 ```
 
-`GameplayHudSnapshot` 包含当前 `LevelId`、`LevelRunId`、关卡显示名、玩法耗时、火/冰/雷剩余时间、击杀数、敌人总数和终局标记。Playing 时由 LevelManager 组合权威状态；Completed 后返回清理前冻结的最终快照。UI 不自行累计击杀或按 Unity 对象数量推断统计。
+`GameplayHudSnapshot` 包含当前 `LevelId`、`LevelRunId`、关卡显示名、玩法耗时、火/冰/雷剩余时间、击杀数、敌人总数和终局标记。Playing 时由 LevelManager 组合权威状态；Completed 后返回清理前冻结的最终快照。BattleHud 用 `KilledEnemyCount / TotalEnemyCount` 驱动 `Image.Type.Filled` 进度条，不直接显示击杀文本；UI 不自行累计击杀或按 Unity 对象数量推断统计。
 
 ```csharp
 public enum LevelRunState

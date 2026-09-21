@@ -6,6 +6,8 @@
 
 > 后续决策：ADR-053 已将 LevelSelect 的临时自动流程替换为动态关卡节点和显式点击启动；本文关于 MainMenu 的决策保持有效。
 
+> 后续决策：ADR-063 又将 LevelSelect 动态节点替换为 Inspector 显式绑定的预放节点；本文关于 MainMenu 的决策仍保持有效。
+
 ## 背景
 
 MainMenuScene 当前只有固定根和 SceneEntry。`GameStateService` 在收到 `AppSceneReady(MainMenu)` 后使用 RealTime 计时器等待 1 秒，再自动切换到 LevelSelectScene。该行为只用于正式 UI 接入前验证场景骨架，无法支持玩家停留在主界面、主动进入选关或退出应用。

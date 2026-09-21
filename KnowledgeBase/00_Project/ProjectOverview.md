@@ -49,15 +49,15 @@
 
 ```text
 初始化 → 加载 MainMenuScene 并等待玩家点击开始 → 切换 LevelSelectScene 并等待玩家选择关卡
-→ 切换 GameplayScene → 胜利或失败 → 清理并卸载本局 → 切换回 LevelSelectScene
-→ 等待玩家再次选择关卡
+→ 切换 GameplayScene → 胜利或失败 → 停留并显示对应结算 UI
+→ 返回选关，或以新的 LevelRunId 重试当前关/挑战下一关
 ```
 
-MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固定根 SceneEntry。MainMenu 已接入开始与退出按钮；LevelSelect 按关卡目录动态生成节点，显示运行期解锁状态并等待玩家选择。页面交互不是游戏的核心循环。
+MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固定根 SceneEntry。MainMenu 已接入开始与退出按钮；LevelSelect 初始化 Inspector 中与 LevelId 一一绑定的预放节点，按运行期完成/解锁状态显示并等待玩家选择，节点位置可由 RectTransform 自由编排。页面交互不是游戏的核心循环。
 
 ## MVP 基线
 
-- 首版只使用一个关卡和一个 `LevelConfig` ScriptableObject；`unlockedLevelIds` 仅记录通关后应解锁的关卡 ID，当前不实现下一关跳转。空列表合法；重复 ID 或自引用是致命配置错误，当前目录中尚不存在的未来关卡 ID 只记录 `Debug.LogWarning` 并从运行时快照中过滤。
+- 首版当前资源只包含一个关卡和一个 `LevelConfig` ScriptableObject；`unlockedLevelIds` 记录通关后应解锁的关卡 ID。空列表表示成功后没有下一关；非空列表首项作为结算页“挑战下一关”的目标，其余项仍正常解锁。重复 ID 或自引用是致命配置错误，当前目录中尚不存在的未来关卡 ID 只记录 `Debug.LogWarning` 并从运行时快照中过滤。
 - Gameplay 当前只实现指定 UI 区域内的相对横向拖动；设备触屏与 Editor 左键共用 UGUI Pointer 路径，键盘/手柄延后。拖拽只消费相邻采样点的水平差，手指或鼠标停止移动时输入立即归零；原始归一化滑动速度先限制到 `[-1,1]`，再乘 `PF_UI_TouchDragArea` Inspector 中默认值为 `1` 的灵敏度系数。
 - 道路固定以世界原点为中心，LevelConfig 只配置 `roadWidth` 与 `roadHeight`，启动时复制到不可变 LevelConfigSnapshot，四边由半宽和半高派生；道路不设置玩法 Collider。ArmyRoot 每局从 `armySpawnPosition` 开始，共用出生横线 `spawnY` 由关卡道路配置提供。
 - 每条敌人、Gate、Prop 生成项都配置 `[0, 1]` 范围内的 `spawnPosition`：`0` 对应道路最左边，`1` 对应道路最右边，中间值线性映射为世界坐标 `x`。
@@ -67,7 +67,7 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - Victory 会立即结束当前会话，不等待 Gate/Prop 时间轴派发完成，也不等待仍在道路上的 Gate/Prop 接触或离场；未来条目停止生成，活动道路对象在 StopRun 中清理。这是当前预期规则，不属于内容丢失。
 - 当 Army 总人数小于等于 0 时失败。同一帧同时满足“最后一个敌人死亡”和“Army 归零”时，失败优先。
 - 初始化成功后异步加载 MainMenuScene，固定入口 Ready 后进入主界面并等待玩家点击开始；随后异步卸载旧场景、异步加载 LevelSelectScene，入口 Ready 后生成关卡节点并等待选择。
-- 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并异步加载 LevelSelectScene；入口 Ready 后使用最新运行期解锁集合重建节点并等待玩家选择。
+- 胜利或失败后停止本局逻辑并冻结 HUD，留在 GameplayScene 显示对应结算根节点。玩家可以返回选关；失败时还可重试当前关，胜利且存在有效解锁目标时还可挑战 `unlockedLevelIds` 首项。重试和下一关都创建新的 `LevelRunId` 并重新加载 GameplayScene。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
 - 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。初始活动槽位和实际换武器后的活动槽位在攻击周期第 0 帧立即发射，运行中新激活槽位等待完整 `FireInterval`；每槽每逻辑帧最多发射一颗且不追赶补发，但保留周期余量。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
@@ -79,16 +79,17 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 门和道具在移动并同步后只对终点姿态执行一次 Overlap 接触查询，不做接触 Cast；未接触时允许直接从道路下方离场。
 - 怪物不通过到达道路底部扣除军队人数；首版按 ADR-005 在接近线后向 Army 接近并攻击。
 - 所有参与命中、接触、受击或阻挡的玩法对象（包括子弹）使用 Inspector 绑定的 `Collider2D`；LevelManager 集中读取各时间域 delta，并按移动、子弹、道路接触、敌人攻击、回收和终局的顺序同步驱动对应 Manager。子弹与敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap。
+- 玩家关卡进度保存于移动端 `Application.persistentDataPath`：记录已完成与已解锁 LevelId；启动时与 `initiallyUnlocked` 合并，胜利后同步保存，失败和主动退出不写进度。卸载或清除应用数据后不保证保留。
 - 存活敌人的身体 Collider 使用上一同步姿态执行 Cast 阻挡。前方敌人较慢或静止时，后方敌人尽量按安全间距排队；该离散规则在 MVP 参数下减少穿透和重叠，但不保证同帧移动后的绝对不重叠，首版不实现事后分离或侧向绕行。
-- Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，Gameplay HUD 与结算数据冻结；玩家点击结算返回后卸载场景并执行最终 Army StopRun。
+- Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，Gameplay HUD 与结算数据冻结；玩家选择返回、重试或下一关后卸载场景并执行最终 Army StopRun。
 - 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
 - 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
 - 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
-- 批次 7 已导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本。Gameplay Canvas 已按 ADR-058 增加功能性 HUD、退出确认和结算面板，最终视觉样式、VFX 与音频继续延后。
+- 批次 7 已导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本。Gameplay Canvas 已按 ADR-058 增加功能性 HUD、退出确认和结算控制器；击杀进度条、三种结算根节点及其按钮的具体视觉和 Inspector 绑定由后续场景装配完成。
 - Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；ADR-044 明确允许的 `unlockedLevelIds` 目录缺失 ID 是唯一例外，只警告并过滤。Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
 
 ## 非目标
 
-本阶段不包含联网、账号、支付、广告、在线排行榜、得分系统、本地进度存档、设置持久化、声音、暂停、减速、局部时停、通用调试服务和复杂养成系统。`unlockedLevelIds` 只作为当前关卡结果数据，不写入玩家存档。
+本阶段不包含联网、账号、支付、广告、在线排行榜、得分系统、云存档、多存档槽、设置持久化、声音、暂停、减速、局部时停、通用调试服务和复杂养成系统。本地存档仅保存关卡完成与解锁状态。
 
 HUD 与胜负面板的最终美术、Gate 最终美术、VFX 和音频仍不属于当前功能切片；现有基础 UI、调试文本、结构化日志和测试负责提供验证反馈。

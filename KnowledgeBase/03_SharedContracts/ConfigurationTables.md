@@ -87,14 +87,14 @@ entries[].levelConfig       LevelConfig 资产引用
 entries[].initiallyUnlocked bool
 ```
 
-目录不重复保存 `levelId`；每个条目的 ID 由其 `LevelConfig.levelId` 提供。当前目录只包含第一关，且第一关默认解锁。目录资产和关卡资产均为只读配置。当前版本只使用 `initiallyUnlocked`；存档属于后续扩展，未来引入 `SaveService` 时另行定案存档状态与默认解锁的合并规则，且不得回写这些资产。
+目录不重复保存 `levelId`；每个条目的 ID 由其 `LevelConfig.levelId` 提供。当前目录只包含第一关，且第一关默认解锁。目录资产和关卡资产均为只读配置。ADR-062 规定启动时把 `initiallyUnlocked`、有效存档解锁和有效已完成集合取并集；任何存档状态都不得回写这些资产。
 
 ### `LevelConfig`
 
 `LevelConfig` 是首版唯一实际关卡配置资产，负责：
 
 - 关卡 ID 和展示信息。
-- 通关后应解锁的关卡 ID 列表 `unlockedLevelIds`；首版不执行下一关跳转。它不是当前玩家已解锁状态。空列表合法；重复 ID 或当前 `levelId` 自引用按 `InvalidLevelConfig` 致命失败；当前 LevelCatalog 中不存在的未来关卡 ID 使用 `Debug.LogWarning` 后忽略。ConfigService 保持其余有效 ID 的原始顺序并只把过滤后的防御性副本写入 `LevelConfigSnapshot.UnlockedLevelIds`。
+- 通关后应解锁的关卡 ID 列表 `unlockedLevelIds`；它不是当前玩家已解锁状态。空列表表示结算时没有下一关；非空列表的首个有效 ID 是“挑战下一关”的目标，其余有效 ID 仍加入运行期解锁集合。重复 ID 或当前 `levelId` 自引用按 `InvalidLevelConfig` 致命失败；当前 LevelCatalog 中不存在的未来关卡 ID 使用 `Debug.LogWarning` 后忽略。ConfigService 保持其余有效 ID 的原始顺序并只把过滤后的防御性副本写入 `LevelConfigSnapshot.UnlockedLevelIds`。
 - 固定道路只配置 `roadWidth`、`roadHeight`，中心永久为世界原点，四边由半宽和半高派生；ArmyRoot 初始世界坐标使用 `armySpawnPosition: Vector2`。
 - `spawnY`、`enemyApproachY`、`despawnY` 等关卡空间参数。
 - 本关元素门统一使用的 `elementDurationSecondsPerDamage`。
@@ -142,7 +142,7 @@ TbProp.weaponId            -> TbWeapon.Id
 
 ## 运行时状态边界
 
-以下字段不得写入配置表作为运行时回写值：当前人数、当前槽位人数、当前槽位 HP、槽位补充标记、当前 WeaponId、火/冰/雷剩余持续时间、当前门数字、当前门/道具 HP、元素门 `PostDepletionDamage`、奖励锁定状态、接触判定状态、运行时实例 ID、生成游标、关卡运行时间和胜负状态。它们属于 ArmyController、Monster、Gate、Prop、ObstacleManager、LevelManager 和 GameStateService 的运行时状态；分数和存档状态当前不属于 MVP 状态模型。
+以下字段不得写入配置表作为运行时回写值：当前人数、当前槽位人数、当前槽位 HP、槽位补充标记、当前 WeaponId、火/冰/雷剩余持续时间、当前门数字、当前门/道具 HP、元素门 `PostDepletionDamage`、奖励锁定状态、接触判定状态、运行时实例 ID、生成游标、关卡运行时间和胜负状态。它们属于 ArmyController、Monster、Gate、Prop、ObstacleManager、LevelManager 和 GameStateService 的运行时状态；已完成/已解锁集合只写入玩家进度文件，不回写 LevelCatalog、LevelConfig 或 Luban 表。分数仍不属于 MVP 状态模型。
 
 ## 变更规则
 

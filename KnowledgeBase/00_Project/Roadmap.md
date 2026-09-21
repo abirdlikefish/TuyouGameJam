@@ -2,7 +2,7 @@
 
 > 本文复选框只表示工程实现和相应验证已经完成，不表示 ADR 是否已接受或设计是否已收敛。用户已授权 AI 按 `ImplementationPlan.md` 分批创建代码与目录；Scene、Prefab、表格、配置资产实例和 ProjectSettings 默认仍由用户手工完成。设计成熟度以模块状态表和 `DesignBacklog.md` 为准，见 ADR-015、ADR-047。
 
-> 当前 MVP 明确不考虑得分、声音、AudioService、SaveService、DebugService、本地进度存档、设置持久化、暂停、减速和局部时停；阶段 4 中相关条目仅表示未来扩展（Deferred），不属于当前验收范围。
+> 当前 MVP 明确不考虑得分、声音、AudioService、DebugService、云存档、多存档槽、设置持久化、暂停、减速和局部时停。ADR-062 已把最小本地关卡进度存档纳入当前范围。
 
 ## 实施顺序
 
@@ -35,7 +35,8 @@
 - [ ] `LevelConfig` ScriptableObject 配置单关卡道路、生成编排和解锁 ID，ConfigService 校验后生成供 Gameplay 使用的不可变 `LevelConfigSnapshot`
 - [ ] Luban 配置角色/军队、敌人、Prop 和子弹属性；Gate 不读表，由 LevelConfig 生成项与对应 Prefab 提供配置
 - [ ] Luban 配置 Army 基础数值、固定 Weapon 0/1/2 和每名士兵生命值；当前不建立 TbElement，阵型槽位由 Army Prefab 序列化绑定
-- [ ] 当前应用流程：MainMenuScene 等待开始按钮；LevelSelectScene 动态生成关卡节点并等待选择；胜利/失败后清理 Gameplay 并返回 LevelSelectScene
+- [ ] 当前应用流程：MainMenuScene 等待开始按钮；LevelSelectScene 初始化 Inspector 显式绑定的预放关卡节点并等待选择；胜利/失败后停留结算，支持返回选关、失败重试和有有效解锁目标时挑战下一关
+- [ ] 移动端本地关卡进度：胜利保存完成/解锁集合，重启恢复，损坏文件回退；代码与 Editor 往返测试已通过，目标设备完整流程待验收
 
 ## 阶段 3：表现和性能
 
@@ -53,7 +54,7 @@
 - Deferred：声音、AudioService、音量设置和音频资源
 - Deferred：DebugService 和通用调试指令
 - Deferred：暂停、减速、加速和局部时停
-- Deferred：本地进度存档
+- Deferred：云存档、多存档槽、跨卸载恢复和设置持久化
 - [ ] 升级和关卡解锁
 - [ ] 后方敌人从侧面绕过较慢、静止或局部时停的前方敌人
 
