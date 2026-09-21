@@ -106,11 +106,15 @@
 - [ ] 新增人数优先补充受击后人数较少或为空的槽位。
 - [ ] 槽位聚合 HP 按 `HpPerSoldier` 计算，伤害按比例转换为槽位人数损失。
 - [ ] 每个激活槽位从独立发射点按同一武器间隔发射一枚子弹；改变代表人数不改变单次发射数量、伤害或速度。
-- [ ] 本局初始激活槽位、运行中新激活槽位和失活后重新激活的槽位均等待完整 `FireInterval` 后首发。
+- [ ] 本局初始活动槽位在首个 Playing Tick 立即首发；运行中新激活槽位和失活后重新激活的槽位等待完整 `FireInterval` 后首发。
 - [ ] 实际切换到不同 WeaponId 后全部激活槽位按新武器完整间隔重置；重复当前 WeaponId 不重置。
 - [ ] 单个逻辑帧每槽最多生成一颗子弹；delta 跨过多个 FireInterval 时不补发历史子弹。
 - [ ] 每局初始武器为 WeaponId=0，火/冰/雷剩余时间均为 0；三元素可以同时有效并从 Gameplay delta 扣减到不小于 0。
 - [ ] 子弹保存发射瞬间的 WeaponId 与 ElementMask；Army 后续换武器、获得元素或元素过期不修改飞行中的子弹。
+- [ ] 正式进入 Playing 时，初始活动槽位在 Attack/Move 动画第 1 帧立即发射；运行中新激活槽位仍等待完整 `FireInterval`。
+- [ ] Attack、MoveLeft、MoveRight 连续切换保持已经播放的攻击周期进度，不从第 0 帧重启，也不改变下一次发射边界。
+- [ ] 实际 WeaponId 改变时活动槽位从新动画第 0 帧立即发射；重复相同 WeaponId 不重播、不发射。
+- [ ] 大帧每槽最多产生一颗周期弹且保留跨周期余量；换武器回调中新生成的子弹不在 BulletManager 当前 Tick 内移动或连锁命中。
 - [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
 - [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
 - [ ] 三类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。

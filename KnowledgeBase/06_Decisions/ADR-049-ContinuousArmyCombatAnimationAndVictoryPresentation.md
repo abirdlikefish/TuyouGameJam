@@ -1,5 +1,7 @@
 # ADR-049：Army 持续战斗动画与胜利表现阶段
 
+> ADR-060 补充并修订射击同步：`FireInterval` 成为三种战斗动画的权威周期，状态切换继承周期相位，实际换武器从第 0 帧立即发射。
+
 - 状态：Accepted
 - 日期：2026-09-20
 - 关联：ADR-009、ADR-033、ADR-043、ADR-048
@@ -38,7 +40,7 @@ ADR-048 最初把 Army Attack 定义为每次实际发射后触发的非循环�
 
 ## 后果
 
-- Army 动画周期与 FireInterval 解耦；美术表达持续攻击，玩法逻辑保持权威。
+- Army 不通过 AnimationEvent 驱动发射，玩法逻辑保持权威；ADR-060 进一步要求三种战斗 Clip 时长与 `FireInterval` 一致并共享攻击周期相位。
 - Army Animator Controller 更简单，三套武器仍共用同一状态结构和预创建 AOC。
 - 胜利表现拥有可延长的生命周期边界，但当前应用流程仍直接返回 LevelSelect。
 - Attack 改为循环后需要检查素材首尾接缝；这属于视觉验收，不改变射击结果。

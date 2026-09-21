@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与命中流程手测待完成）
 - 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`
 
 ## 职责
 
@@ -32,6 +32,7 @@
 - 命中 Collider 节点必须存在已在 Preparing 验证的同节点 `BulletHitProxy`；代理显式绑定实现 `IBulletHittable` 的 Enemy/Gate/Prop 根组件，并提供对象类别和 RuntimeInstanceId。候选还必须满足 `CanReceiveBulletHit = true`；BulletManager 不通过父级搜索或 HP 推断目标。
 - HP 已归零但仍处于 `Pending` 的元素门保持 `CanReceiveBulletHit = true`，命中后子弹照常消费，伤害交由 Gate 累计为可兑换额外伤害。Failed 元素门和 Prop 仍保持可命中，子弹照常消费，但目标 HP 最低锁在 `1`，不再产生奖励、击破或伤害回收。
 - 移动使用 LevelManager 在帧开始读取并传入的 Bullet 时间域 delta；Bullet 和 BulletManager 不自行再次读取 TimeService。
+- `TickMovementAndHits` 只处理进入该 Tick 前已经登记的活动子弹；命中回调中新生成的子弹保持活动和可见，但从下一逻辑帧开始移动与命中。
 - 不依赖 `OnTriggerEnter2D` 或 `OnCollisionEnter2D` 作为命中唯一入口；查询使用 Bullet Layer 到 Enemy/Gate/Prop 受击 Layer 的明确过滤。
 - Bullet Prefab 保持无 Rigidbody2D；现有 Collider Cast 依赖 Enemy、Gate 和 Prop 规范 Prefab 根节点上已经在 Preparing 校验的 Kinematic Rigidbody2D 查询适配。该适配不负责移动、推挤或回调结算。
 - 首轮只对 Bullet 自身从上一逻辑位置到期望位置执行扫掠，不计算与本帧同时移动目标的相对运动，也不做子步进。通过 MVP 配置的合理速度、Collider 尺寸和目标帧率避免穿透，不承诺任意高速或严重掉帧场景。
@@ -80,3 +81,4 @@ Bullet 自身不添加 Rigidbody2D，避免高弹量场景为每颗活动子弹�
 - BulletId 0～9 分别播放正确的独立循环 Clip；池化实例从一个 BulletId 回收后以另一个 BulletId 借出时，不残留旧参数、状态、帧或 Sprite。
 - 子弹只请求生成所有者结束实例，不持有 PoolService 或类型池，不在 `OnDisable`、`OnDestroy` 中归还；命中或离屏后清理状态、主动失活，再由类型池防御性失活并回收。
 - LevelManager 只在子弹阶段调用一次 `TickMovementAndHits`；Preparing、Completed 和过期 LevelRunId 不移动或命中。
+- 武器箱命中导致 Army 刷新攻击并生成新子弹时，新子弹不会在当前 `TickMovementAndHits` 中继续移动、命中或触发第二次换武器。

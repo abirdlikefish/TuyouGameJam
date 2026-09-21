@@ -131,7 +131,10 @@ namespace Game.Gameplay
             filter.SetLayerMask(hittableLayers);
             filter.useTriggers = true;
 
-            for (var index = 0; index < activeBullets.Count; index++)
+            // 命中回调可能因换武器立即生成新子弹；新实例从下一逻辑帧开始移动，
+            // 避免它在本次遍历中继续命中并形成同帧连锁。
+            var bulletsToProcess = activeBullets.Count;
+            for (var index = 0; index < bulletsToProcess; index++)
             {
                 var bullet = activeBullets[index];
                 if (bullet == null || !bullet.IsRuntimeActive || pendingRecycles.Contains(bullet))

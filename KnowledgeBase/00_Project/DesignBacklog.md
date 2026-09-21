@@ -60,7 +60,7 @@
 | DES-046 | Army 配置、Prefab 容量、运行时装备、三元素计时与负数门减员 | Accepted | Army、Config、Composition、Gate、Bullet、事件、测试 | 见 ADR-035、ADR-046；ArmyId=0 同时选择 TbArmy 首行与序列化 Prefab，槽位数组决定容量，WeaponId 固定 0/1/2，当前删除 TbElement，元素按三计时器与 ElementMask 表达 |
 | DES-047 | Gate 配置来源、伤害驱动数值与元素奖励结算 | Accepted | Level、Spawn、Obstacle、Gate、Bullet、Army、Config、事件、测试 | 见 ADR-038、ADR-046；仅保留加法门和元素门，Gate 不读表；逐门初始值、元素类型与 MaxHp 位于 LevelConfig，Prefab 提供同类共用速度/接触伤害；加法门按实际伤害累加，元素门只用 Pending 状态下 HP 归零后的额外伤害乘关卡系数兑换持续时间，Failed 后锁血 1 且永久锁定奖励 |
 | DES-048 | LevelConfig 资产、运行时快照与程序集依赖闭合 | Accepted | Contracts、ConfigGenerated、Foundation、Composition、Scene、Level、Spawn | 见 ADR-042；LevelConfig 资产及转换归 Foundation，Luban 代码归生成程序集，Contracts 定义不可变 LevelConfigSnapshot，IConfigService 只保留查询，具体初始化由 Composition 调用 |
-| DES-049 | 槽位射击、攻击冷却、死亡动画与道路接触/阈值语义 | Accepted | Army、Bullet、Monster、Gate、Prop、Obstacle、Level、Animation、测试 | 见 ADR-043；激活/换武器后等待完整射击间隔，每槽每帧最多一弹；攻击冷却从起攻计算，Death 末帧登记回收；Gate/Prop 只做终点 Overlap，纵向阈值按根中心判定 |
+| DES-049 | 槽位射击、攻击冷却、死亡动画与道路接触/阈值语义 | Accepted | Army、Bullet、Monster、Gate、Prop、Obstacle、Level、Animation、测试 | 见 ADR-043、ADR-060；初始活动槽位和实际换武器立即首发，运行中新激活槽位等待完整间隔，每槽每帧最多一弹并保留周期余量；攻击冷却从起攻计算，Death 末帧登记回收；Gate/Prop 只做终点 Overlap，纵向阈值按根中心判定 |
 | DES-050 | 正式序列帧的导入目录、Prefab 数量与 ID 到 Animator 的预绑定方式 | Accepted | Army、Bullet、Monster、Gate、资源、Prefab、测试 | 见 ADR-048、ADR-049；源包留在 Reference，运行时只导入透明 Sprite；保持单 Army、单 Bullet、单 ElementGate 与三类 Monster Prefab。Army 通过预绑定 AOC 与代码显式状态选择，Bullet/ElementGate 使用 Animator 参数，不运行时按路径加载 |
 
 ## 已接受决策

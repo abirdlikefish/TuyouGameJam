@@ -109,6 +109,8 @@ namespace Game.Gameplay
         {
             slotIndex = index;
             slotHitProxy.Initialize(armyId, index);
+            // Army 玩法周期使用 unscaledDeltaTime，Animator 必须使用同一时间域才不会漂移。
+            soldierAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
             SetState(0, 0, 0, 0f);
         }
 
@@ -125,13 +127,15 @@ namespace Game.Gameplay
             slotCollider.enabled = active;
             if (active && (!wasActive || !animationStateInitialized))
             {
-                PlayDesiredAnimation(true);
+                animationStateInitialized = false;
+                PlayDesiredAnimation(0f);
             }
         }
 
         internal void ApplyAnimatorController(
             AnimatorOverrideController controller,
-            ArmyAnimationState animationState)
+            ArmyAnimationState animationState,
+            float normalizedTime)
         {
             if (controller == null)
             {
@@ -142,10 +146,10 @@ namespace Game.Gameplay
             soldierAnimator.runtimeAnimatorController = controller;
             soldierAnimator.Rebind();
             animationStateInitialized = false;
-            PlayDesiredAnimation(true);
+            PlayDesiredAnimation(normalizedTime);
         }
 
-        internal void SetAnimationState(ArmyAnimationState animationState)
+        internal void SetAnimationState(ArmyAnimationState animationState, float normalizedTime)
         {
             if (desiredAnimationState == animationState && animationStateInitialized)
             {
@@ -154,7 +158,7 @@ namespace Game.Gameplay
 
             desiredAnimationState = animationState;
             animationStateInitialized = false;
-            PlayDesiredAnimation(false);
+            PlayDesiredAnimation(normalizedTime);
         }
 
         internal void SetFireCooldown(float value)
@@ -191,7 +195,7 @@ namespace Game.Gameplay
             }
         }
 
-        private void PlayDesiredAnimation(bool restart)
+        private void PlayDesiredAnimation(float normalizedTime)
         {
             if (!soldierVisual.activeInHierarchy || !soldierAnimator.isActiveAndEnabled)
             {
@@ -199,12 +203,15 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (!restart && animationStateInitialized)
+            if (animationStateInitialized)
             {
                 return;
             }
 
-            soldierAnimator.Play(GetStateHash(desiredAnimationState), 0, 0f);
+            soldierAnimator.Play(
+                GetStateHash(desiredAnimationState),
+                0,
+                Mathf.Repeat(normalizedTime, 1f));
             animationStateInitialized = true;
         }
 

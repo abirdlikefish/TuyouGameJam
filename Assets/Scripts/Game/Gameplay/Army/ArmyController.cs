@@ -179,9 +179,8 @@ namespace Game.Gameplay
             victoryPresentation = false;
             running = true;
 
-            var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
-            ApplyWeaponAnimatorController(currentWeaponId);
-            InitializeSlots(MvpInitialArmyCount, weapon.FireInterval);
+            ApplyWeaponAnimatorController(currentWeaponId, 0f);
+            InitializeSlots(MvpInitialArmyCount);
             ValidateInitialSpawnPosition();
             PublishCountChanged(MvpInitialArmyCount, ArmyCountChangeReason.Addition);
             PublishFormationChanged();
@@ -204,6 +203,7 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException(nameof(gameplayDeltaTime));
             }
 
+            var weaponIdBeforeDurationTick = currentWeaponId;
             var elementExpired = TickElementDuration(
                 ref fireRemainingDuration,
                 ElementType.Fire,
@@ -222,8 +222,12 @@ namespace Game.Gameplay
                 RefreshStaffWeapon(ArmyWeaponChangeReason.ElementExpired, null);
             }
 
-            SetAnimationState(MoveArmy(gameplayDeltaTime));
-            TickFire(gameplayDeltaTime);
+            var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
+            SetAnimationState(MoveArmy(gameplayDeltaTime), weapon.FireInterval);
+            TickFire(
+                gameplayDeltaTime,
+                weapon,
+                currentWeaponId == weaponIdBeforeDurationTick);
         }
 
         public void EnterVictoryPresentation(int completedLevelRunId)
@@ -235,7 +239,7 @@ namespace Game.Gameplay
 
             victoryPresentation = true;
             horizontalInput = 0f;
-            SetAnimationState(ArmyAnimationState.Victory);
+            SetAnimationState(ArmyAnimationState.Victory, 0f);
         }
 
         public void StopRun(int stoppedLevelRunId)
@@ -607,7 +611,7 @@ namespace Game.Gameplay
             return true;
         }
 
-        private void ApplyWeaponAnimatorController(int weaponId)
+        private void ApplyWeaponAnimatorController(int weaponId, float normalizedTime)
         {
             AnimatorOverrideController controller = null;
             for (var index = 0; index < weaponAnimatorControllers.Length; index++)
@@ -627,11 +631,14 @@ namespace Game.Gameplay
 
             for (var index = 0; index < slots.Length; index++)
             {
-                slots[index].ApplyAnimatorController(controller, currentAnimationState);
+                slots[index].ApplyAnimatorController(
+                    controller,
+                    currentAnimationState,
+                    normalizedTime);
             }
         }
 
-        private void SetAnimationState(ArmyAnimationState animationState)
+        private void SetAnimationState(ArmyAnimationState animationState, float fireInterval)
         {
             if (currentAnimationState == animationState)
             {
@@ -641,11 +648,14 @@ namespace Game.Gameplay
             currentAnimationState = animationState;
             for (var index = 0; index < slots.Length; index++)
             {
-                slots[index].SetAnimationState(animationState);
+                var slot = slots[index];
+                slot.SetAnimationState(
+                    animationState,
+                    GetAttackNormalizedTime(slot, fireInterval));
             }
         }
 
-        private void InitializeSlots(int initialCount, float fireInterval)
+        private void InitializeSlots(int initialCount)
         {
             armyCount = initialCount;
             var activeCount = Mathf.Min(initialCount, slots.Length);
@@ -657,7 +667,8 @@ namespace Game.Gameplay
                 slots[index].Initialize(armyId, index);
                 var represented = index < activeCount ? baseCount + (index < remainder ? 1 : 0) : 0;
                 var hp = SaturatingMultiply(represented, armyConfig.HpPerSoldier);
-                slots[index].SetState(represented, hp, hp, represented > 0 ? fireInterval : 0f);
+                // 初始活动槽位在首个 Playing Tick 的动画第 1 帧立即发射。
+                slots[index].SetState(represented, hp, hp, 0f);
             }
         }
 
@@ -711,12 +722,16 @@ namespace Game.Gameplay
 
             var previousWeaponId = currentWeaponId;
             currentWeaponId = targetWeaponId;
-            ApplyWeaponAnimatorController(currentWeaponId);
+            ApplyWeaponAnimatorController(currentWeaponId, 0f);
+            var activeElements = GetActiveElements();
             for (var index = 0; index < slots.Length; index++)
             {
-                if (slots[index].IsActive)
+                var slot = slots[index];
+                if (slot.IsActive)
                 {
-                    slots[index].SetFireCooldown(nextWeapon.FireInterval);
+                    // 实际换武器会刷新攻击：动画和攻击周期同时归零，并在第 1 帧发射。
+                    slot.SetFireCooldown(nextWeapon.FireInterval);
+                    SpawnBullet(slot, nextWeapon, activeElements);
                 }
             }
 
@@ -852,14 +867,16 @@ namespace Game.Gameplay
             return found;
         }
 
-        private void TickFire(float deltaTime)
+        private void TickFire(
+            float deltaTime,
+            WeaponConfigSnapshot weapon,
+            bool allowScheduledFire)
         {
             if (armyCount <= 0)
             {
                 return;
             }
 
-            var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
             var activeElements = GetActiveElements();
             for (var index = 0; index < slots.Length; index++)
             {
@@ -869,25 +886,54 @@ namespace Game.Gameplay
                     continue;
                 }
 
-                var cooldown = Mathf.Max(0f, slot.FireCooldownRemaining - deltaTime);
-                if (cooldown > 0f)
+                var cooldown = slot.FireCooldownRemaining;
+                if (cooldown > deltaTime)
                 {
-                    slot.SetFireCooldown(cooldown);
+                    slot.SetFireCooldown(cooldown - deltaTime);
                     continue;
                 }
 
-                bulletManager.Spawn(
-                    new BulletSpawnRequest(
-                        levelRunId,
-                        armyId,
-                        slot.SlotIndex,
-                        weapon.BulletId,
-                        currentWeaponId,
-                        activeElements,
-                        slot.FirePosition,
-                        Vector2.up));
-                slot.SetFireCooldown(weapon.FireInterval);
+                if (allowScheduledFire)
+                {
+                    SpawnBullet(slot, weapon, activeElements);
+                }
+
+                // 大帧仍只发射一颗，但保留越过周期边界的时间，避免射击相位逐帧漂移。
+                var elapsedAfterShot = Mathf.Max(0f, deltaTime - cooldown);
+                var elapsedInCycle = Mathf.Repeat(elapsedAfterShot, weapon.FireInterval);
+                var nextCooldown = elapsedInCycle > 0f
+                    ? weapon.FireInterval - elapsedInCycle
+                    : weapon.FireInterval;
+                slot.SetFireCooldown(nextCooldown);
             }
+        }
+
+        private void SpawnBullet(
+            ArmySlotView slot,
+            WeaponConfigSnapshot weapon,
+            ElementMask activeElements)
+        {
+            bulletManager.Spawn(
+                new BulletSpawnRequest(
+                    levelRunId,
+                    armyId,
+                    slot.SlotIndex,
+                    weapon.BulletId,
+                    currentWeaponId,
+                    activeElements,
+                    slot.FirePosition,
+                    Vector2.up));
+        }
+
+        private static float GetAttackNormalizedTime(ArmySlotView slot, float fireInterval)
+        {
+            if (!slot.IsActive || fireInterval <= 0f)
+            {
+                return 0f;
+            }
+
+            var cooldown = Mathf.Clamp(slot.FireCooldownRemaining, 0f, fireInterval);
+            return Mathf.Repeat((fireInterval - cooldown) / fireInterval, 1f);
         }
 
         private SlotDamageResult ApplyDamageToSlot(ArmySlotView slot, int damage)

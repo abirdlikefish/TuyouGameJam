@@ -153,7 +153,7 @@ Clip 的 Samples 当前统一为 8 FPS。生成后必须核对最后一帧持有
 
 `AC_Army_Base` 固定包含 `Idle`、`MoveLeft`、`MoveRight`、`Attack`、`Victory`，不包含 Animator 参数或自动 Transition。ArmyController 只在状态变化时通过固定状态哈希显式播放：Preparing 为 Idle，Playing 原地为 Attack，实际左/右位移为 MoveLeft/MoveRight，Victory 为终态。Idle、Attack、MoveLeft、MoveRight 循环，Victory 非循环。每个武器创建一个预制 `AnimatorOverrideController`，完整覆盖五个基础占位 Clip。
 
-`PF_Army_000` 保存唯一的 `WeaponId -> AnimatorOverrideController` 数组，完整覆盖 WeaponId 0～9；每个 `ArmySlotView` 显式绑定本槽位 `soldierAnimator`。初始 `WeaponId=0` 和每次实际换武器时，ArmyController 把选中的 Controller 应用到所有槽位。战斗中换武器后直接重播当前 Attack/MoveLeft/MoveRight 状态，不先回 Idle；隐藏槽位保存当前武器与状态，激活时再从第 0 帧播放。
+`PF_Army_000` 保存唯一的 `WeaponId -> AnimatorOverrideController` 数组，完整覆盖 WeaponId 0～9；每个 `ArmySlotView` 显式绑定本槽位 `soldierAnimator`。初始 `WeaponId=0` 和每次实际换武器时，ArmyController 把选中的 Controller 应用到所有槽位。Attack、MoveLeft、MoveRight 的 Clip 时长必须与该 WeaponId 的 `FireInterval` 一致；三种战斗状态切换时按已有攻击周期 normalized time 进入新状态。战斗中换武器后从当前战斗状态第 0 帧重播并立即发射，不先回 Idle；隐藏槽位保存当前武器与状态，激活时再从第 0 帧播放。
 
 ### Monster
 

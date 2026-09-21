@@ -70,7 +70,7 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 胜利或失败后停止本局逻辑并清理当前游玩会话，异步卸载 GameplayScene 并异步加载 LevelSelectScene；入口 Ready 后使用最新运行期解锁集合重建节点并等待玩家选择。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
-- 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。槽位激活或实际换武器后等待一个完整 FireInterval，每槽每逻辑帧最多发射一颗且不追赶补发。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
+- 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。初始活动槽位和实际换武器后的活动槽位在攻击周期第 0 帧立即发射，运行中新激活槽位等待完整 `FireInterval`；每槽每逻辑帧最多发射一颗且不追赶补发，但保留周期余量。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
 - SpawnY、EnemyApproachY、DespawnY 与子弹 `TopBoundary` 离场阈值都按实例根 GameObject 中心判断；Army 横向边界仍使用激活槽位合并 AABB。
 - 加法门数字可以为负数；每次有效子弹命中按本次实际伤害累加，不按命中次数使用固定增量。
 - 非负加法门增加人数并受 ArmyCountLimit 限制；负数门请求 Army 按等价单兵 HP 伤害执行减员，标记失败但仍只结算一次。
