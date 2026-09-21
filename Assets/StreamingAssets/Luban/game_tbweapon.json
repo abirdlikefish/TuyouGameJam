@@ -11,42 +11,42 @@
   },
   {
     "id": 2,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 2
   },
   {
     "id": 3,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 3
   },
   {
     "id": 4,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 4
   },
   {
     "id": 5,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 5
   },
   {
     "id": 6,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 6
   },
   {
     "id": 7,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 7
   },
   {
     "id": 8,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 8
   },
   {
     "id": 9,
-    "fireInterval": 0.25,
+    "fireInterval": 1,
     "bulletId": 9
   }
 ]
