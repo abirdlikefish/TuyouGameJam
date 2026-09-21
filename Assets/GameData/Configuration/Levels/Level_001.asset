@@ -14,73 +14,137 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelId: 0
   displayName: 1
-  unlockedLevelIds: 01000000
+  unlockedLevelIds:
+  - 1
   spawnY: 8
   enemyApproachY: 0
   despawnY: -9
   bulletDespawnY: 3
-  elementDurationSecondsPerDamage: 1
-  ikunBasketballConfigId: 3
+  elementDurationSecondsPerDamage: 0
+  ikunBasketballConfigId: 0
   enemySpawns:
-  - spawnTime: 1
+  - spawnTime: 3
     spawnPosition: 0.5
-    configId: 3
-  - spawnTime: 8.174127
-    spawnPosition: 0.565803
-    configId: 0
-  - spawnTime: 8.470528
-    spawnPosition: 0.358243
-    configId: 0
-  - spawnTime: 8.540329
-    spawnPosition: 0.859015
     configId: 1
-  - spawnTime: 8.831974
-    spawnPosition: 0.788554
-    configId: 1
-  - spawnTime: 9.133944
-    spawnPosition: 0.784743
-    configId: 1
-  - spawnTime: 10.163981
-    spawnPosition: 0.381105
-    configId: 2
-  - spawnTime: 10.270575
-    spawnPosition: 0.592543
-    configId: 2
-  - spawnTime: 10.404028
-    spawnPosition: 0.336126
-    configId: 2
-  gateSpawns:
-  - spawnTime: 4
-    spawnPosition: 0.166667
-    gateType: 1
-    initialValue: 0
-    elementType: 1
-    maxHp: 3
-  - spawnTime: 5
-    spawnPosition: 0.5
-    gateType: 1
-    initialValue: 0
-    elementType: 2
-    maxHp: 3
-  - spawnTime: 6
-    spawnPosition: 0.833333
-    gateType: 1
-    initialValue: 0
-    elementType: 3
-    maxHp: 3
   - spawnTime: 7
     spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 7
+    spawnPosition: 0.5
+    configId: 1
+  - spawnTime: 7
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 14
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 14
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 15
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 15
+    spawnPosition: 0.5
+    configId: 1
+  - spawnTime: 15
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 16
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 16
+    spawnPosition: 0.5
+    configId: 1
+  - spawnTime: 16
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 17
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 17
+    spawnPosition: 0.5
+    configId: 1
+  - spawnTime: 17
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 18
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 18
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 25
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 25
+    spawnPosition: 0.5
+    configId: 1
+  - spawnTime: 25
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 26
+    spawnPosition: 0.166667
+    configId: 1
+  - spawnTime: 26
+    spawnPosition: 0.5
+    configId: 1
+  - spawnTime: 26
+    spawnPosition: 0.833333
+    configId: 1
+  - spawnTime: 27
+    spawnPosition: 0.166667
+    configId: 2
+  - spawnTime: 27
+    spawnPosition: 0.5
+    configId: 2
+  - spawnTime: 27
+    spawnPosition: 0.833333
+    configId: 2
+  - spawnTime: 28
+    spawnPosition: 0.166667
+    configId: 2
+  - spawnTime: 28
+    spawnPosition: 0.5
+    configId: 2
+  - spawnTime: 28
+    spawnPosition: 0.833333
+    configId: 2
+  gateSpawns:
+  - spawnTime: 5
+    spawnPosition: 0.166667
     gateType: 0
-    initialValue: -2
+    initialValue: -6
+    elementType: 0
+    maxHp: 0
+  - spawnTime: 9
+    spawnPosition: 0.833333
+    gateType: 0
+    initialValue: -15
     elementType: 0
     maxHp: 0
   propSpawns:
   - spawnTime: 1
     spawnPosition: 0.166667
     configId: 4
-  - spawnTime: 2
-    spawnPosition: 0.5
-    configId: 1
-  - spawnTime: 3
+  - spawnTime: 1
     spawnPosition: 0.833333
-    configId: 2
+    configId: 4
+  - spawnTime: 11
+    spawnPosition: 0.166667
+    configId: 4
+  - spawnTime: 11
+    spawnPosition: 0.833333
+    configId: 4
+  - spawnTime: 20
+    spawnPosition: 0.5
+    configId: 4
+  - spawnTime: 22
+    spawnPosition: 0.166667
+    configId: 4
+  - spawnTime: 22
+    spawnPosition: 0.833333
+    configId: 4
+  - spawnTime: 24
+    spawnPosition: 0.5
+    configId: 4
