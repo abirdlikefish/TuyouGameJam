@@ -25,5 +25,14 @@
     "moveSpeed": 1,
     "attackStartRange": 1,
     "attackCooldown": 1
+  },
+  {
+    "id": 3,
+    "enemyType": 3,
+    "maxHp": 50,
+    "attackPower": 5,
+    "moveSpeed": 1,
+    "attackStartRange": 1,
+    "attackCooldown": 1
   }
 ]

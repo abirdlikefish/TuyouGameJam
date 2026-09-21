@@ -28,6 +28,10 @@ namespace cfg.game
         /// 公鸡敌人
         /// </summary>
         Rooster = 2,
+        /// <summary>
+        /// ikun 敌人
+        /// </summary>
+        Ikun = 3,
     }
 
 } 

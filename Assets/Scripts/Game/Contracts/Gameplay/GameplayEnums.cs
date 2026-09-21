@@ -6,7 +6,8 @@ namespace Game.Contracts
     {
         Chick = 0,
         Hen = 1,
-        Rooster = 2
+        Rooster = 2,
+        Ikun = 3
     }
 
     public enum AttackType

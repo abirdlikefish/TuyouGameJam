@@ -245,6 +245,46 @@ namespace Game.Contracts
         public bool ContactedArmy { get; }
     }
 
+    public readonly struct BasketballSpawned
+    {
+        public BasketballSpawned(
+            int levelRunId,
+            int runtimeInstanceId,
+            int sourceEnemyRuntimeInstanceId,
+            Vector2 worldPosition)
+        {
+            LevelRunId = levelRunId;
+            RuntimeInstanceId = runtimeInstanceId;
+            SourceEnemyRuntimeInstanceId = sourceEnemyRuntimeInstanceId;
+            WorldPosition = worldPosition;
+        }
+
+        public int LevelRunId { get; }
+        public int RuntimeInstanceId { get; }
+        public int SourceEnemyRuntimeInstanceId { get; }
+        public Vector2 WorldPosition { get; }
+    }
+
+    public readonly struct BasketballBroken
+    {
+        public BasketballBroken(
+            int levelRunId,
+            int runtimeInstanceId,
+            int sourceEnemyRuntimeInstanceId,
+            BulletDamageContext damageContext)
+        {
+            LevelRunId = levelRunId;
+            RuntimeInstanceId = runtimeInstanceId;
+            SourceEnemyRuntimeInstanceId = sourceEnemyRuntimeInstanceId;
+            DamageContext = damageContext;
+        }
+
+        public int LevelRunId { get; }
+        public int RuntimeInstanceId { get; }
+        public int SourceEnemyRuntimeInstanceId { get; }
+        public BulletDamageContext DamageContext { get; }
+    }
+
     public readonly struct ObstacleRecycled
     {
         public ObstacleRecycled(

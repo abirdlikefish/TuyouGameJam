@@ -2,6 +2,7 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 新增并实现 ADR-064：加入范围攻击 ikun 与无击破收益篮球；第一球等待完整间隔、仅在 MovingDown 阶段周期生成，ikun 死亡后已有篮球保留；篮球沿用 WeaponProp 的一次接触 Failed 语义且不阻止胜利，运行时生成使用同步接口而非事实事件；Level_020 接入首个 ikun，正式动画与篮球美术后补 | Monster、Prop、Obstacle、Spawn、Pool、Luban、Prefab、Level、共享契约、测试 | Codex |
 | 2026-09-21 | 新增 `ImageNumberText` 与 `PF_UI_ImageNumberText`，集中序列化绑定 0～9 和冒号 11 张 Sprite，运行时复用 UGUI Image 显示纯数字或时间；Gameplay HUD 的关卡 ID、耗时、当前击杀数及 BattleResult 的耗时、击杀数改用图片数字，关卡显示直接取非负 LevelId 以保证纯数字 | UI、Gameplay Scene、Prefab | Codex |
 | 2026-09-21 | 新增 ADR-063；LevelSelect 改为 Inspector 显式绑定预放节点与 LevelId，节点可自由布局，并按已通关、仅解锁、未解锁三态显示 CompletedState/UnlockedState | LevelSelect、UI、场景、Prefab、测试 | Codex |
 | 2026-09-21 | 新增 ADR-062，启用 Android/iOS 单槽本地关卡进度：保存已完成与已解锁 LevelId，启动合并默认解锁，Victory 前同步写入版本化 JSON，并以临时文件/备份和非致命恢复处理移动端文件异常 | Save、Application、Bootstrap、共享契约、测试 | Codex |

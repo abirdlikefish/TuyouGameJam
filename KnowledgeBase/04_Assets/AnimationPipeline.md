@@ -6,7 +6,7 @@
 
 - 状态：`InProgress`（81 个 Clip、5 个 Controller、13 个 OverrideController、7 个动画 Prefab 与三类 Monster AnimationEvent 已完成绑定；当前 39 个正式 Clip 共 695 帧已按 8 FPS 导入，剩余 34 个动作素材、竖屏目标分辨率与 Player 内存验收待完成）
 - 决策：[ADR-048](../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md)、[ADR-049](../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md)、[ADR-057](../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md)
-- 不包含：运行时资源下载、Addressables、Resources 路径加载、骨骼动画、音频、VFX、WeaponProp 正式动画。
+- 不包含：运行时资源下载、Addressables、Resources 路径加载、骨骼动画、音频、VFX、WeaponProp 正式动画，以及 Ikun/篮球的正式帧动画与美术导入。
 
 ## 目录边界
 

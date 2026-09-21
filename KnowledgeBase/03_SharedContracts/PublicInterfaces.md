@@ -93,7 +93,8 @@ public enum EnemyType
 {
     Chick = 0,
     Hen = 1,
-    Rooster = 2
+    Rooster = 2,
+    Ikun = 3
 }
 
 public enum AttackType
@@ -727,9 +728,16 @@ public readonly struct PropSpawnRequest
     public float SpawnPosition { get; }
     public Vector2 WorldPosition { get; }
 }
+
+public readonly struct BasketballSpawnRequest
+{
+    public int LevelRunId { get; }
+    public int SourceEnemyRuntimeInstanceId { get; }
+    public Vector2 WorldPosition { get; }
+}
 ```
 
-`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`EnemySpawnRequest.ConfigId` 与 `PropSpawnRequest.ConfigId` 分别引用 `TbEnemy.Id`、`TbProp.Id`。三类请求的 `SpawnEntryIndex` 都是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。
+`GateSpawnRequest` 来自已校验的 `LevelConfigSnapshot.GateSpawns`，不携带 Gate ConfigId。`InitialValue` 只供 Additive 使用；`ElementType`、`MaxHp` 和 `ElementDurationSecondsPerDamage` 只供 Element 使用，未使用字段必须为中性值。`EnemySpawnRequest.ConfigId` 与 `PropSpawnRequest.ConfigId` 分别引用 `TbEnemy.Id`、`TbProp.Id`。这三类时间轴请求的 `SpawnEntryIndex` 都是对应列表内的本局来源索引，只用于诊断与事件关联，不是跨资产稳定 ID。`BasketballSpawnRequest` 由存活且仍处于接近线前的 Ikun 同步提交，不进入 LevelConfig 或 TbProp，并以来源敌人运行时 ID 供诊断关联。
 
 ## BulletManager 接口
 
@@ -775,7 +783,12 @@ public interface IEnemyManager
 ```
 
 ```csharp
-public interface IObstacleManager : IObstacleRegistry
+public interface IBasketballSpawner
+{
+    void SpawnBasketball(BasketballSpawnRequest request);
+}
+
+public interface IObstacleManager : IObstacleRegistry, IBasketballSpawner
 {
     void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
     void Spawn(GateSpawnRequest request);

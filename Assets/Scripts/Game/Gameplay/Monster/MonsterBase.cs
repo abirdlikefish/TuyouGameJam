@@ -206,6 +206,7 @@ namespace Game.Gameplay
                 AttackCollider.enabled = true;
             }
 
+            OnRuntimeInitialized();
             PrepareMoveAnimation();
         }
 
@@ -387,6 +388,7 @@ namespace Game.Gameplay
                 AttackCollider.enabled = false;
             }
 
+            OnPrepareForPool();
             army = null;
             damagedCallback = null;
             deathCallback = null;
@@ -489,6 +491,7 @@ namespace Game.Gameplay
                 return;
             }
 
+            TickBeforeApproach(deltaTime);
             var distance = config.MoveSpeed * deltaTime;
             var maximumDistance = position.y - enemyApproachY;
             var movement = Vector2.down * Mathf.Min(distance, maximumDistance);
@@ -605,5 +608,11 @@ namespace Game.Gameplay
                     $"{name}.animator controller requires Attack and Death Trigger parameters.");
             }
         }
+
+        protected virtual void OnRuntimeInitialized() { }
+
+        protected virtual void TickBeforeApproach(float deltaTime) { }
+
+        protected virtual void OnPrepareForPool() { }
     }
 }

@@ -10,7 +10,7 @@
 
 ## 玩法定位
 
-Prop 是“可被击破并触发效果的道路对象”，不等同于武器箱。道具在 `Pending` 状态被击破时触发一次配置的击破效果；效果应用完成后才发布击破事实并回收。当前 MVP 只确认了替换武器效果，未来其他效果的目录和组合规则仍处于设计待决状态。
+Prop 是可被击破的道路对象，不等同于武器箱。WeaponProp 在 `Pending` 状态被击破时应用一次武器替换；BasketballProp 被击破时没有收益，只发布事实并回收。通用效果目录和组合规则仍处于设计待决状态。
 
 ## 当前 MVP 道具
 
@@ -23,14 +23,14 @@ Prop 是“可被击破并触发效果的道路对象”，不等同于武器箱
 ## 职责
 
 - 控制道具从道路上方生成并向下移动；移动流程使用 LevelManager 传给 ObstacleManager 的 `Gate` 时间域 delta，一次更新不再读取或叠加 `Gameplay` delta。
-- 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；BodyCollider 节点必须绑定同节点 `BulletHitProxy` 并显式引用 WeaponProp 根组件。本帧移动与 Physics2D 同步完成后只对终点姿态执行一次 `OverlapCollider`，不做接触 Cast、扫掠或子步进，也不依赖自动碰撞回调。
-- WeaponProp 根节点提供 Kinematic Rigidbody2D 查询适配，使无刚体 Bullet 的 Collider Cast 能命中 Prop；该刚体不驱动移动、推挤或接触结算。
+- 使用 Prefab 上的 `BodyCollider` 参与子弹命中和 Army 接触；BodyCollider 节点必须绑定同节点 `BulletHitProxy` 并显式引用对应的 `WeaponProp` 或 `BasketballProp` 根组件。本帧移动与 Physics2D 同步完成后只对终点姿态执行一次 `OverlapCollider`，不做接触 Cast、扫掠或子步进，也不依赖自动碰撞回调。
+- Prop 根节点提供 Kinematic Rigidbody2D 查询适配，使无刚体 Bullet 的 Collider Cast 能命中 Prop；该刚体不驱动移动、推挤或接触结算。
 - 保存运行时 HP、接触状态、运行时实例 ID 和配置 ID。
 - 接收子弹伤害，并在 `Pending` 状态下 HP 首次清空时触发一次配置的击破效果。
 - 与 Army 接触时只判定一次。
 - 未击破接触时，对每个接触到的 Army 槽位造成相同伤害，然后继续向下移动离场。
 - 未击破接触时通过 `IArmyController.ApplySlotDamage` 同步结算已去重槽位，随后发布 `PropContactDamage` 事实事件。
-- 当前 MVP 击破成功时通过 `IArmyController.ApplyWeaponPickup` 同步应用武器切换，随后发布 `PropBroken` 并向 `ObstacleManager` 报告回收。
+- WeaponProp 击破成功时通过 `IArmyController.ApplyWeaponPickup` 同步应用武器切换，随后发布 `PropBroken` 并向 `ObstacleManager` 报告回收；BasketballProp 不提交 Army 命令，只发布 `BasketballBroken` 并请求回收。
 - 后续新增的击破效果必须通过明确的同步命令应用，不能依赖 `PropBroken` 监听者修改玩法状态，也不能由 Prop 直接写入 Army 私有字段。
 
 ## 击破与接触规则
@@ -49,9 +49,9 @@ Pending
 ## 配置输入
 
 - ObstacleManager 通过 `IPropConfigProvider.GetPropConfig(ConfigId)` 必得 ConfigService 已校验并复制的 `PropConfigSnapshot`，再向 WeaponProp 注入 `WeaponId`、`MaxHp`、`ContactDamage` 和 `MoveSpeed`；Prop 不持有 Luban 生成行，也不处理缺失配置恢复。
-- 当前三种武器箱只有配置和表现资源差异，共用一个 `WeaponProp` 池化根脚本和一个规范 Prefab；装备效果及运行时表现绑定由 `WeaponId` 决定，不重复配置 `PropType`。未来只有出现不同生命周期或玩法逻辑时才新增具体根类型和 Prefab。
+- 当前三种武器箱只有配置和表现资源差异，共用一个 `WeaponProp` 池化根脚本和一个规范 Prefab；装备效果及运行时表现绑定由 `WeaponId` 决定。篮球使用独立 `BasketballProp`、规范 Prefab 和类型池，生命、接触伤害和移动速度由唯一 Prefab 提供，不进入 `TbProp`。
 - 首轮表现允许统一占位 Sprite 或 DebugText 显示 WeaponId，不要求建立第二套运行时资源注册；正式武器箱外观绑定进入表现迭代后再补充，不影响玩法契约。
-- 其他击破效果进入范围前，必须先在 `DES-031` 确认效果类型、单个或组合规则、目标、叠加和配置结构；在此之前不预留通用参数字段。
+- ADR-064 只接受固定“无收益”篮球；其他击破效果进入范围前，仍须在 `DES-031` 确认效果类型、单个或组合规则、目标、叠加和配置结构。
 - 关卡出现顺序和每条生成项的 `[0,1]` 横向出生位置由 `LevelConfig` 提供；SpawnManager 解析固定 `spawnY` 上的中心点世界坐标。当前 HP、接触状态和位置不回写 Luban。
 
 ## 非职责
@@ -77,5 +77,5 @@ Pending
 - 道具接触失败后继续受到任意正伤害时 HP 最低锁在 `1`，不发布 `PropBroken`、不触发任何击破效果或伤害回收；当前 MVP 可通过 `WeaponId` 不变化并最终只从 DespawnY 离场验证。
 - Army 状态变更完成后才发布对应事实事件；增删其他事件监听者不会改变结算结果。
 - Prop 的 BodyCollider 使用 Prop Layer；同一查询返回多个子 Collider 时按运行时实例 ID 去重。
-- BodyCollider 与 `BulletHitProxy` 必须位于同一节点并显式绑定 WeaponProp；缺失或绑定错误时阻止 Gameplay Ready。
-- WeaponProp 根 Kinematic Rigidbody2D 必须符合 ADR-055 且 BodyCollider 保持 Trigger；缺失或配置错误时阻止 Gameplay Ready。
+- BodyCollider 与 `BulletHitProxy` 必须位于同一节点并显式绑定对应的 WeaponProp/BasketballProp；缺失或绑定错误时阻止 Gameplay Ready。
+- WeaponProp 与 BasketballProp 根 Kinematic Rigidbody2D 必须符合 ADR-055 且 BodyCollider 保持 Trigger；缺失或配置错误时阻止 Gameplay Ready。

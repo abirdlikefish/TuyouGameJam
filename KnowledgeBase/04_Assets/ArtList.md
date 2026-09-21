@@ -13,7 +13,9 @@
 | 小鸡敌人 | Sprite / Animator / Prefab | Move、Attack、Death；Attack 含攻击帧与结束事件，Death 末帧含回收事件；需要 `BodyCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
 | 母鸡敌人 | Sprite / Animator / Prefab | Move、Attack、Death；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
 | 公鸡敌人 | Sprite / Animator / Prefab | Move、Attack、Death；需要 `BodyCollider`、`AttackCollider` 与非负 `blockingGap` | Move/Attack Imported / Death & Events Pending |
+| ikun 敌人 | Sprite / Animator / `PF_Monster_Ikun` Prefab | 范围攻击；接近线前周期生成篮球；正式 Move、Attack、Death 帧动画后补 | Functional Prefab / Rooster Placeholder |
 | 武器箱规范 Prefab | Prefab | 唯一 `WeaponProp` 根类型，按 `WeaponId` 绑定表现 | Planned |
+| 篮球道具 | Sprite / `PF_Prop_Basketball` Prefab | 可击破、接触伤害、击破无收益；正式篮球美术后补 | Functional Prefab / WeaponProp Placeholder |
 | 子弹 | Sprite / Animator / Prefab | 唯一 `Bullet` 规范 Prefab；BulletId 0～9 各一个循环 Clip | Bullet 000～002 Imported / 003～009 Pending |
 | 命中特效 | Particle / Prefab | 子弹反馈 | Planned |
 | `PF_UI_TouchDragArea` | UI Prefab / Image | 全屏拉伸 RectTransform 定义 Gameplay 拖拽范围并承载 `TouchDragInput`；Image alpha 为 0 且启用 Raycast Target | Planned |
@@ -23,10 +25,10 @@
 - MVP 不在 Luban 表配置 `PrefabKey`。池化规范 Prefab 由对应 Manager 的 Inspector 引用绑定；Army 不入池，由 GameplaySceneEntry 的序列化 ArmyPrefabBinding 按 ArmyId 选择。Sprite、Animator、阵型槽位和发射点通过 Unity Inspector 绑定。MVP 完全无声音，不要求 AudioClip。
 - 正式动画按 [AnimationPipeline](AnimationPipeline.md) 导入：原始导出包保留在 `Reference/AnimationSource`，Unity 只导入 `Assets/Art/Sprites` 中的最终透明帧；Clip/Controller 放入 `Assets/Animations`，不使用 Resources、StreamingAssets 或运行时路径加载。
 - 重复导入通过 `Tools/Game Jam/Sequence Animation Builder` 先扫描再应用；当前已同步 12 个正式 Clip、554 帧，剩余动作仍使用空轨道。
-- `ChickMonster`、`HenMonster`、`RoosterMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 各自只对应一个规范 Prefab；同一具体根类型不能绑定第二个 Prefab。
+- `ChickMonster`、`HenMonster`、`RoosterMonster`、`IkunMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp`、`BasketballProp` 和 `Bullet` 各自只对应一个规范 Prefab；同一具体根类型不能绑定第二个 Prefab。
 - Army 保持唯一 `PF_Army_000`，通过序列化的 WeaponId→AnimatorOverrideController 映射选择十套动作并同步到全部槽位。Bullet 保持唯一 `PF_Bullet` 并按 BulletId 选择循环状态；ElementGate 保持唯一 `PF_Gate_Element` 并按 ElementType 选择循环状态。
 - Gate Prefab 不保存逐门初始数字、元素类型或 MaxHp，也不引用 Gate 配置表。`AdditiveGate` 序列化统一移动速度；`ElementGate` 序列化统一移动速度和接触伤害，逐门参数由 `GateSpawnRequest` 注入。
-- 敌人按 `EnemyType` 选择三个具体类型池；当前三种武器箱共用 `WeaponProp` 类型池并按 `WeaponId` 选择表现，MVP 子弹共用 `Bullet` 类型池并按 `BulletId` 选择数值与表现。
+- 敌人按 `EnemyType` 选择四个具体类型池；当前三种武器箱共用 `WeaponProp` 类型池并按 `WeaponId` 选择表现，篮球使用独立 `BasketballProp` 类型池，MVP 子弹共用 `Bullet` 类型池并按 `BulletId` 选择数值与表现。
 - 资源注册表键仍使用大小写敏感的 ASCII `类别/身份` 格式且不使用绝对路径或 Luban 资源键，但不作为对象池身份或 PoolService 的 Prefab 选择入口。
 - 进入 Gameplay 前验证本关使用的资源绑定、Collider2D 和 Layer；缺失时报告配置或资源来源，不静默创建替代对象。
 - `PF_Road_Default` 只提供 SpriteRenderer/Transform 和 RoadView，不参与 PoolService，也不设置玩法 Collider；道路四边以 LevelConfig 的 `roadWidth`、`roadHeight` 派生值为权威。
@@ -44,6 +46,7 @@
 | EnemyType Chick（动画技术身份 Normal） | Move、Attack、Death | Move |
 | EnemyType Hen（动画技术身份 Elite） | Move、Attack、Death | Move |
 | EnemyType Rooster（动画技术身份 Boss） | Move、Attack、Death | Move |
+| EnemyType Ikun | Move、Attack、Death（后续正式素材；当前复用 Rooster 占位） | Move |
 | BulletId 0～9 | 各一个 Loop | 是 |
 | AdditiveGate | Loop | 是 |
 | ElementType Fire/Ice/Lightning | 各一个 Loop | 是 |

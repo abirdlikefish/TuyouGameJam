@@ -93,4 +93,21 @@ namespace Game.Contracts
         public float SpawnPosition { get; }
         public Vector2 WorldPosition { get; }
     }
+
+    public readonly struct BasketballSpawnRequest
+    {
+        public BasketballSpawnRequest(
+            int levelRunId,
+            int sourceEnemyRuntimeInstanceId,
+            Vector2 worldPosition)
+        {
+            LevelRunId = levelRunId;
+            SourceEnemyRuntimeInstanceId = sourceEnemyRuntimeInstanceId;
+            WorldPosition = worldPosition;
+        }
+
+        public int LevelRunId { get; }
+        public int SourceEnemyRuntimeInstanceId { get; }
+        public Vector2 WorldPosition { get; }
+    }
 }

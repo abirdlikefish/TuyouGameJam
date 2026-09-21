@@ -139,10 +139,19 @@ PF_Monster_Rooster [RoosterMonster；Animator；Kinematic Rigidbody2D]
 ├── FireEffectRoot [默认关闭；后续特效挂点]
 ├── IceEffectRoot [默认关闭；后续特效挂点]
 └── LightningEffectRoot [默认关闭；后续特效挂点]
+
+PF_Monster_Ikun [IkunMonster；Animator；Kinematic Rigidbody2D]
+├── Visual [SpriteRenderer]
+├── BodyCollider [Collider2D；EnemyBody Layer；BulletHitProxy]
+├── AttackCollider [Collider2D；EnemyAttack Layer]
+├── BasketballSpawnPoint [直属生成点]
+├── FireEffectRoot [默认关闭；后续特效挂点]
+├── IceEffectRoot [默认关闭；后续特效挂点]
+└── LightningEffectRoot [默认关闭；后续特效挂点]
 ```
 
 - 三个根 GameObject 都同时挂载具体 Monster 根脚本、Animator 和 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、视觉引用、Animator 和有限且非负的 `blockingGap`；每个 BodyCollider 节点绑定同节点 `BulletHitProxy` 并显式引用根 Monster。
-- Hen/Rooster 另外绑定 `attackCollider`；Chick 不绑定 AttackCollider。
+- Hen/Rooster/Ikun 另外绑定 `attackCollider`；Chick 不绑定 AttackCollider。Ikun 还必须绑定直属 `basketballSpawnPoint` 与正数生成间隔。
 - 三种 Prefab 均不创建 TargetSensor。
 - 三种 Prefab 根脚本都显式绑定三个互不重复的直属元素效果子节点。节点自身默认关闭且不带玩法组件；后续具体表现只能挂在对应节点内部，不替换根脚本引用。
 - `blockingGap` 只来自当前规范 Prefab，不进入 Luban 或 LevelConfig。
@@ -180,9 +189,14 @@ PF_Prop_Weapon [WeaponProp；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
 └── DebugText [TMP_Text；可选占位表现]
+
+PF_Prop_Basketball [BasketballProp；Kinematic Rigidbody2D]
+├── Visual [SpriteRenderer 或占位视觉]
+├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
+└── DebugText [TMP_Text；可选占位表现]
 ```
 
-- WeaponProp 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy` 和视觉引用。
+- WeaponProp 与 BasketballProp 根节点都提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy` 和视觉引用。BasketballProp 另外提供正数生命、正数接触伤害和非负有限移动速度。
 
 上述六个子弹目标根节点的 Rigidbody2D 固定为 Kinematic、Simulated、关闭 Full Kinematic Contacts、Gravity Scale 0、Discrete、无插值并冻结旋转。BodyCollider 继续为 Trigger，自动碰撞矩阵保持关闭；适配刚体不驱动 Transform、推挤或玩法结算。Bullet Prefab 不挂 Rigidbody2D。
 - 首轮可以使用 DebugText 显示 WeaponId，或使用 Inspector 绑定的简单占位 Sprite；二者都不参与效果选择。

@@ -14,6 +14,7 @@ namespace Game.Gameplay
         [SerializeField] private HenMonster henPrefab;
         [FormerlySerializedAs("bossPrefab")]
         [SerializeField] private RoosterMonster roosterPrefab;
+        [SerializeField] private IkunMonster ikunPrefab;
         [SerializeField] private LayerMask enemyBodyLayers;
         [SerializeField] private LayerMask armySlotLayers;
 
@@ -30,7 +31,9 @@ namespace Game.Gameplay
         private IComponentPool<ChickMonster> chickPool;
         private IComponentPool<HenMonster> henPool;
         private IComponentPool<RoosterMonster> roosterPool;
+        private IComponentPool<IkunMonster> ikunPool;
         private IEnemyConfigProvider configProvider;
+        private IBasketballSpawner basketballSpawner;
         private IArmyController army;
         private IEventBus eventBus;
         private int levelRunId;
@@ -44,7 +47,8 @@ namespace Game.Gameplay
             IPoolService poolService,
             IEnemyConfigProvider enemyConfigProvider,
             IArmyController armyController,
-            IEventBus initializedEventBus)
+            IEventBus initializedEventBus,
+            IBasketballSpawner initializedBasketballSpawner)
         {
             if (poolService == null)
             {
@@ -54,6 +58,8 @@ namespace Game.Gameplay
             configProvider = enemyConfigProvider ?? throw new ArgumentNullException(nameof(enemyConfigProvider));
             army = armyController ?? throw new ArgumentNullException(nameof(armyController));
             eventBus = initializedEventBus ?? throw new ArgumentNullException(nameof(initializedEventBus));
+            basketballSpawner = initializedBasketballSpawner ??
+                                throw new ArgumentNullException(nameof(initializedBasketballSpawner));
             if (initialized)
             {
                 throw new InvalidOperationException("EnemyManager is already initialized.");
@@ -67,14 +73,15 @@ namespace Game.Gameplay
             chickPool = poolService.GetOrCreatePool(chickPrefab);
             henPool = poolService.GetOrCreatePool(henPrefab);
             roosterPool = poolService.GetOrCreatePool(roosterPrefab);
+            ikunPool = poolService.GetOrCreatePool(ikunPrefab);
             initialized = true;
         }
 
         public bool TryValidate(out string error)
         {
-            if (chickPrefab == null || henPrefab == null || roosterPrefab == null)
+            if (chickPrefab == null || henPrefab == null || roosterPrefab == null || ikunPrefab == null)
             {
-                error = $"{name} requires Chick, Hen and Rooster prefab bindings.";
+                error = $"{name} requires Chick, Hen, Rooster and Ikun prefab bindings.";
                 return false;
             }
 
@@ -92,7 +99,8 @@ namespace Game.Gameplay
 
             return chickPrefab.TryValidate(out error) &&
                    henPrefab.TryValidate(out error) &&
-                   roosterPrefab.TryValidate(out error);
+                   roosterPrefab.TryValidate(out error) &&
+                   ikunPrefab.TryValidate(out error);
         }
 
         public void StartRun(int startedLevelRunId, RoadLayoutSnapshot roadLayout)
@@ -136,6 +144,11 @@ namespace Game.Gameplay
             var config = configProvider.GetEnemyConfig(request.ConfigId);
             var monster = Rent(config.EnemyType);
             var runtimeId = nextRuntimeInstanceId++;
+            if (monster is IkunMonster ikun)
+            {
+                ikun.ConfigureBasketballSpawner(OnBasketballSpawnRequested);
+            }
+
             monster.InitializeRuntime(
                 request,
                 config,
@@ -387,6 +400,17 @@ namespace Game.Gameplay
             }
         }
 
+        private void OnBasketballSpawnRequested(IkunMonster ikun, Vector2 worldPosition)
+        {
+            if (!IsOwnedCurrentMonster(ikun) || !ikun.IsAlive || !IsFinite(worldPosition))
+            {
+                return;
+            }
+
+            basketballSpawner.SpawnBasketball(
+                new BasketballSpawnRequest(levelRunId, ikun.RuntimeInstanceId, worldPosition));
+        }
+
         private bool IsOwnedCurrentMonster(MonsterBase monster)
         {
             return monster != null && running && monster.LevelRunId == levelRunId &&
@@ -506,6 +530,8 @@ namespace Game.Gameplay
                     return henPool.RentInactive();
                 case EnemyType.Rooster:
                     return roosterPool.RentInactive();
+                case EnemyType.Ikun:
+                    return ikunPool.RentInactive();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(enemyType));
             }
@@ -525,6 +551,10 @@ namespace Game.Gameplay
             else if (monster is RoosterMonster rooster)
             {
                 roosterPool.Return(rooster);
+            }
+            else if (monster is IkunMonster ikun)
+            {
+                ikunPool.Return(ikun);
             }
             else
             {

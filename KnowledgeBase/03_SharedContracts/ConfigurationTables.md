@@ -40,13 +40,13 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 初始字段：`Id`、`EnemyType`、`MaxHp`、`AttackPower`、`MoveSpeed`、`AttackStartRange`、`AttackCooldown`。
 
-首版 `EnemyType` 为 `Chick`、`Hen`、`Rooster`，固定值分别为 `0`、`1`、`2`。`MaxHp`、`AttackPower` 必须大于 `0`；`MoveSpeed` 必须有限且大于等于 `0`，单位为世界单位/秒；`AttackStartRange`、`AttackCooldown` 必须有限且大于等于 `0`，冷却单位为秒。攻击类型由敌人类型固定派生：小鸡敌人为 `SingleTarget`，母鸡和公鸡为 `Area`，不重复配置 `AttackType`。`AttackStartRange` 使用怪物与锁定槽位目标位置的 XY 欧氏距离，距离为 `0` 的重合状态同样允许开始攻击，不使用 `TargetSensor`。`AttackCooldown` 表示两次攻击开始之间的最短时间，从每次攻击开始时递减；动画结束时若已到期，可在下一次 EnemyManager Tick 重新验证后起攻。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定 `ChickMonster`、`HenMonster`、`RoosterMonster` 三个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。敌人间阻挡安全间距由各规范 Prefab 根脚本的 `blockingGap` 提供，不加入 `TbEnemy` 或 LevelConfig。
+首版 `EnemyType` 为 `Chick`、`Hen`、`Rooster`、`Ikun`，固定值分别为 `0`、`1`、`2`、`3`。`MaxHp`、`AttackPower` 必须大于 `0`；`MoveSpeed` 必须有限且大于等于 `0`，单位为世界单位/秒；`AttackStartRange`、`AttackCooldown` 必须有限且大于等于 `0`，冷却单位为秒。攻击类型由敌人类型固定派生：小鸡敌人为 `SingleTarget`，母鸡、公鸡和 ikun 为 `Area`，不重复配置 `AttackType`。`AttackStartRange` 使用怪物与锁定槽位目标位置的 XY 欧氏距离，距离为 `0` 的重合状态同样允许开始攻击，不使用 `TargetSensor`。`AttackCooldown` 表示两次攻击开始之间的最短时间，从每次攻击开始时递减；动画结束时若已到期，可在下一次 EnemyManager Tick 重新验证后起攻。道路接近线由 `LevelConfig` 的关卡空间配置提供。首版不配置 `ContactDamage`，敌人到达道路偏下接近线后向军队接近，不继续向底部移动。EnemyManager 通过 Inspector 分别绑定四个具体根类型的规范 Prefab，按 `EnemyType` 选择类型池；Prefab 与池身份不写入 Luban。敌人间阻挡安全间距由各规范 Prefab 根脚本的 `blockingGap` 提供。ikun 的唯一 Prefab 另外提供篮球生成间隔与生成点；这些类型专属参数不加入 `TbEnemy` 或 LevelConfig，见 ADR-064。
 
 ### `TbProp`
 
 初始字段：`Id`、`WeaponId`、`MaxHp`、`ContactDamage`、`MoveSpeed`。
 
-当前 MVP 的道具均为武器箱，其装备效果和表现由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱共用一个 `WeaponProp` 根类型、规范 Prefab 和类型池，ObstacleManager 通过 Inspector 绑定 Prefab，初始化时按 `WeaponId` 绑定表现；不同武器必须使用不同的 `WeaponId`。该字段集只描述当前 MVP；Prop 的领域职责允许未来配置其他击破效果，但在 DES-031 定案前不预留通用效果字段，见 ADR-022。
+`TbProp` 当前只描述武器箱，其装备效果和表现由 `WeaponId` 确定，不重复配置 `PropType`。弹弓箱、弓箭箱和法杖箱共用一个 `WeaponProp` 根类型、规范 Prefab 和类型池，ObstacleManager 通过 Inspector 绑定 Prefab，初始化时按 `WeaponId` 绑定表现；不同武器必须使用不同的 `WeaponId`。ADR-064 的唯一篮球使用 `BasketballProp` 规范 Prefab上的固定参数，不占用 `TbProp` 行，也不伪造 WeaponId。通用效果目录和数据驱动结构仍保持待决。
 
 每条 `TbProp` 必须具有有效且非负的 `WeaponId`、`MaxHp > 0`、`ContactDamage > 0`，以及有限且大于等于 `0`、单位为世界单位/秒的 `MoveSpeed`。
 

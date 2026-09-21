@@ -114,16 +114,17 @@ namespace Game.Composition
                     bulletManager,
                     dependencies.EventBus);
                 inputAdapter.Initialize(armyInstance);
-                enemyManager.Initialize(
-                    dependencies.PoolService,
-                    dependencies.ConfigService,
-                    armyInstance,
-                    dependencies.EventBus);
                 obstacleManager.Initialize(
                     dependencies.PoolService,
                     dependencies.ConfigService,
                     armyInstance,
                     dependencies.EventBus);
+                enemyManager.Initialize(
+                    dependencies.PoolService,
+                    dependencies.ConfigService,
+                    armyInstance,
+                    dependencies.EventBus,
+                    obstacleManager);
                 spawnManager.Initialize(enemyManager, obstacleManager);
                 levelManager.Initialize(
                     request.LevelConfig,

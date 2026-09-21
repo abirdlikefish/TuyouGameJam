@@ -102,6 +102,8 @@
 - [ ] 门只对 Army 进行一次接触判定；未接触门可以直接从道路下方离场。
 - [ ] Gate/Prop 先通过 `IArmyController` 完成状态变更再发布事实事件；增删 UI 或 VFX 监听者不会改变结算结果。
 - [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。配置保证获得法杖后不再生成其他武器箱，元素法杖 3～9 不作为武器箱直接掉落。
+- [ ] BasketballProp 接触前击破时不改变武器、人数或元素；接触时对当次去重后的每个有效槽位伤害一次并进入 Failed，后续命中锁血 1 且不能击破。
+- [ ] Ikun 出生后等待完整生成间隔，仅在 MovingDown 阶段周期生成篮球；到达 EnemyApproachY 或死亡后停止，已有篮球继续存在且不阻止胜利。
 - [ ] 道具未击破接触时，对每个接触槽位造成相同伤害并继续向下离场。
 - [ ] 怪物从固定出生横线上的配置位置向下移动，到达接近线后向最近的有效士兵槽位移动；初始横向位置不限制后续移动。
 - [ ] 初始总人数为 1，并按配置创建对应的上场槽位。
@@ -129,18 +131,18 @@
 - [ ] 大帧每槽最多产生一颗周期弹且保留跨周期余量；换武器回调中新生成的子弹不在 BulletManager 当前 Tick 内移动或连锁命中。
 - [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
 - [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
-- [ ] 三类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。
+- [ ] 四类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。
 - [ ] 子弹、敌人 BodyCollider、Hen/Rooster AttackCollider、Army 槽位、Gate 和 Prop 的 Prefab 均配置职责明确的 Collider2D 和 Layer。
-- [ ] Chick/Hen/Rooster、Additive/Element Gate 和 WeaponProp 根节点均提供 ADR-055 的 Kinematic Rigidbody2D 查询适配：Simulated、关闭 Full Kinematic Contacts、零重力、Discrete、无插值并冻结旋转；Bullet 保持无 Rigidbody2D，任一目标适配缺失或误配都会阻止 Gameplay Ready。
+- [ ] Chick/Hen/Rooster/Ikun、Additive/Element Gate、WeaponProp 和 BasketballProp 根节点均提供 ADR-055 的 Kinematic Rigidbody2D 查询适配：Simulated、关闭 Full Kinematic Contacts、零重力、Discrete、无插值并冻结旋转；Bullet 保持无 Rigidbody2D，任一目标适配缺失或误配都会阻止 Gameplay Ready。
 - [ ] 子弹沿上一位置到期望位置执行 Collider Cast，在 MVP 约定速度、Collider 尺寸和测试帧率范围内稳定命中且一次只结算一次；不测试双方任意高速相对运动或严重掉帧下的绝对不穿透。
 - [ ] 母鸡/公鸡的 AttackCollider 只在攻击判定帧执行一次显式重叠查询，每个 Army 槽位最多受击一次。
-- [ ] 三种敌人的非循环 Attack Clip 在命中关键帧恰好调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；AnimationEvent 不直接修改 Army，实际伤害只在 `EnemyManager.ResolveAttacks` 中发生。
+- [ ] 四种敌人的非循环 Attack Clip 在命中关键帧恰好调用一次 `OnAttackFrame()`，末帧调用一次 `OnAttackAnimationFinished()`；AnimationEvent 不直接修改 Army，实际伤害只在 `EnemyManager.ResolveAttacks` 中发生；Ikun 正式素材加入前复用 Rooster 占位事件。
 - [ ] AttackCooldown 从每次攻击开始时刻计算且在攻击动画期间继续递减；动画结束时若已到期，下一次 EnemyManager.TickMovement 重新验证成功后立即起攻，不由动画回调直接递归起攻。
 - [ ] 三种非循环 Death Clip 末帧恰好调用一次 `OnDeathAnimationFinished()`；它只登记回收，重复/过期回调不重复计数、发布 MonsterKilled 或归还对象池，StopRun 不等待动画。
 - [ ] 同一 AttackSequenceId 的重复关键帧事件只登记一次；事件前目标失效、事件后但结算前死亡、StopRun 或回池都会使待结算请求无效。
 - [ ] AnimationEvent 在当帧 ResolveAttacks 之后触发时，请求安全保留到下一次 ResolveAttacks，且不会因为跨帧而重复结算。
 - [ ] Gate/Prop 在移动并同步 Transform 后只以终点姿态执行一次 `OverlapCollider`；不执行接触 Cast/扫掠，接触状态和运行时 ID 保证一次性结算。
-- [ ] 三种敌人 Prefab 各自提供有限且非负的 `blockingGap`；BodyCollider Cast 只查询上一同步姿态，后方敌人在命中前方敌人时截断位移。在 MVP 参数下验证明显穿透和重叠风险可接受，但不要求同帧移动后的绝对不重叠或事后分离。
+- [ ] 四种敌人 Prefab 各自提供有限且非负的 `blockingGap`；BodyCollider Cast 只查询上一同步姿态，后方敌人在命中前方敌人时截断位移。在 MVP 参数下验证明显穿透和重叠风险可接受，但不要求同帧移动后的绝对不重叠或事后分离。
 - [ ] Monster 移动不查询 `ArmySlot`，Army 横向移动不查询 `EnemyBody`；士兵与敌人部分或完全重合时不发生推挤、接触伤害或位移修正。
 - [ ] 士兵与敌人重合且目标仍有效时，小鸡敌人可以对锁定槽位结算伤害，母鸡/公鸡可以通过 `AttackCollider` 正常命中范围内槽位。
 - [ ] 敌人进入 Dead 后退出受击和阻挡查询；死亡动画不会阻塞后方敌人。
@@ -204,10 +206,10 @@
 - [ ] GameplaySceneEntry 的序列化 ArmyPrefabBinding 包含唯一 ArmyId=0；Prefab 根为 ArmyController，槽位数组非空、无空项或重复引用，SlotCapacity 准确等于数组长度。
 - [ ] MVP Luban 表不要求 `PrefabKey`、`FormationKey`、`SoldierPrefabKey`、`PropType`、`AttackType`、代表人数缩放字段或 `CollisionBehavior`。
 - [ ] 缺少必需的 Unity Prefab、Collider2D、阵型槽位或发射点绑定时阻止进入 Gameplay，并报告稳定来源。
-- [ ] `ChickMonster`、`HenMonster`、`RoosterMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
+- [ ] `ChickMonster`、`HenMonster`、`RoosterMonster`、`IkunMonster`、`AdditiveGate`、`ElementGate`、`WeaponProp`、`BasketballProp` 和 `Bullet` 的具体根类型与规范 Prefab 一一匹配；同类型不同 Prefab 注册被拒绝。
 - [ ] AdditiveGate Prefab 只提供所有加法门共用的速度；ElementGate Prefab 提供所有元素门共用的速度与接触伤害。逐门初始数字、元素类型和 MaxHp 不重复配置在 Prefab。
 - [ ] AdditiveGate 和 ElementGate 各自只用一个显式绑定的 TMP_Text 显示已结算状态；缺失文本引用时阻止 Gameplay Ready，首轮不依赖 HUD 或最终 Gate 美术。
-- [ ] Chick/Hen/Rooster 的阻挡间距只来自各自 Prefab 的 `blockingGap`，不在 TbEnemy 或 LevelConfig 保存第二份数值。
+- [ ] Chick/Hen/Rooster/Ikun 的阻挡间距只来自各自 Prefab 的 `blockingGap`，不在 TbEnemy 或 LevelConfig 保存第二份数值。
 - [ ] 三种武器箱共用 `WeaponProp` 规范 Prefab 并按 `WeaponId` 绑定正确表现；MVP 子弹共用 `Bullet` 规范 Prefab 并按 `BulletId` 取得正确数值和表现。
 - [ ] 修改 Luban 数据并重新生成后，Unity 使用新数值且未编辑生成代码。
 - [ ] 三类生成列表的时间、数量、配置 ID 和 `[0,1]` 横向出生位置与 `LevelConfig` 一致；`0`、`1` 和中间值正确映射到固定 `spawnY` 横线。

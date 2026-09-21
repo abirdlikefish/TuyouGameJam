@@ -10,6 +10,7 @@ namespace Game.Gameplay
         [SerializeField] private AdditiveGate additiveGatePrefab;
         [SerializeField] private ElementGate elementGatePrefab;
         [SerializeField] private WeaponProp weaponPropPrefab;
+        [SerializeField] private BasketballProp basketballPropPrefab;
         [SerializeField] private LayerMask armySlotLayers;
 
         private readonly List<IRoadObstacleRuntime> activeObjects =
@@ -22,6 +23,7 @@ namespace Game.Gameplay
         private IComponentPool<AdditiveGate> additiveGatePool;
         private IComponentPool<ElementGate> elementGatePool;
         private IComponentPool<WeaponProp> weaponPropPool;
+        private IComponentPool<BasketballProp> basketballPropPool;
         private IPropConfigProvider propConfigProvider;
         private IArmyController army;
         private IEventBus eventBus;
@@ -59,14 +61,16 @@ namespace Game.Gameplay
             additiveGatePool = poolService.GetOrCreatePool(additiveGatePrefab);
             elementGatePool = poolService.GetOrCreatePool(elementGatePrefab);
             weaponPropPool = poolService.GetOrCreatePool(weaponPropPrefab);
+            basketballPropPool = poolService.GetOrCreatePool(basketballPropPrefab);
             initialized = true;
         }
 
         public bool TryValidate(out string error)
         {
-            if (additiveGatePrefab == null || elementGatePrefab == null || weaponPropPrefab == null)
+            if (additiveGatePrefab == null || elementGatePrefab == null || weaponPropPrefab == null ||
+                basketballPropPrefab == null)
             {
-                error = $"{name} requires AdditiveGate, ElementGate and WeaponProp prefab bindings.";
+                error = $"{name} requires AdditiveGate, ElementGate, WeaponProp and BasketballProp prefab bindings.";
                 return false;
             }
 
@@ -78,7 +82,8 @@ namespace Game.Gameplay
 
             return additiveGatePrefab.TryValidate(out error) &&
                    elementGatePrefab.TryValidate(out error) &&
-                   weaponPropPrefab.TryValidate(out error);
+                   weaponPropPrefab.TryValidate(out error) &&
+                   basketballPropPrefab.TryValidate(out error);
         }
 
         public void StartRun(int startedLevelRunId, RoadLayoutSnapshot roadLayout)
@@ -185,6 +190,39 @@ namespace Game.Gameplay
                     runtimeId,
                     config.Id,
                     config.WeaponId,
+                    request.WorldPosition));
+        }
+
+        public void SpawnBasketball(BasketballSpawnRequest request)
+        {
+            if (!IsCurrentRun(request.LevelRunId))
+            {
+                return;
+            }
+
+            if (request.SourceEnemyRuntimeInstanceId < 0 || !IsFinite(request.WorldPosition))
+            {
+                throw new ArgumentException(
+                    "Basketball spawn request contains invalid values.",
+                    nameof(request));
+            }
+
+            var runtimeId = nextRuntimeInstanceId++;
+            var basketball = basketballPropPool.RentInactive();
+            basketball.InitializeRuntime(
+                request,
+                runtimeId,
+                army,
+                eventBus,
+                OnRecycleRequested,
+                transform);
+            activeObjects.Add(basketball);
+            basketball.gameObject.SetActive(true);
+            eventBus.Publish(
+                new BasketballSpawned(
+                    levelRunId,
+                    runtimeId,
+                    request.SourceEnemyRuntimeInstanceId,
                     request.WorldPosition));
         }
 
@@ -393,6 +431,10 @@ namespace Game.Gameplay
             else if (roadObject is WeaponProp prop)
             {
                 weaponPropPool.Return(prop);
+            }
+            else if (roadObject is BasketballProp basketball)
+            {
+                basketballPropPool.Return(basketball);
             }
             else
             {

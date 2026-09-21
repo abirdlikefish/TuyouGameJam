@@ -90,7 +90,7 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 - Animator Attack Clip 的命中关键帧只登记当前 AttackSequenceId 的攻击请求；`AttackCollider` 只在 EnemyManager.ResolveAttacks 消费该请求时用于一次显式重叠查询。同一攻击以攻击序号和 `SlotIndex` 去重。Collider 可以保持启用作为查询形状，但自动碰撞矩阵关闭，不通过启停 Collider 决定攻击窗口。
 - Gate/Prop 在本帧位移已经应用且 `Physics2D.SyncTransforms()` 完成后，只以终点姿态执行一次 `BodyCollider.OverlapCollider`。不对移动路径执行 Cast、扫掠或子步进；合理速度、Collider 尺寸与目标帧率是 MVP 的防穿透约束。
 - Gate/Prop 只对当前查询命中的有效 Army 槽位结算。多个槽位接触同一对象时，整体成功效果只应用一次，逐槽伤害按槽位索引去重。
-- Gate/Prop 接触失败后继续保留用于子弹受击表现的 BodyCollider，但接触状态机必须拒绝后续成功奖励。后续命中正常消费子弹，HP 按 `Max(1, CurrentHp - Damage)` 锁在至少 `1`：元素门不再累计可兑换伤害，Prop 不发布 `PropBroken`；两者只继续移动至离场或由 StopRun 清理。
+- Gate/Prop 接触失败后继续保留用于子弹受击表现的 BodyCollider，但接触状态机必须拒绝后续成功奖励。后续命中正常消费子弹，HP 按 `Max(1, CurrentHp - Damage)` 锁在至少 `1`：元素门不再累计可兑换伤害，WeaponProp 不发布 `PropBroken`，BasketballProp 不发布 `BasketballBroken`；对象只继续移动至离场或由 StopRun 清理。
 - MVP 不实现暂停或局部时停。未来启用后需要重新确认停止对象的 Collider2D 是否仍可被其他活动对象查询，以及暂停与受击判定的关系。
 
 ## Layer 约束

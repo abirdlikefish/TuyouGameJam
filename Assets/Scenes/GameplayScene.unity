@@ -169,6 +169,7 @@ MonoBehaviour:
   chickPrefab: {fileID: 1309610768443824540, guid: 13ba819940c574c4db65d014273cc25b, type: 3}
   henPrefab: {fileID: 1212212309880875452, guid: e441496c41c7a624aad71de69d964a74, type: 3}
   roosterPrefab: {fileID: 8952765051212216555, guid: f621d055ce9ce5d429c7bed30a425472, type: 3}
+  ikunPrefab: {fileID: 3143454609517030653, guid: c12cd9fa172fb6b468f38d1949e64c2a, type: 3}
   enemyBodyLayers:
     serializedVersion: 2
     m_Bits: 128
@@ -2164,6 +2165,7 @@ MonoBehaviour:
   additiveGatePrefab: {fileID: 8281056331024875097, guid: f7c630cd1e7b9024c824d1367d724d7b, type: 3}
   elementGatePrefab: {fileID: 673872333606065038, guid: 1be8a4ecd6509f74d9c229e81934f8a3, type: 3}
   weaponPropPrefab: {fileID: 2992519029271272633, guid: d05971eaaf492a847b9f718fec6d3dfe, type: 3}
+  basketballPropPrefab: {fileID: 9201479098454200500, guid: f75829a987d62ff47b1bb989eb33e508, type: 3}
   armySlotLayers:
     serializedVersion: 2
     m_Bits: 512

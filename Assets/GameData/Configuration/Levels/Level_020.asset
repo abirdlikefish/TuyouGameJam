@@ -26,6 +26,9 @@ MonoBehaviour:
   - spawnTime: 35.9
     spawnPosition: 1
     configId: 0
+  - spawnTime: 42.5
+    spawnPosition: 0.5
+    configId: 3
   gateSpawns:
   - spawnTime: 2
     spawnPosition: 0.279
@@ -43,4 +46,3 @@ MonoBehaviour:
   - spawnTime: 10.22
     spawnPosition: 0.464
     configId: 1
-

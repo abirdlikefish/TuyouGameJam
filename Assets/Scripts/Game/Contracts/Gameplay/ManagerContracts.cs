@@ -56,7 +56,12 @@ namespace Game.Contracts
         void StopRun(int levelRunId);
     }
 
-    public interface IObstacleManager : IObstacleRegistry
+    public interface IBasketballSpawner
+    {
+        void SpawnBasketball(BasketballSpawnRequest request);
+    }
+
+    public interface IObstacleManager : IObstacleRegistry, IBasketballSpawner
     {
         void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
         void Spawn(GateSpawnRequest request);

@@ -854,6 +854,8 @@ namespace Game.Foundation
                     return RuntimeEnemyType.Hen;
                 case cfg.game.EnemyType.Rooster:
                     return RuntimeEnemyType.Rooster;
+                case cfg.game.EnemyType.Ikun:
+                    return RuntimeEnemyType.Ikun;
                 default:
                     ThrowInvalidTableValue($"{source}.EnemyType", $"EnemyType value {(int)value} is not supported.");
                     return default;
