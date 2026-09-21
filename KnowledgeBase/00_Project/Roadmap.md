@@ -27,7 +27,7 @@
 - [ ] 敌人 BodyCollider 基于上一同步姿态 Cast；在 MVP 速度、尺寸和帧率下减少穿透并形成排队，不验收同帧绝对不重叠
 - [ ] 原点居中的 `roadWidth`/`roadHeight`、无道路玩法 Collider、可配置 Army 出生坐标、出生/接近/离场线和归一化横向出生位置
 - [ ] LevelManager 同步驱动生成、移动、子弹、道路接触、敌人攻击、回收和终局的固定帧阶段
-- [ ] 按 ADR-048 导入 Army、Monster、Bullet 和 Gate 序列帧并完成 Animator/Prefab 预绑定；Gate 保留单个 TMP 调试文本，首轮不建设 HUD、胜负面板或 VFX
+- [ ] 按 ADR-048 导入 Army、Monster、Bullet 和 Gate 序列帧并完成 Animator/Prefab 预绑定；Gate 保留单个 TMP 调试文本；HUD/胜负面板功能后续已由 ADR-058 追加，VFX 仍延后
 
 ## 阶段 2：关卡化
 
@@ -40,7 +40,7 @@
 ## 阶段 3：表现和性能
 
 - [ ] 三套 WeaponId Army 动画、三类 Monster Move/Attack/Death、三个 BulletId 循环动画及四类 Gate 循环动画完成目标平台内存与多实例播放验证
-- [ ] HUD、胜负面板与 UI 完整反馈
+- [ ] HUD、胜负面板最终样式与 UI 完整反馈（功能性 HUD、退出确认和结算流程已按 ADR-058 实现）
 - [ ] 粒子和命中特效
 - [ ] 在目标设备实测子弹、怪物和特效类型池，并按数据决定是否增加预热、容量上限或溢出策略
 - [ ] 多分辨率和移动设备验证

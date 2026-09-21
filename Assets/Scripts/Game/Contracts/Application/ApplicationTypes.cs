@@ -6,7 +6,8 @@ namespace Game.Contracts
         MainMenu = 1,
         LevelSelect = 2,
         GameplayLoading = 3,
-        Gameplay = 4
+        Gameplay = 4,
+        GameplayResult = 5
     }
 
     public enum AppSceneId

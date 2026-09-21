@@ -150,6 +150,18 @@ namespace Game.Foundation
             return true;
         }
 
+        public bool TryReturnToLevelSelect()
+        {
+            if (disposed || !started || pendingScene.IsValid ||
+                (state != AppFlowState.Gameplay && state != AppFlowState.GameplayResult))
+            {
+                return false;
+            }
+
+            RequestScene(AppSceneId.LevelSelect, 0, 0, null);
+            return true;
+        }
+
         public void CompleteGameplay(LevelCompletion completion)
         {
             if (disposed || state != AppFlowState.Gameplay || gameplayCompleted ||
@@ -168,10 +180,12 @@ namespace Game.Foundation
                     unlockedLevelIds.Add(unlockedCopy[index]);
                 }
 
+                ChangeState(AppFlowState.GameplayResult);
                 eventBus.Publish(new Victory(completion.LevelId, completion.LevelRunId, unlockedCopy));
             }
             else
             {
+                ChangeState(AppFlowState.GameplayResult);
                 eventBus.Publish(
                     new GameOver(
                         completion.LevelId,
@@ -179,7 +193,6 @@ namespace Game.Foundation
                         GameOverReason.ArmyReachedZero));
             }
 
-            RequestScene(AppSceneId.LevelSelect, 0, 0, null);
         }
 
         public void Dispose()

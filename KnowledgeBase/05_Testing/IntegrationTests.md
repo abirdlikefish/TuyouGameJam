@@ -17,7 +17,10 @@
 - [ ] 根缺失、重名、入口类型错误或 Entry 初始化失败时，失败目标场景先完成清理，再发布 `AppSceneLoadFailed`；不得发布 Ready。
 - [ ] Gameplay 加载失败时不发布 `LevelRunStarted`，清除待启动会话并请求恢复 LevelSelectScene；只有 LevelSelect Ready 后才进入 LevelSelect。
 - [ ] 异步卸载失败发布 `AppSceneUnloadFailed`，停止本次切换且不加载目标场景。
-- [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 请求切换 LevelSelect，GameplaySceneEntry 清理并卸载，LevelSelectSceneEntry Ready 后才清除当前会话并进入 LevelSelect。
+- [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 进入 `GameplayResult` 后停留在 GameplayScene，只有结算返回命令才切换 LevelSelect，LevelSelectSceneEntry Ready 后才清除当前会话并进入 LevelSelect。
+- [ ] `BattleHud` 在 Playing 与 GameplayResult 都保持显示；终局前显示实时耗时、三元素剩余时间和击杀进度，终局后全部数值冻结且 `BattleResult` 显示最终耗时与击杀数。
+- [ ] 战斗中退出先显示二次确认；确认层显示期间玩法与计时继续但 Pointer 拖拽被遮挡，取消后恢复操作，确认后不发布 Victory/GameOver、不解锁并返回 LevelSelect。
+- [ ] 退出确认期间发生自然终局时确认层关闭且只显示 BattleResult；结算返回不二次确认，快速重复点击只接受一次场景请求。
 - [ ] 回到 LevelSelect 后只重建一组节点并等待再次选择；上一局的延迟事件、节点监听和池实例不会影响新会话。
 - [ ] 快速重复点击只接受一次选择和开始命令，不能创建第二个会话或重复场景请求。
 - [ ] 结构化日志中每次加载恰好出现一次切换请求、Entry 初始化和 Ready；每次卸载恰好出现一次 Entry 清理和 Unloaded，Gameplay 日志包含 `LevelId`、`LevelRunId`。日志不参与流程控制。

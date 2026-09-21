@@ -10,6 +10,49 @@ namespace Game.Contracts
         RoadLayoutSnapshot GetRoadLayout();
     }
 
+    public interface IGameplayHudSource
+    {
+        GameplayHudSnapshot GetHudSnapshot();
+    }
+
+    public readonly struct GameplayHudSnapshot
+    {
+        public GameplayHudSnapshot(
+            int levelId,
+            int levelRunId,
+            string displayName,
+            float elapsedTime,
+            float fireRemainingDuration,
+            float iceRemainingDuration,
+            float lightningRemainingDuration,
+            int killedEnemyCount,
+            int totalEnemyCount,
+            bool isCompleted)
+        {
+            LevelId = levelId;
+            LevelRunId = levelRunId;
+            DisplayName = displayName ?? string.Empty;
+            ElapsedTime = elapsedTime;
+            FireRemainingDuration = fireRemainingDuration;
+            IceRemainingDuration = iceRemainingDuration;
+            LightningRemainingDuration = lightningRemainingDuration;
+            KilledEnemyCount = killedEnemyCount;
+            TotalEnemyCount = totalEnemyCount;
+            IsCompleted = isCompleted;
+        }
+
+        public int LevelId { get; }
+        public int LevelRunId { get; }
+        public string DisplayName { get; }
+        public float ElapsedTime { get; }
+        public float FireRemainingDuration { get; }
+        public float IceRemainingDuration { get; }
+        public float LightningRemainingDuration { get; }
+        public int KilledEnemyCount { get; }
+        public int TotalEnemyCount { get; }
+        public bool IsCompleted { get; }
+    }
+
     public readonly struct RoadLayoutSnapshot
     {
         public RoadLayoutSnapshot(

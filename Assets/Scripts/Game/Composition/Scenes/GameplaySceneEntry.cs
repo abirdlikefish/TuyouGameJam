@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Contracts;
 using Game.Foundation;
 using Game.Gameplay;
+using Game.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -41,6 +42,10 @@ namespace Game.Composition
         [SerializeField] private GraphicRaycaster graphicRaycaster;
         [SerializeField] private EventSystem eventSystem;
         [SerializeField] private StandaloneInputModule standaloneInputModule;
+
+        [Header("战斗 UI")]
+        [SerializeField] private BattleHudView battleHudView;
+        [SerializeField] private BattleResultView battleResultView;
 
         private ArmyController armyInstance;
         private bool levelInitialized;
@@ -109,6 +114,12 @@ namespace Game.Composition
                     roadView,
                     armySpawnPoint.position);
                 levelInitialized = true;
+                battleHudView.Initialize(levelManager, dependencies.GameStateService);
+                battleResultView.Initialize(
+                    request.LevelRunId,
+                    levelManager,
+                    dependencies.GameStateService,
+                    dependencies.EventBus);
                 initialized = true;
                 Debug.Log(
                     $"[GameplaySceneEntry] Initialized; LevelId={request.LevelId}; " +
@@ -140,6 +151,8 @@ namespace Game.Composition
             RequireSceneComponent(graphicRaycaster, nameof(graphicRaycaster));
             RequireSceneComponent(eventSystem, nameof(eventSystem));
             RequireSceneComponent(standaloneInputModule, nameof(standaloneInputModule));
+            RequireSceneComponent(battleHudView, nameof(battleHudView));
+            RequireSceneComponent(battleResultView, nameof(battleResultView));
             RequireSceneTransform(armySpawnPoint, nameof(armySpawnPoint));
             RequireSceneTransform(armyContainer, nameof(armyContainer));
             RequireSceneTransform(bulletRoot, nameof(bulletRoot));
@@ -167,6 +180,21 @@ namespace Game.Composition
             {
                 throw new InvalidOperationException(
                     "GameplayInputAdapter must reference the TouchDragInput bound by GameplaySceneEntry.");
+            }
+
+            if (touchDragInput.transform.parent != gameplayCanvas.transform ||
+                battleHudView.transform.parent != gameplayCanvas.transform ||
+                battleResultView.transform.parent != gameplayCanvas.transform)
+            {
+                throw new InvalidOperationException(
+                    "TouchDragInput, BattleHudView and BattleResultView must be direct Gameplay Canvas children.");
+            }
+
+            if (touchDragInput.transform.GetSiblingIndex() >= battleHudView.transform.GetSiblingIndex() ||
+                battleHudView.transform.GetSiblingIndex() >= battleResultView.transform.GetSiblingIndex())
+            {
+                throw new InvalidOperationException(
+                    "Gameplay Canvas order must be TouchDragArea, BattleHud, then BattleResult.");
             }
 
             if (armyContainer.childCount != 0)
@@ -202,6 +230,16 @@ namespace Game.Composition
             if (!touchDragInput.TryValidate(out var touchError))
             {
                 throw new InvalidOperationException(touchError);
+            }
+
+            if (!battleHudView.TryValidate(out var battleHudError))
+            {
+                throw new InvalidOperationException(battleHudError);
+            }
+
+            if (!battleResultView.TryValidate(out var battleResultError))
+            {
+                throw new InvalidOperationException(battleResultError);
             }
         }
 
@@ -256,6 +294,16 @@ namespace Game.Composition
 
         private void CleanupInternal()
         {
+            if (battleResultView != null)
+            {
+                battleResultView.Cleanup();
+            }
+
+            if (battleHudView != null)
+            {
+                battleHudView.Cleanup();
+            }
+
             if (levelInitialized && levelManager != null)
             {
                 levelManager.StopRun();

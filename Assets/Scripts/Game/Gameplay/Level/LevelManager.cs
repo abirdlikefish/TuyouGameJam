@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Game.Gameplay
 {
     [DisallowMultipleComponent]
-    public sealed class LevelManager : MonoBehaviour, ILevelRuntime
+    public sealed class LevelManager : MonoBehaviour, ILevelRuntime, IGameplayHudSource
     {
         private IGameStateService gameStateService;
         private ITimeService timeService;
@@ -18,13 +18,19 @@ namespace Game.Gameplay
         private IGameplayInputController inputController;
         private RoadView roadView;
         private SubscriptionToken levelRunStartedSubscription;
+        private SubscriptionToken monsterKilledSubscription;
         private RoadLayoutSnapshot roadLayout;
+        private GameplayHudSnapshot completedHudSnapshot;
         private LevelRunState runState;
+        private string levelDisplayName;
         private int levelId;
         private int levelRunId;
+        private int killedEnemyCount;
+        private int totalEnemyCount;
         private float elapsedTime;
         private bool sessionInitialized;
         private bool completionSubmitted;
+        private bool hasCompletedHudSnapshot;
         private bool bulletStarted;
         private bool armyStarted;
         private bool enemyStarted;
@@ -78,8 +84,13 @@ namespace Game.Gameplay
 
             levelId = initializedLevelId;
             levelRunId = initializedLevelRunId;
+            levelDisplayName = levelConfig.DisplayName;
+            totalEnemyCount = levelConfig.EnemySpawns.Count;
+            killedEnemyCount = 0;
             elapsedTime = 0f;
             runState = LevelRunState.Preparing;
+            completedHudSnapshot = default(GameplayHudSnapshot);
+            hasCompletedHudSnapshot = false;
             roadLayout = CreateRoadLayout(levelConfig, roadView, initializedArmySpawnPosition);
             sessionInitialized = true;
 
@@ -99,11 +110,12 @@ namespace Game.Gameplay
                 spawnManager.StartRun(levelConfig, roadLayout, levelRunId);
 
                 levelRunStartedSubscription = eventBus.Subscribe<LevelRunStarted>(OnLevelRunStarted);
+                monsterKilledSubscription = eventBus.Subscribe<MonsterKilled>(OnMonsterKilled);
             }
             catch
             {
                 StopModules();
-                UnsubscribeFromRunStart();
+                UnsubscribeFromEvents();
                 sessionInitialized = false;
                 levelRunId = 0;
                 throw;
@@ -130,18 +142,31 @@ namespace Game.Gameplay
             return roadLayout;
         }
 
+        public GameplayHudSnapshot GetHudSnapshot()
+        {
+            if (!sessionInitialized)
+            {
+                throw new InvalidOperationException(
+                    "LevelManager must be initialized before reading the Gameplay HUD snapshot.");
+            }
+
+            return hasCompletedHudSnapshot
+                ? completedHudSnapshot
+                : CreateHudSnapshot(false);
+        }
+
         public void StopRun()
         {
             if (!sessionInitialized)
             {
-                UnsubscribeFromRunStart();
+                UnsubscribeFromEvents();
                 return;
             }
 
             runState = LevelRunState.Completed;
             inputController.SetGameplayEnabled(false);
             StopModules();
-            UnsubscribeFromRunStart();
+            UnsubscribeFromEvents();
         }
 
         private void Update()
@@ -190,6 +215,17 @@ namespace Game.Gameplay
             inputController.SetGameplayEnabled(true);
         }
 
+        private void OnMonsterKilled(MonsterKilled killed)
+        {
+            if (!sessionInitialized || runState != LevelRunState.Playing ||
+                killed.LevelRunId != levelRunId)
+            {
+                return;
+            }
+
+            killedEnemyCount = Mathf.Min(totalEnemyCount, killedEnemyCount + 1);
+        }
+
         private void EvaluateCompletion()
         {
             if (army.GetArmyCount() <= 0)
@@ -215,6 +251,8 @@ namespace Game.Gameplay
             runState = LevelRunState.Completed;
             completionSubmitted = true;
             inputController.SetGameplayEnabled(false);
+            completedHudSnapshot = CreateHudSnapshot(true);
+            hasCompletedHudSnapshot = true;
             var preserveArmyVisuals = result == LevelResult.Victory && armyStarted;
             if (preserveArmyVisuals)
             {
@@ -223,8 +261,24 @@ namespace Game.Gameplay
             }
 
             StopModules(preserveArmyVisuals);
-            UnsubscribeFromRunStart();
+            UnsubscribeFromEvents();
             gameStateService.CompleteGameplay(new LevelCompletion(levelId, levelRunId, result));
+        }
+
+        private GameplayHudSnapshot CreateHudSnapshot(bool isCompleted)
+        {
+            var elements = army.GetElementStateSnapshot();
+            return new GameplayHudSnapshot(
+                levelId,
+                levelRunId,
+                levelDisplayName,
+                elapsedTime,
+                elements.FireRemainingDuration,
+                elements.IceRemainingDuration,
+                elements.LightningRemainingDuration,
+                killedEnemyCount,
+                totalEnemyCount,
+                isCompleted);
         }
 
         private void StopModules(bool preserveArmyVisuals = false)
@@ -260,15 +314,24 @@ namespace Game.Gameplay
             }
         }
 
-        private void UnsubscribeFromRunStart()
+        private void UnsubscribeFromEvents()
         {
-            if (!levelRunStartedSubscription.IsValid || eventBus == null)
+            if (eventBus == null)
             {
                 return;
             }
 
-            eventBus.Unsubscribe(levelRunStartedSubscription);
-            levelRunStartedSubscription = default(SubscriptionToken);
+            if (monsterKilledSubscription.IsValid)
+            {
+                eventBus.Unsubscribe(monsterKilledSubscription);
+                monsterKilledSubscription = default(SubscriptionToken);
+            }
+
+            if (levelRunStartedSubscription.IsValid)
+            {
+                eventBus.Unsubscribe(levelRunStartedSubscription);
+                levelRunStartedSubscription = default(SubscriptionToken);
+            }
         }
 
         private void OnDestroy()

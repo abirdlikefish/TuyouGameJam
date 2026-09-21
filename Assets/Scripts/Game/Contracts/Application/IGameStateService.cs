@@ -10,6 +10,7 @@ namespace Game.Contracts
         bool IsLevelUnlocked(int levelId);
         bool TrySelectLevel(int levelId);
         bool TryStartSelectedGameplay();
+        bool TryReturnToLevelSelect();
         void CompleteGameplay(LevelCompletion completion);
     }
 }

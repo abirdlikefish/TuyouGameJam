@@ -78,11 +78,12 @@ Assets/Tests/
 | `MainMenu` | GameStateService | MainMenuScene Ready | 玩家点击开始，`TryEnterLevelSelect()` 接受请求并切换 LevelSelect |
 | `LevelSelect` | GameStateService | LevelSelectScene Ready | 玩家点击已解锁节点，选择有效关卡并请求开始新会话 |
 | `GameplayLoading` | GameStateService | 创建新 `LevelRunId` 并请求切换 Gameplay | 收到匹配的 `AppSceneReady(Gameplay)` 或场景失败事实 |
-| `Gameplay` | GameStateService | GameplayScene Ready，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver，并请求切换 LevelSelect |
+| `Gameplay` | GameStateService | GameplayScene Ready，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver 后进入 `GameplayResult`，或玩家主动放弃并请求返回 LevelSelect |
+| `GameplayResult` | GameStateService | 当前 Gameplay 结果被接受、解锁处理完成 | 玩家点击结算返回按钮并请求切换 LevelSelect |
 
-`Initializing` 和 `GameplayLoading` 是流程状态，不对应同名场景。MainMenu 到 LevelSelect 的切换期间公开状态保持 `MainMenu`；终局回选关期间公开状态保持 `Gameplay`，并用内部完成标记拒绝重复结果。只有目标 SceneEntry Ready 后才进入目标稳定状态。
+`Initializing` 和 `GameplayLoading` 是流程状态，不对应同名场景。MainMenu 到 LevelSelect 的切换期间公开状态保持 `MainMenu`；Gameplay 主动退出期间保持 `Gameplay`，结算返回期间保持 `GameplayResult`。只有目标 SceneEntry Ready 后才进入目标稳定状态。
 
-`Victory` 和 `GameOver` 是结果事实，不是额外应用状态。Gameplay 单局内部的 `Preparing`、`Playing`、`Completed` 由 `LevelManager` 拥有。
+`Victory` 和 `GameOver` 仍是结果事实；`GameplayResult` 只表达结果界面正在等待玩家返回。Gameplay 单局内部的 `Preparing`、`Playing`、`Completed` 继续由 `LevelManager` 拥有。
 
 ## 场景入口协议
 
@@ -154,7 +155,10 @@ MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用�
 LevelManager 完成当前会话并停止玩法逻辑
 → GameStateService.CompleteGameplay(completion)
 → 校验 LevelRunId 且只接受一次
-→ 发布 Victory 或 GameOver
+→ 胜利时更新运行期解锁集合
+→ 进入 GameplayResult 并发布 Victory 或 GameOver
+→ BattleResult 显示冻结的耗时与击杀数并等待玩家点击返回
+→ GameStateService.TryReturnToLevelSelect()
 → SceneService.SwitchToLevelSelect()
 → GameplaySceneEntry 清理当前会话
 → 异步卸载 GameplayScene
@@ -164,7 +168,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 → LevelSelectView 使用最新解锁集合生成节点并等待选择
 ```
 
-`LevelManager` 不直接切换或卸载场景，`SceneService` 不自行决定回到 LevelSelect。
+战斗中 HUD 也可通过 `TryReturnToLevelSelect()` 主动放弃本局；该路径不提交 `LevelCompletion`、不发布胜负且不解锁。`LevelManager` 不直接切换或卸载场景，`SceneService` 不自行决定回到 LevelSelect。
 
 ## 失败、重复与过期处理
 

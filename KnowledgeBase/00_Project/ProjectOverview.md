@@ -80,15 +80,15 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 怪物不通过到达道路底部扣除军队人数；首版按 ADR-005 在接近线后向 Army 接近并攻击。
 - 所有参与命中、接触、受击或阻挡的玩法对象（包括子弹）使用 Inspector 绑定的 `Collider2D`；LevelManager 集中读取各时间域 delta，并按移动、子弹、道路接触、敌人攻击、回收和终局的顺序同步驱动对应 Manager。子弹与敌人阻挡使用 Cast，范围攻击及 Gate/Prop 终点接触使用 Overlap。
 - 存活敌人的身体 Collider 使用上一同步姿态执行 Cast 阻挡。前方敌人较慢或静止时，后方敌人尽量按安全间距排队；该离散规则在 MVP 参数下减少穿透和重叠，但不保证同帧移动后的绝对不重叠，首版不实现事后分离或侧向绕行。
-- Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，场景卸载时再执行最终 Army StopRun；当前版本仍直接返回 LevelSelect。
+- Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，Gameplay HUD 与结算数据冻结；玩家点击结算返回后卸载场景并执行最终 Army StopRun。
 - 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
 - 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
 - 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
-- 批次 7 开始导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本，Gameplay Canvas 只保留拖拽输入所需组件。正式 HUD、胜负面板、VFX 和音频继续延后。
+- 批次 7 已导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本。Gameplay Canvas 已按 ADR-058 增加功能性 HUD、退出确认和结算面板，最终视觉样式、VFX 与音频继续延后。
 - Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；ADR-044 明确允许的 `unlockedLevelIds` 目录缺失 ID 是唯一例外，只警告并过滤。Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
 
 ## 非目标
 
 本阶段不包含联网、账号、支付、广告、在线排行榜、得分系统、本地进度存档、设置持久化、声音、暂停、减速、局部时停、通用调试服务和复杂养成系统。`unlockedLevelIds` 只作为当前关卡结果数据，不写入玩家存档。
 
-正式 HUD、胜负面板和 Gate 最终美术同样不属于首轮玩法验证切片；调试文本、结构化日志和测试负责提供验证反馈。
+HUD 与胜负面板的最终美术、Gate 最终美术、VFX 和音频仍不属于当前功能切片；现有基础 UI、调试文本、结构化日志和测试负责提供验证反馈。

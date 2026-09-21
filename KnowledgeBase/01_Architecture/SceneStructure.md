@@ -81,7 +81,7 @@ GameplayScene
 
 `GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理；Camera 与 AudioListener 不属于单局对象，由 GlobalRoot 的 AppCamera 持有。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 0` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到 LevelConfig 的 `armySpawnPosition`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的 `roadWidth`、`roadHeight` 提供原点居中的视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收。
 
-首轮玩法验证不创建 Gameplay HUD、胜负面板或计时文本。Canvas 只承载 Input 模块的 TouchDragArea；Gate 自身使用世界空间单个 TMP 调试文本显示当前状态。完整最小绑定见 [PrefabSpecifications](../04_Assets/PrefabSpecifications.md)。
+Gameplay Canvas 依次承载 Input 模块的 TouchDragArea、常驻 BattleHud 与初始隐藏的 BattleResult；后两者只提供 ADR-058 所需的基础功能布局，最终样式延后。Gate 自身继续使用世界空间单个 TMP 调试文本显示当前状态。完整最小绑定见 [PrefabSpecifications](../04_Assets/PrefabSpecifications.md)。
 
 LevelManager 是 Gameplay 逻辑帧阶段顺序的唯一协调者。Army、Enemy、Obstacle 和 Bullet Manager 仍拥有自己的规则和集合，但不通过独立 Update 推进核心移动、命中、接触或攻击；LevelManager 在 Playing 中按 ADR-033 使用同步阶段接口驱动它们。
 

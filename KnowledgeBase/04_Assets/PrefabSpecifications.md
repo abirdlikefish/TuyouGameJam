@@ -35,7 +35,7 @@ GameplayRoot [GameplaySceneEntry]
 └── EventSystem [EventSystem；StandaloneInputModule]
 ```
 
-首轮不创建 HUD 节点、胜负面板或计时文本。AppCamera、CanvasScaler 的最终适配参数在工程创建时按目标竖屏分辨率配置，但不作为玩法数值来源。
+GameplayScene 已在 Canvas 下创建 TouchDragArea、BattleHud 与 BattleResult；HUD/Result 使用基础布局和显式序列化引用，最终视觉样式延后。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
 
 ## Army
 

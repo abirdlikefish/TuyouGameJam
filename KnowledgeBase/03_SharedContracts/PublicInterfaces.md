@@ -259,13 +259,14 @@ public interface IGameStateService
     bool IsLevelUnlocked(int levelId);
     bool TrySelectLevel(int levelId);
     bool TryStartSelectedGameplay();
+    bool TryReturnToLevelSelect();
     void CompleteGameplay(LevelCompletion completion);
 }
 ```
 
 `GameStateService` 是 `AppFlowState` 和运行期解锁集合的唯一所有者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`IsLevelUnlocked` 查询当前运行期集合，未知或未解锁 ID 返回 `false`；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
-`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds` 并发布 Victory，LevelCompletion 不重复携带该集合。结果接受后由 `GameStateService` 调用 `SceneService.SwitchToLevelSelect`，收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
+`CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds`，进入 `GameplayResult` 后发布 Victory，LevelCompletion 不重复携带该集合。结果接受后保持 GameplayScene，直到 `TryReturnToLevelSelect` 接受命令才调用 `SceneService.SwitchToLevelSelect`。该命令在 `Gameplay` 中表示主动放弃且不产生结果，在 `GameplayResult` 中表示结束结果展示；收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
 ```csharp
 public interface ISceneService
@@ -531,7 +532,14 @@ public interface ILevelRuntime
     float GetElapsedTime();
     RoadLayoutSnapshot GetRoadLayout();
 }
+
+public interface IGameplayHudSource
+{
+    GameplayHudSnapshot GetHudSnapshot();
+}
 ```
+
+`GameplayHudSnapshot` 包含当前 `LevelId`、`LevelRunId`、关卡显示名、玩法耗时、火/冰/雷剩余时间、击杀数、敌人总数和终局标记。Playing 时由 LevelManager 组合权威状态；Completed 后返回清理前冻结的最终快照。UI 不自行累计击杀或按 Unity 对象数量推断统计。
 
 ```csharp
 public enum LevelRunState
@@ -547,7 +555,8 @@ public enum AppFlowState
     MainMenu,
     LevelSelect,
     GameplayLoading,
-    Gameplay
+    Gameplay,
+    GameplayResult
 }
 
 public enum AppSceneId

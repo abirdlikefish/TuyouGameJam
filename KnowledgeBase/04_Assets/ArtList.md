@@ -31,7 +31,7 @@
 - 进入 Gameplay 前验证本关使用的资源绑定、Collider2D 和 Layer；缺失时报告配置或资源来源，不静默创建替代对象。
 - `PF_Road_Default` 只提供 SpriteRenderer/Transform 和 RoadView，不参与 PoolService，也不设置玩法 Collider；道路四边以 LevelConfig 的 `roadWidth`、`roadHeight` 派生值为权威。
 - `Assets/Prefabs/UI/PF_UI_TouchDragArea.prefab` 根对象名为 `TouchDragArea`，默认相对 Gameplay Canvas 全屏拉伸；根同时持有透明 Image 和 TouchDragInput。`TouchDragInput.touchArea` 显式绑定根 RectTransform，`raycastGraphic` 显式绑定根 Image，`horizontalMultiplier` 默认值为 `1`。Prefab 不包含 Canvas、GraphicRaycaster、EventSystem、StandaloneInputModule、Input Adapter 或 Army 引用；GameplaySceneEntry 校验场景组件并由独立 GameplayInputAdapter 绑定 `IHorizontalInputReceiver`。
-- 正式动画未全部到位前可以使用占位 Sprite/Clip，但 Controller、参数、ID 映射和 Monster AnimationEvent 必须完整；HUD、VFX、音频和最终 UI 仍不属于本轮。最小层级与字段见 [PrefabSpecifications](PrefabSpecifications.md)。
+- 正式动画未全部到位前可以使用占位 Sprite/Clip，但 Controller、参数、ID 映射和 Monster AnimationEvent 必须完整；功能性 HUD/结算已按 ADR-058 接入，VFX、音频和最终 UI 美术仍不属于本轮。最小层级与字段见 [PrefabSpecifications](PrefabSpecifications.md)。
 
 ## 动画资产矩阵
 
