@@ -3,7 +3,7 @@
     "id": 0,
     "enemyType": 0,
     "maxHp": 10,
-    "attackPower": 1,
+    "attackPower": 2,
     "moveSpeed": 1,
     "attackStartRange": 1,
     "attackCooldown": 1
@@ -12,7 +12,7 @@
     "id": 1,
     "enemyType": 1,
     "maxHp": 20,
-    "attackPower": 2,
+    "attackPower": 4,
     "moveSpeed": 1,
     "attackStartRange": 1,
     "attackCooldown": 1
@@ -20,8 +20,8 @@
   {
     "id": 2,
     "enemyType": 2,
-    "maxHp": 30,
-    "attackPower": 3,
+    "maxHp": 40,
+    "attackPower": 5,
     "moveSpeed": 1,
     "attackStartRange": 1,
     "attackCooldown": 1
@@ -29,8 +29,8 @@
   {
     "id": 3,
     "enemyType": 3,
-    "maxHp": 50,
-    "attackPower": 5,
+    "maxHp": 100,
+    "attackPower": 10,
     "moveSpeed": 1,
     "attackStartRange": 1,
     "attackCooldown": 1

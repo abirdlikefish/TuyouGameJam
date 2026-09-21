@@ -31,7 +31,7 @@
     "weaponId": 0,
     "maxHp": 10,
     "contactDamage": 10,
-    "moveSpeed": 1,
+    "moveSpeed": 1.5,
     "propType": 1,
     "armyAddition": 0
   },

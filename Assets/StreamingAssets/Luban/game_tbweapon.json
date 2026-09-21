@@ -6,47 +6,47 @@
   },
   {
     "id": 1,
-    "fireInterval": 1,
+    "fireInterval": 0.5,
     "bulletId": 1
   },
   {
     "id": 2,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 2
   },
   {
     "id": 3,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 3
   },
   {
     "id": 4,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 4
   },
   {
     "id": 5,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 5
   },
   {
     "id": 6,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 6
   },
   {
     "id": 7,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 7
   },
   {
     "id": 8,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 8
   },
   {
     "id": 9,
-    "fireInterval": 1,
+    "fireInterval": 0.25,
     "bulletId": 9
   }
 ]
