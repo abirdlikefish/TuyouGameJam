@@ -35,6 +35,20 @@ namespace Game.Contracts
         public int LevelRunId { get; }
     }
 
+    public readonly struct LevelIntroFinished
+    {
+        public LevelIntroFinished(int levelId, int levelRunId, LevelIntroEndReason reason)
+        {
+            LevelId = levelId;
+            LevelRunId = levelRunId;
+            Reason = reason;
+        }
+
+        public int LevelId { get; }
+        public int LevelRunId { get; }
+        public LevelIntroEndReason Reason { get; }
+    }
+
     public readonly struct AppSceneReady
     {
         public AppSceneReady(AppSceneId sceneId, int levelId, int levelRunId)

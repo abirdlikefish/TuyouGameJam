@@ -13,6 +13,7 @@ namespace Game.Foundation
         private readonly HashSet<int> unlockedLevelIds = new HashSet<int>();
 
         private SubscriptionToken sceneReadySubscription;
+        private SubscriptionToken levelIntroFinishedSubscription;
         private SubscriptionToken sceneUnloadedSubscription;
         private SubscriptionToken sceneLoadFailedSubscription;
         private SubscriptionToken sceneUnloadFailedSubscription;
@@ -51,6 +52,7 @@ namespace Game.Foundation
             }
 
             sceneReadySubscription = eventBus.Subscribe<AppSceneReady>(OnSceneReady);
+            levelIntroFinishedSubscription = eventBus.Subscribe<LevelIntroFinished>(OnLevelIntroFinished);
             sceneUnloadedSubscription = eventBus.Subscribe<AppSceneUnloaded>(OnSceneUnloaded);
             sceneLoadFailedSubscription = eventBus.Subscribe<AppSceneLoadFailed>(OnSceneLoadFailed);
             sceneUnloadFailedSubscription = eventBus.Subscribe<AppSceneUnloadFailed>(OnSceneUnloadFailed);
@@ -206,6 +208,7 @@ namespace Game.Foundation
             Unsubscribe(sceneUnloadFailedSubscription);
             Unsubscribe(sceneLoadFailedSubscription);
             Unsubscribe(sceneUnloadedSubscription);
+            Unsubscribe(levelIntroFinishedSubscription);
             Unsubscribe(sceneReadySubscription);
             pendingScene = default(PendingScene);
             ClearCurrentSession();
@@ -243,12 +246,32 @@ namespace Game.Foundation
                         return;
                     }
 
-                    ChangeState(AppFlowState.Gameplay);
-                    eventBus.Publish(new LevelRunStarted(message.LevelId, message.LevelRunId));
+                    Debug.Log(
+                        $"[GameStateService] WaitingForLevelIntro; LevelId={message.LevelId}; " +
+                        $"LevelRunId={message.LevelRunId}");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private void OnLevelIntroFinished(LevelIntroFinished message)
+        {
+            if (disposed || state != AppFlowState.GameplayLoading || pendingScene.IsValid ||
+                !hasCurrentScene || currentSceneId != AppSceneId.Gameplay ||
+                currentSceneLevelId != message.LevelId ||
+                currentSceneLevelRunId != message.LevelRunId ||
+                currentLevelConfig == null || currentLevelConfig.LevelId != message.LevelId ||
+                currentLevelRunId != message.LevelRunId)
+            {
+                return;
+            }
+
+            Debug.Log(
+                $"[GameStateService] LevelIntroFinished={message.Reason}; " +
+                $"LevelId={message.LevelId}; LevelRunId={message.LevelRunId}");
+            ChangeState(AppFlowState.Gameplay);
+            eventBus.Publish(new LevelRunStarted(message.LevelId, message.LevelRunId));
         }
 
         private void OnSceneUnloaded(AppSceneUnloaded message)

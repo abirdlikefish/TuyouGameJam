@@ -2,6 +2,7 @@
 
 | 日期 | 变更 | 影响模块 | 记录人 |
 |---|---|---|---|
+| 2026-09-21 | 新增 ADR-059 并实现关卡开场全屏视频门禁：Gameplay Canvas 新增 LevelIntroVideo，按 LevelId 显式绑定 VideoClip；Gameplay Ready 后保持 GameplayLoading/LevelManager Preparing，视频正常完成、未配置、播放失败或准备超时后通过 LevelIntroFinished 统一进入玩法；当前未加入 MP4 素材，未绑定关卡安全跳过 | UI、Application、Scene、Level、事件、共享契约、资源、测试 | Codex |
 | 2026-09-21 | 新增 ADR-058 并实现 Gameplay 战斗 HUD、退出确认和结算停留流程：HUD 显示关卡名、玩法耗时、三元素剩余时间及击杀进度；终局冻结统计并显示结算面板，改由玩家显式返回选关；战斗中确认退出不产生胜负或解锁 | UI、Level、Application、Scene、事件、共享契约、测试 | Codex |
 | 2026-09-21 | 将序列帧动画统一调整为 8 FPS；规范化并导入十种武器的 Attack/MoveLeft/MoveRight 新帧，全部 Sprite 设置为 Single、PPU 512，并重建现有怪物与子弹动画。修复整组替换 PNG 后 Unity 近期删除 GUID 被误判为重名的问题。最终 39 个正式 Clip、695 帧全部通过复扫，34 个未到位动作保持空轨道；十种 Army AOC、Bullet 十状态及 Prefab 引用复核通过 | Animation、Army、Monster、Bullet、Sprite 导入、编辑器工具、Codex Skill | Codex |
 | 2026-09-21 | 新增并实施 ADR-057：固定普通法杖及七种元素组合法杖的 WeaponId/BulletId 2～9，实现元素获得与过期时的法杖派生、降级、冷却重置与事件原因；扩展 Luban 武器/子弹表、Bullet Animator、Army AOC/Prefab 映射和 Sequence Animation Builder，创建 42 个待填帧动作骨架。Unity 编译通过，扫描为 12 UpToDate、0 Pending、61 Empty、0 Invalid | Army、Bullet、Config、Animation、Prefab、事件、测试 | Codex |

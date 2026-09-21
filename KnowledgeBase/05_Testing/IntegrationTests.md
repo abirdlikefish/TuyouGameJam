@@ -12,7 +12,11 @@
 - [ ] MainMenu 退出按钮在 Editor 停止 Play Mode，在 Player 退出应用；开始或退出请求接受后两个按钮立即不可交互。
 - [ ] LevelSelectSceneEntry 使用目录和运行期解锁集合生成节点；当前配置只生成一个名称为“第 1 关”的已解锁节点，停留超过 1 秒不自动开始关卡。
 - [ ] 点击已解锁节点后只创建一个新 `LevelRunId` 并进入 `GameplayLoading`；GameplayScene 异步加载、LevelConfig 注入、入口订阅和 LevelManager `Preparing` 全部完成后才发布 `AppSceneReady(Gameplay)`。
-- [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
+- [ ] 只有匹配的 `AppSceneReady(Gameplay)` 才启动当前 LevelId 的开场视频；视频终止前保持 `GameplayLoading`、LevelManager `Preparing`、耗时为 0，输入、生成、移动和射击都不推进。
+- [ ] 视频正常结束后只发布一次匹配的 `LevelIntroFinished(Completed)`；GameStateService 随后进入 Gameplay、发布一次 `LevelRunStarted` 并让 LevelManager 进入 Playing。
+- [ ] 当前关卡未绑定视频时下一帧发布 `NoVideoConfigured` 并安全进入玩法；播放错误或准备超过 10 秒分别记录 `PlaybackFailed`/`PreparationTimedOut` 后安全进入玩法，不永久黑屏。
+- [ ] LevelIntroVideo 黑色遮挡完整覆盖 TouchDragArea 与 BattleHud，RawImage 保持原视频宽高比并覆盖屏幕；BattleResult 保持最高层级，视频结束前拖拽状态归零。
+- [ ] 重复、过期、场景不匹配或卸载后的 `LevelIntroFinished` 不推进状态；连续两局没有旧 VideoPlayer 回调、纹理或输入差值残留。
 - [ ] MainMenu、LevelSelect 的场景事实使用 `LevelId = 0`、`LevelRunId = 0`；Gameplay 事实携带当前值，目标不匹配或过期事实不会推进状态。
 - [ ] 根缺失、重名、入口类型错误或 Entry 初始化失败时，失败目标场景先完成清理，再发布 `AppSceneLoadFailed`；不得发布 Ready。
 - [ ] Gameplay 加载失败时不发布 `LevelRunStarted`，清除待启动会话并请求恢复 LevelSelectScene；只有 LevelSelect Ready 后才进入 LevelSelect。
@@ -227,7 +231,7 @@
 - [ ] Bullet Cast 同距离目标按 `Enemy > Gate > Prop > RuntimeInstanceId` 稳定选择。
 - [ ] EventBus 按注册顺序同步调用；发布期间使用订阅快照，异常隔离，重复订阅独立 Token，取消幂等。
 - [ ] EventBus 只按准确消息类型分发；基类或接口订阅不会收到具体子类型消息。
-- [ ] EventBus 支持同步嵌套发布，每层发布使用独立快照；`AppSceneReady(Gameplay)` 处理器发布的 `LevelRunStarted` 不会因重入丢失或重复。
+- [ ] EventBus 支持同步嵌套发布，每层发布使用独立快照；`LevelIntroFinished` 处理器发布的 `LevelRunStarted` 不会因重入丢失或重复。
 - [ ] 发布期间新增或取消订阅只影响下一次发布；当前快照中的处理器仍按原注册顺序完成。
 - [ ] 默认、未知、重复使用和其他 EventBus 实例的 `SubscriptionToken` 取消时无副作用。
 - [ ] 单个处理器和异常报告委托抛出异常时，当前快照中的其他处理器仍继续执行。

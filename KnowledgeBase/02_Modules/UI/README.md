@@ -4,7 +4,7 @@
 
 - ID：`MOD-UI`
 - 层级：Presentation
-- 状态：MainMenu `InTest`；LevelSelect `InTest`；Gameplay HUD/Result `InTest`；Input UI `ContractReady`
+- 状态：MainMenu `InTest`；LevelSelect `InTest`；Gameplay HUD/Result `InTest`；Level Intro Video `InTest`；Input UI `ContractReady`
 - 依赖：EventBus、GameStateService
 
 ## Gameplay HUD 与结算
@@ -12,6 +12,12 @@
 Gameplay Canvas 在 `PF_UI_TouchDragArea` 上方依次放置常驻 `BattleHud` 与初始隐藏的 `BattleResult`。HUD 显示关卡名、玩法耗时、火/冰/雷剩余时间与击杀进度；结果面板显示冻结的总耗时、击杀数和返回选关按钮，不显示额外胜负标题。终局后停留在 GameplayScene，玩家显式返回后才卸载场景。
 
 战斗中退出使用 HUD 内的二次确认层。确认层显示期间玩法继续推进和计时，但全屏射线遮挡阻止拖拽；取消恢复操作，确认则主动放弃本局且不发布胜负或解锁。终局发生时确认层必须关闭，结果面板获得最高 UI 层级。
+
+## 关卡开场视频
+
+Gameplay Canvas 在 BattleHud 上方、BattleResult 下方放置全屏 `LevelIntroVideo`。`LevelIntroVideoView` 使用黑色 Raycast Target 遮挡输入，VideoPlayer 以 API Only 输出到保持宽高比并覆盖全屏的 RawImage；播放使用未缩放时间且当前不输出音频。GameplaySceneEntry 按 LevelId 解析 Inspector 中的 VideoClip 绑定，并在匹配的 `AppSceneReady(Gameplay)` 后启动。
+
+视频结束前应用保持 `GameplayLoading`、LevelManager 保持 `Preparing`。正常结束、当前关卡未绑定视频、播放失败或准备超时都会结束门禁并发布一次 `LevelIntroFinished`；只有 GameStateService 校验该事实后才发布 `LevelRunStarted`。View 不直接修改玩法状态。视频结束前重置拖拽输入，场景清理时停止播放器并移除回调。
 
 ## 后续 HUD 职责
 

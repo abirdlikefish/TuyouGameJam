@@ -7,6 +7,7 @@ using Game.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 namespace Game.Composition
 {
@@ -47,7 +48,17 @@ namespace Game.Composition
         [SerializeField] private BattleHudView battleHudView;
         [SerializeField] private BattleResultView battleResultView;
 
+        [Header("关卡开场视频")]
+        [SerializeField] private LevelIntroVideoView levelIntroVideoView;
+        [SerializeField] private LevelIntroVideoBinding[] levelIntroVideoBindings =
+            new LevelIntroVideoBinding[0];
+
         private ArmyController armyInstance;
+        private IEventBus eventBus;
+        private SubscriptionToken sceneReadySubscription;
+        private int levelId;
+        private int levelRunId;
+        private bool introStarted;
         private bool levelInitialized;
         private bool initialized;
 
@@ -65,7 +76,12 @@ namespace Game.Composition
             ValidateContext(request);
             ValidateSceneBindings();
             var armyPrefab = ResolveArmyPrefab(MvpArmyId);
+            var introVideoClip = ResolveLevelIntroVideoClip(request.LevelId);
             var armyConfig = dependencies.ConfigService.GetArmyConfig(MvpArmyId);
+            eventBus = dependencies.EventBus;
+            levelId = request.LevelId;
+            levelRunId = request.LevelRunId;
+            introStarted = false;
 
             try
             {
@@ -120,6 +136,8 @@ namespace Game.Composition
                     levelManager,
                     dependencies.GameStateService,
                     dependencies.EventBus);
+                levelIntroVideoView.Initialize(introVideoClip, OnLevelIntroFinished);
+                sceneReadySubscription = eventBus.Subscribe<AppSceneReady>(OnAppSceneReady);
                 initialized = true;
                 Debug.Log(
                     $"[GameplaySceneEntry] Initialized; LevelId={request.LevelId}; " +
@@ -153,6 +171,7 @@ namespace Game.Composition
             RequireSceneComponent(standaloneInputModule, nameof(standaloneInputModule));
             RequireSceneComponent(battleHudView, nameof(battleHudView));
             RequireSceneComponent(battleResultView, nameof(battleResultView));
+            RequireSceneComponent(levelIntroVideoView, nameof(levelIntroVideoView));
             RequireSceneTransform(armySpawnPoint, nameof(armySpawnPoint));
             RequireSceneTransform(armyContainer, nameof(armyContainer));
             RequireSceneTransform(bulletRoot, nameof(bulletRoot));
@@ -184,17 +203,20 @@ namespace Game.Composition
 
             if (touchDragInput.transform.parent != gameplayCanvas.transform ||
                 battleHudView.transform.parent != gameplayCanvas.transform ||
+                levelIntroVideoView.transform.parent != gameplayCanvas.transform ||
                 battleResultView.transform.parent != gameplayCanvas.transform)
             {
                 throw new InvalidOperationException(
-                    "TouchDragInput, BattleHudView and BattleResultView must be direct Gameplay Canvas children.");
+                    "TouchDragInput, BattleHudView, LevelIntroVideoView and BattleResultView must be " +
+                    "direct Gameplay Canvas children.");
             }
 
             if (touchDragInput.transform.GetSiblingIndex() >= battleHudView.transform.GetSiblingIndex() ||
-                battleHudView.transform.GetSiblingIndex() >= battleResultView.transform.GetSiblingIndex())
+                battleHudView.transform.GetSiblingIndex() >= levelIntroVideoView.transform.GetSiblingIndex() ||
+                levelIntroVideoView.transform.GetSiblingIndex() >= battleResultView.transform.GetSiblingIndex())
             {
                 throw new InvalidOperationException(
-                    "Gameplay Canvas order must be TouchDragArea, BattleHud, then BattleResult.");
+                    "Gameplay Canvas order must be TouchDragArea, BattleHud, LevelIntroVideo, then BattleResult.");
             }
 
             if (armyContainer.childCount != 0)
@@ -240,6 +262,11 @@ namespace Game.Composition
             if (!battleResultView.TryValidate(out var battleResultError))
             {
                 throw new InvalidOperationException(battleResultError);
+            }
+
+            if (!levelIntroVideoView.TryValidate(out var introVideoError))
+            {
+                throw new InvalidOperationException(introVideoError);
             }
         }
 
@@ -292,8 +319,77 @@ namespace Game.Composition
             return selectedPrefab;
         }
 
+        private VideoClip ResolveLevelIntroVideoClip(int requestedLevelId)
+        {
+            if (levelIntroVideoBindings == null)
+            {
+                throw new InvalidOperationException("Level intro video bindings cannot be null.");
+            }
+
+            var seenIds = new HashSet<int>();
+            VideoClip selectedClip = null;
+            for (var index = 0; index < levelIntroVideoBindings.Length; index++)
+            {
+                var binding = levelIntroVideoBindings[index];
+                if (binding == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Level intro video binding at index {index} is null.");
+                }
+
+                if (binding.LevelId < 0 || !seenIds.Add(binding.LevelId))
+                {
+                    throw new InvalidOperationException(
+                        $"Level intro video binding ID {binding.LevelId} is invalid or duplicated.");
+                }
+
+                if (binding.VideoClip == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Level intro video binding {binding.LevelId} has no VideoClip.");
+                }
+
+                if (binding.LevelId == requestedLevelId)
+                {
+                    selectedClip = binding.VideoClip;
+                }
+            }
+
+            return selectedClip;
+        }
+
+        private void OnAppSceneReady(AppSceneReady ready)
+        {
+            if (!initialized || introStarted || ready.SceneId != AppSceneId.Gameplay ||
+                ready.LevelId != levelId || ready.LevelRunId != levelRunId)
+            {
+                return;
+            }
+
+            introStarted = true;
+            UnsubscribeFromSceneReady();
+            levelIntroVideoView.BeginPlayback();
+        }
+
+        private void OnLevelIntroFinished(LevelIntroEndReason reason)
+        {
+            if (!initialized || eventBus == null)
+            {
+                return;
+            }
+
+            touchDragInput.ResetInput();
+            eventBus.Publish(new LevelIntroFinished(levelId, levelRunId, reason));
+        }
+
         private void CleanupInternal()
         {
+            UnsubscribeFromSceneReady();
+            if (levelIntroVideoView != null)
+            {
+                levelIntroVideoView.Cleanup();
+            }
+
             if (battleResultView != null)
             {
                 battleResultView.Cleanup();
@@ -326,7 +422,22 @@ namespace Game.Composition
                 Debug.Log("[GameplaySceneEntry] Cleaned");
             }
 
+            eventBus = null;
+            levelId = 0;
+            levelRunId = 0;
+            introStarted = false;
             initialized = false;
+        }
+
+        private void UnsubscribeFromSceneReady()
+        {
+            if (eventBus == null || !sceneReadySubscription.IsValid)
+            {
+                return;
+            }
+
+            eventBus.Unsubscribe(sceneReadySubscription);
+            sceneReadySubscription = default(SubscriptionToken);
         }
 
         private void RequireSceneComponent(Component component, string fieldName)
@@ -381,5 +492,15 @@ namespace Game.Composition
 
         public int ArmyId => armyId;
         public ArmyController Prefab => prefab;
+    }
+
+    [Serializable]
+    public sealed class LevelIntroVideoBinding
+    {
+        [SerializeField] private int levelId;
+        [SerializeField] private VideoClip videoClip;
+
+        public int LevelId => levelId;
+        public VideoClip VideoClip => videoClip;
     }
 }

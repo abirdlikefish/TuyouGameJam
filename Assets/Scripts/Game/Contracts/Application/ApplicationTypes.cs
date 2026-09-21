@@ -28,6 +28,14 @@ namespace Game.Contracts
         ArmyReachedZero = 0
     }
 
+    public enum LevelIntroEndReason
+    {
+        Completed = 0,
+        NoVideoConfigured = 1,
+        PlaybackFailed = 2,
+        PreparationTimedOut = 3
+    }
+
     public enum SceneLoadErrorCode
     {
         InvalidRequest = 0,

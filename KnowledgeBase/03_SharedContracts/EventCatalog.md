@@ -3,7 +3,8 @@
 | 事件 | 发布者 | 主要监听者 | 参数 |
 |---|---|---|---|
 | `AppFlowChanged` | GameStateService | UI | 旧状态、新状态、当前关卡 ID、当前 `LevelRunId` |
-| `LevelRunStarted` | GameStateService | LevelManager、UI | `LevelId`、`LevelRunId`；仅在匹配的 `AppSceneReady(Gameplay)` 后发布；LevelManager 收到后从 `Preparing` 进入 `Playing` |
+| `LevelIntroFinished` | GameplaySceneEntry | GameStateService | `LevelId`、`LevelRunId`、`LevelIntroEndReason`；匹配场景的开场视频正常结束、未配置、播放失败或准备超时后只发布一次 |
+| `LevelRunStarted` | GameStateService | LevelManager、UI | `LevelId`、`LevelRunId`；仅在匹配的 `AppSceneReady(Gameplay)` 与 `LevelIntroFinished` 后发布；LevelManager 收到后从 `Preparing` 进入 `Playing` |
 | `AppSceneReady` | SceneService | GameStateService、UI | `AppSceneId`、`LevelId`、`LevelRunId`；规范 SceneEntry 已初始化，Gameplay 的 `LevelManager.Preparing` 已完成 |
 | `AppSceneUnloaded` | SceneService | GameStateService、UI | `AppSceneId`、`LevelId`、`LevelRunId`；旧场景 Entry 已清理且异步卸载完成 |
 | `AppSceneLoadFailed` | SceneService | GameStateService、UI | 目标 `AppSceneId`、`LevelId`、`LevelRunId`、`SceneLoadErrorCode`；失败场景已清理 |
@@ -42,7 +43,8 @@
 - 监听者在销毁时必须取消订阅。
 - 事件参数版本变化需要在 `06_Decisions` 记录。
 - 所有 Gameplay 生成请求、会话结果以及可能跨场景或延迟处理的事件必须携带 `LevelRunId`，或由统一的会话事件封装携带；接收者不得处理过期会话消息。
-- `AppSceneReady` 是进入 MainMenu、LevelSelect 或 Gameplay 稳定状态的唯一场景成功信号；只有匹配的 `AppSceneReady(Gameplay)` 可以触发 `LevelRunStarted`。
+- `AppSceneReady` 是进入 MainMenu、LevelSelect 或 Gameplay 场景就绪边界的唯一成功信号。Gameplay Ready 后仍保持 `GameplayLoading`；只有同一场景和会话随后发布匹配的 `LevelIntroFinished`，GameStateService 才能进入 Gameplay 并发布 `LevelRunStarted`。
+- `LevelIntroFinished` 的四种原因都表示本局开场门禁已经终止，不表示播放一定成功。重复、过期、场景不匹配或非 `GameplayLoading` 状态的消息必须忽略。
 - MainMenu、LevelSelect 场景事实使用 `LevelId = 0`、`LevelRunId = 0`；Gameplay 场景事实必须使用当前值。GameStateService 必须同时校验 `AppSceneId`、pending target 和会话 ID。
 - `AppSceneUnloaded` 只确认旧场景清理完成，不直接推进下一个应用状态。SceneService 在此后同步加载并初始化目标场景，GameStateService 只在目标 `AppSceneReady` 后推进。
 - `AppSceneLoadFailed` 只能在失败目标场景完成清理后发布；`AppSceneUnloadFailed` 会终止本次切换，且不得继续加载目标场景。

@@ -67,7 +67,7 @@ Assets/Tests/
 - `GameStateService` 通过 `IConfigService` 校验选关，通过 `ISceneService` 发出类型化切换命令，并通过 `IEventBus` 发布应用状态和结果事实。
 - GameStateService 在创建 Gameplay 会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；Victory 的 `UnlockedLevelIds` 从这里防御性复制，LevelManager 只提交精简 LevelCompletion。该集合已由 ConfigService 按 ADR-044 过滤当前目录中不存在的未来关卡 ID，应用流程不回读原始 LevelConfig，也不重复警告或过滤。
 - `SceneService` 依赖 `IEventBus` 和 Unity 场景适配能力；它持有当前场景、待切换目标和内部操作状态，不读取配置目录，不决定下一状态。
-- `GameStateService` 订阅 `AppSceneReady`、`AppSceneUnloaded`、`AppSceneLoadFailed`、`AppSceneUnloadFailed`，并校验 `AppSceneId`、`LevelId`、`LevelRunId` 和内部 pending target；Unloaded 只用于确认旧场景事实，不直接推进稳定状态。
+- `GameStateService` 订阅 `AppSceneReady`、`LevelIntroFinished`、`AppSceneUnloaded`、`AppSceneLoadFailed`、`AppSceneUnloadFailed`，并校验 `AppSceneId`、`LevelId`、`LevelRunId` 和内部 pending target；Unloaded 只用于确认旧场景事实，不直接推进稳定状态。
 - `LevelManager` 只依赖 `IGameStateService` 提交终局。`GameplaySceneEntry` 向 LevelManager 注入已校验的 `LevelConfigSnapshot`、`LevelId`、`LevelRunId` 和最小服务接口。
 
 ## 应用状态
@@ -77,11 +77,11 @@ Assets/Tests/
 | `Initializing` | GameStateService | 应用启动 | ConfigService Ready，MainMenuScene 的 Entry 完成初始化并收到 `AppSceneReady(MainMenu)` |
 | `MainMenu` | GameStateService | MainMenuScene Ready | 玩家点击开始，`TryEnterLevelSelect()` 接受请求并切换 LevelSelect |
 | `LevelSelect` | GameStateService | LevelSelectScene Ready | 玩家点击已解锁节点，选择有效关卡并请求开始新会话 |
-| `GameplayLoading` | GameStateService | 创建新 `LevelRunId` 并请求切换 Gameplay | 收到匹配的 `AppSceneReady(Gameplay)` 或场景失败事实 |
-| `Gameplay` | GameStateService | GameplayScene Ready，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver 后进入 `GameplayResult`，或玩家主动放弃并请求返回 LevelSelect |
+| `GameplayLoading` | GameStateService | 创建新 `LevelRunId` 并请求切换 Gameplay | 场景 Ready 后收到匹配的 `LevelIntroFinished`，或收到场景失败事实 |
+| `Gameplay` | GameStateService | GameplayScene Ready 且开场门禁结束，随后发布 `LevelRunStarted` | 接受当前会话的 Victory 或 GameOver 后进入 `GameplayResult`，或玩家主动放弃并请求返回 LevelSelect |
 | `GameplayResult` | GameStateService | 当前 Gameplay 结果被接受、解锁处理完成 | 玩家点击结算返回按钮并请求切换 LevelSelect |
 
-`Initializing` 和 `GameplayLoading` 是流程状态，不对应同名场景。MainMenu 到 LevelSelect 的切换期间公开状态保持 `MainMenu`；Gameplay 主动退出期间保持 `Gameplay`，结算返回期间保持 `GameplayResult`。只有目标 SceneEntry Ready 后才进入目标稳定状态。
+`Initializing` 和 `GameplayLoading` 是流程状态，不对应同名场景。MainMenu 到 LevelSelect 的切换期间公开状态保持 `MainMenu`；Gameplay Ready 后在开场视频终止前仍保持 `GameplayLoading`；Gameplay 主动退出期间保持 `Gameplay`，结算返回期间保持 `GameplayResult`。
 
 `Victory` 和 `GameOver` 仍是结果事实；`GameplayResult` 只表达结果界面正在等待玩家返回。Gameplay 单局内部的 `Preparing`、`Playing`、`Completed` 继续由 `LevelManager` 拥有。
 
@@ -98,6 +98,7 @@ GameplayScene/GameplayRoot       [GameplaySceneEntry]
 - SceneEntry 通过 Inspector 保存本场景固定引用；运行时服务和会话数据通过显式初始化传入。
 - SceneEntry 的 `Awake`、`OnEnable`、`Start` 不得自行推进应用状态。Gameplay 对象在 Entry 初始化后仍保持 `Preparing`，只在 `LevelRunStarted` 后进入 `Playing`。
 - Entry 初始化成功且场景监听者完成订阅后，SceneService 才能发布 `AppSceneReady`。
+- GameplaySceneEntry 只在匹配的 Ready 后开始开场视频；视频正常完成或安全终止后发布 `LevelIntroFinished`，不直接启动 LevelManager。
 - 卸载前先调用 Entry 清理入口，取消订阅和场景定时任务；异步卸载完成后发布 `AppSceneUnloaded`。
 
 ## 加载与卸载策略
@@ -143,7 +144,9 @@ MainMenu 使用场景内序列化 Button 和 `MainMenuView` 提交同步应用�
 → GameplaySceneEntry 注入依赖并完成 LevelManager.Preparing
 → AppSceneReady(Gameplay, levelId, levelRunId)
 → GameStateService 校验 pending target 和 LevelRunId
-→ 进入 Gameplay 并发布 LevelRunStarted
+→ GameplaySceneEntry 播放当前 LevelId 绑定的开场视频；未绑定、失败或准备超时则安全终止
+→ LevelIntroFinished(levelId, levelRunId, reason)
+→ GameStateService 再次校验当前场景和会话，进入 Gameplay 并发布 LevelRunStarted
 → LevelManager 进入 Playing
 ```
 
@@ -176,6 +179,7 @@ LevelManager 完成当前会话并停止玩法逻辑
 - 重复的初始化通知、切换请求、节点点击和终局提交必须幂等，不能创建第二个会话或重复结果。
 - MainMenuScene 或 LevelSelectScene 加载失败时不进入目标稳定状态，也不自动无限重试。
 - GameplayScene 加载失败时不得发布 `LevelRunStarted`；GameStateService 清除待启动会话并请求恢复 LevelSelectScene，只有 `AppSceneReady(LevelSelect)` 后才进入 `LevelSelect`。
+- 开场视频未绑定、运行时解码失败或准备超时不得永久阻塞；GameplaySceneEntry 记录原因并发布一次 `LevelIntroFinished`。过期或重复完成事实不得启动当前或下一局。
 - `AppSceneUnloadFailed` 会停止当前切换，保留可诊断状态；不得在旧场景仍存在时加载目标场景。
 - 所有场景事实必须匹配当前 pending target；Gameplay 事实还必须匹配当前 `LevelRunId`。过期事实不能影响新会话。
 - 每个 UI 命令执行前再次检查当前状态和 pending target；过期或重复点击不得推进流程。

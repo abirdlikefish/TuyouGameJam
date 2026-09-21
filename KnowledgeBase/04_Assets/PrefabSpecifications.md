@@ -31,11 +31,15 @@ GameplayRoot [GameplaySceneEntry]
 ├── BulletRoot [BulletManager]
 ├── InputAdapter [GameplayInputAdapter]
 ├── UI [Canvas；GraphicRaycaster]
-│   └── TouchDragArea [PF_UI_TouchDragArea 实例]
+│   ├── TouchDragArea [PF_UI_TouchDragArea 实例]
+│   ├── BattleHud [BattleHudView]
+│   ├── LevelIntroVideo [Image；VideoPlayer；LevelIntroVideoView]
+│   │   └── VideoRawImage [RawImage；AspectRatioFitter]
+│   └── BattleResult [BattleResultView]
 └── EventSystem [EventSystem；StandaloneInputModule]
 ```
 
-GameplayScene 已在 Canvas 下创建 TouchDragArea、BattleHud 与 BattleResult；HUD/Result 使用基础布局和显式序列化引用，最终视觉样式延后。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
+GameplayScene 已在 Canvas 下按 TouchDragArea、BattleHud、LevelIntroVideo、BattleResult 的顺序创建节点；HUD/Result 使用基础布局和显式序列化引用，最终视觉样式延后。LevelIntroVideo 根节点全屏拉伸，黑色 Image 开启 Raycast Target，同节点 VideoPlayer 禁止 Play On Awake/Loop、使用 API Only 与无音频输出；子 RawImage 全屏拉伸并由 AspectRatioFitter 采用 Envelope Parent。GameplaySceneEntry 显式绑定 LevelIntroVideoView，并通过 `LevelIntroVideoBinding[]` 按 LevelId 绑定导入的 VideoClip。数组可为空；数组中的负数/重复 LevelId 或空 VideoClip 会阻止 Ready。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
 
 ## Army
 

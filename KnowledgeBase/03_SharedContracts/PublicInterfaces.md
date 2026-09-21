@@ -264,7 +264,7 @@ public interface IGameStateService
 }
 ```
 
-`GameStateService` 是 `AppFlowState` 和运行期解锁集合的唯一所有者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`IsLevelUnlocked` 查询当前运行期集合，未知或未解锁 ID 返回 `false`；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
+`GameStateService` 是 `AppFlowState` 和运行期解锁集合的唯一所有者。`NotifyInitializationReady` 只接受 `ConfigService` 已为 `Ready` 的情况，并请求 `SceneService.SwitchToMainMenu()`；只有 `AppSceneReady(MainMenu)` 后才进入 MainMenu。`TryEnterLevelSelect` 只允许在 MainMenuScene Ready 且没有待处理切换时请求 LevelSelect；`IsLevelUnlocked` 查询当前运行期集合，未知或未解锁 ID 返回 `false`；`TrySelectLevel` 只允许在 LevelSelectScene Ready 后选择当前可选关卡；`TryStartSelectedGameplay` 负责校验选定关卡、创建新的 `LevelRunId`、切换到内部过渡状态 `GameplayLoading` 并调用 `SceneService.SwitchToGameplay`。Gameplay Ready 后仍保持该状态，收到匹配的 `LevelIntroFinished` 才进入 `Gameplay` 并发布 `LevelRunStarted`。没有活动会话时 `GetCurrentLevelRunId` 返回 `0`。
 
 `CompleteGameplay` 只接受当前 `LevelRunId` 的结果；重复或过期结果必须忽略。GameStateService 在创建会话时保留本次已校验 `LevelConfigSnapshot` 的只读结果数据；接受 Victory 后从该快照防御性复制已按 ADR-044 过滤的 `UnlockedLevelIds`，进入 `GameplayResult` 后发布 Victory，LevelCompletion 不重复携带该集合。结果接受后保持 GameplayScene，直到 `TryReturnToLevelSelect` 接受命令才调用 `SceneService.SwitchToLevelSelect`。该命令在 `Gameplay` 中表示主动放弃且不产生结果，在 `GameplayResult` 中表示结束结果展示；收到目标匹配的 `AppSceneReady(LevelSelect)` 后才清除当前会话并进入 `LevelSelect`。
 
@@ -296,9 +296,18 @@ public readonly struct AppSceneUnloaded
     public int LevelId { get; }
     public int LevelRunId { get; }
 }
+
+public readonly struct LevelIntroFinished
+{
+    public int LevelId { get; }
+    public int LevelRunId { get; }
+    public LevelIntroEndReason Reason { get; }
+}
 ```
 
 MainMenu 和 LevelSelect 的 `LevelId`、`LevelRunId` 固定为 `0`。Gameplay 事实必须携带当前值。`AppSceneReady` 只能在目标场景加载、规范 Entry 初始化、场景监听者订阅完成，且 Gameplay 的 `LevelManager.Preparing` 完成后发布；`AppSceneUnloaded` 只描述旧场景异步卸载完成。
+
+`LevelIntroEndReason` 包含 `Completed`、`NoVideoConfigured`、`PlaybackFailed`、`PreparationTimedOut`。四种原因都会释放开场门禁；该枚举用于诊断结束路径，不改变玩法结果。
 
 ## 军队接口
 
@@ -564,6 +573,14 @@ public enum AppSceneId
     MainMenu,
     LevelSelect,
     Gameplay
+}
+
+public enum LevelIntroEndReason
+{
+    Completed,
+    NoVideoConfigured,
+    PlaybackFailed,
+    PreparationTimedOut
 }
 
 public enum LevelResult
