@@ -36,7 +36,7 @@ namespace Game.Contracts
         public MonsterDamaged(
             int levelRunId,
             int runtimeInstanceId,
-            BulletDamageContext damageContext,
+            EnemyDamageContext damageContext,
             int remainingHp,
             bool isFatal)
         {
@@ -49,7 +49,7 @@ namespace Game.Contracts
 
         public int LevelRunId { get; }
         public int RuntimeInstanceId { get; }
-        public BulletDamageContext DamageContext { get; }
+        public EnemyDamageContext DamageContext { get; }
         public int RemainingHp { get; }
         public bool IsFatal { get; }
     }
@@ -82,7 +82,7 @@ namespace Game.Contracts
         public MonsterKilled(
             int levelRunId,
             int runtimeInstanceId,
-            BulletDamageContext damageContext)
+            EnemyDamageContext damageContext)
         {
             LevelRunId = levelRunId;
             RuntimeInstanceId = runtimeInstanceId;
@@ -91,6 +91,6 @@ namespace Game.Contracts
 
         public int LevelRunId { get; }
         public int RuntimeInstanceId { get; }
-        public BulletDamageContext DamageContext { get; }
+        public EnemyDamageContext DamageContext { get; }
     }
 }

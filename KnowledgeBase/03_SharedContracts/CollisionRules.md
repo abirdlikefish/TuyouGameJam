@@ -9,7 +9,7 @@
 - LevelManager 在逻辑帧开始从 `TimeService` 读取各域有效 delta，并传给对应 Manager；Collider2D 不负责通过力或自动碰撞响应移动对象。
 - 核心结算由显式 Cast/Overlap 查询触发，不依赖自动碰撞回调的执行顺序。
 - 查询统一使用无分配版本或复用结果缓存，并通过 Layer 和 `ContactFilter2D` 限定目标。
-- 同一次命中或接触即使返回多个子 Collider，也只能结算一次。
+- 同一次直接命中、单个组合效果或接触即使返回多个子 Collider，也只能对同一运行时目标结算一次；不同子弹或不同组合效果实例可在同一帧分别结算。
 - 受击 Collider 节点通过同 GameObject 上已验证的 `BulletHitProxy` 映射到 Enemy/Gate/Prop 根玩法对象；Army SlotCollider 节点通过 `ArmySlotHitProxy` 映射到 `ArmyId + SlotIndex`。运行时不向父级搜索缺失引用。
 - Level 不处于 `Playing` 时停止新的玩法查询与结算；重开前禁用或回收所有运行时碰撞对象。
 
@@ -34,8 +34,10 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 读取 Gameplay、Bullet、Gate、Monster delta
 → SpawnManager 派发到时对象
 → Army、Enemy、Gate/Prop 计算期望位移并执行敌人阻挡
-→ 应用位置并由 LevelManager 调用一次 Physics2D.SyncTransforms
+→ 应用位置并由 LevelManager 第一次调用 Physics2D.SyncTransforms
 → BulletManager 执行移动扫掠、命中查询与结算
+→ EnemyManager 应用冰火效果登记的固定 +Y 位移
+→ LevelManager 第二次调用 Physics2D.SyncTransforms
 → ObstacleManager 执行 Gate/Prop 接触查询与结算
 → EnemyManager 执行 Monster AttackCollider 攻击查询与结算
 → 按运行时 ID/攻击序号去重、发布事实并刷新待回收对象
@@ -44,7 +46,7 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 
 上述阶段是同帧玩法结算的权威顺序，使用类型化同步接口而不是逐帧 EventBus 事件。MVP 所有时间倍率为 `1`；后续启用自定义时间域时仍保持阶段顺序不变。`LevelRunStarted` 只切换到 Playing，不替代该逐帧协调。
 
-当前项目关闭 Physics2D Auto Sync Transforms。LevelManager 在全部玩法移动应用完成后、首次 Bullet/接触/攻击查询前准确调用一次 `Physics2D.SyncTransforms()`；各 Manager 和池对象不得自行重复同步。
+当前项目关闭 Physics2D Auto Sync Transforms。LevelManager 每个 Playing 逻辑帧准确调用两次 `Physics2D.SyncTransforms()`：第一次同步常规移动并供 Bullet 查询，第二次同步子弹阶段登记的冰火位移并供 Gate/Prop 接触与 Monster 攻击查询。各 Manager、池对象和效果对象不得自行同步。
 
 同一次 Bullet Cast 存在多个有效目标时，按 Cast 距离优先；距离相同时按目标类别 `Enemy` > `Gate` > `Prop`；类别和距离仍相同时按 `RuntimeInstanceId` 升序。同一运行时实例的多个子 Collider 必须先去重。该优先级只处理完全相同距离的稳定决胜。
 
@@ -57,6 +59,15 @@ LevelManager 是以下阶段的唯一调用顺序所有者。各 Manager 管理�
 - `AttackCollider`、其他 Bullet 和 Army `SlotCollider` 不属于首版子弹目标。
 - 飞行中 Army 的武器、元素或人数变化不修改已经生成的子弹快照。
 - 首轮只扫掠子弹自身从上一逻辑位置到期望位置的位移，不计算子弹与本帧同时移动目标的相对扫掠，也不做子步进。MVP 通过合理的速度、Collider 尺寸、编排和目标帧率避免穿透；测试不承诺任意高速或严重掉帧下绝不穿透。
+
+## 元素组合效果
+
+- 只对直接命中 Enemy 的精确二元素掩码解析组合效果；Gate、Prop、单元素、无元素和三元素不进入本轮组合规则。
+- 火雷以直接命中位置为范围中心；直接目标受到基础伤害和一次爆炸额外伤害，范围内其他存活敌人只受额外伤害。一次爆炸只查询一次，同一敌人在该实例内按 RuntimeInstanceId 去重；多个爆炸实例可以在同帧各自命中同一目标。
+- 冰雷先固定纳入直接目标，再从半径内其他存活敌人中按可复现随机顺序选至总数 `targetCount`。一次链式效果只对入选目标各结算一次；显示连线不追加伤害。
+- 火雷与冰雷的选取只接受结算时仍存活且属于当前 LevelRunId 的敌人。已进入死亡动画的敌人可以被显示覆盖，但不进入伤害候选。
+- 冰火不做物理推力，只向 EnemyManager 登记一次固定世界 `+Y` 位移；位移在 Bullet 阶段结束后批量应用，不查询道路、Army 或其他敌人，也不改变攻击/动画状态。
+- 所有组合伤害在效果 Prefab 激活显示前由显式一次性方法结算；`Awake`、`OnEnable`、`Start` 和后续 VFX 帧不得产生伤害或再次选取目标。
 
 ## 敌人阻挡
 
@@ -103,7 +114,7 @@ Layer 只负责过滤候选目标，不替代模块状态检查。道路左右�
 
 当前核心规则不依赖 `OnTriggerEnter2D`、`OnCollisionEnter2D` 或 Rigidbody2D 自动响应，因此上述 Gameplay Layer 之间的自动物理碰撞矩阵默认全部关闭，避免隐式推挤、回调和重复结算。显式查询继续通过 `ContactFilter2D` 或 LayerMask 命中目标，不以矩阵开关代替查询过滤。
 
-ADR-055 的目标侧 Kinematic Rigidbody2D 是 `Collider2D.Cast` 的工程适配，不改变本段规则。六类目标 Prefab 的根 Body 固定为 Kinematic、启用 Simulated、关闭 Full Kinematic Contacts、零重力、Discrete、无插值并冻结旋转；对应 BodyCollider 继续为 Trigger。对象仍由模块写入 Transform，并由 LevelManager 的单次 `Physics2D.SyncTransforms()` 同步后执行查询。
+ADR-055 的目标侧 Kinematic Rigidbody2D 是 `Collider2D.Cast` 的工程适配，不改变本段规则。六类目标 Prefab 的根 Body 固定为 Kinematic、启用 Simulated、关闭 Full Kinematic Contacts、零重力、Discrete、无插值并冻结旋转；对应 BodyCollider 继续为 Trigger。对象仍由模块写入 Transform，并由 LevelManager 在常规移动后与组合位移后各执行一次 `Physics2D.SyncTransforms()`，分别供前后阶段查询。
 
 显式查询方向固定为：
 

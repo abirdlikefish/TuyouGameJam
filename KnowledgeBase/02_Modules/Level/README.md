@@ -189,8 +189,10 @@ InputGate.SetGameplayEnabled(true)
 → ArmyController.TickMovementAndFire
 → EnemyManager.TickMovement
 → ObstacleManager.TickMovement
-→ Physics2D.SyncTransforms（每帧移动完成后准确一次）
+→ Physics2D.SyncTransforms（同步常规移动）
 → BulletManager.TickMovementAndHits
+→ EnemyManager.ApplyPendingDisplacements
+→ Physics2D.SyncTransforms（同步冰火组合位移）
 → ObstacleManager.ResolveContacts
 → EnemyManager.ResolveAttacks
 → 各 Manager FlushPendingRecycles
@@ -248,8 +250,8 @@ unlockedLevelIds 中当前目录不存在的未来关卡 ID 记录 Debug.LogWarn
 - ArmyId=0 的配置或 Prefab 绑定缺失、重复、Prefab 根类型错误或槽位数组无效时 Preparing 失败且不发布 Ready。
 - `LevelRunStarted` 只让匹配会话进入 Playing；重复、过期或参数不匹配的事件无副作用。
 - `spawnTime == 0` 的条目在首帧移动前只生成一次。
-- 每帧阶段顺序与 ADR-033 一致，Manager 独立 Update 不执行核心玩法结算。
-- 当前 Auto Sync Transforms 关闭；每个 Playing 帧在全部移动后、首次显式查询前准确调用一次 Physics2D.SyncTransforms，各 Manager 不重复同步。
+- 每帧阶段顺序以 ADR-033 为基础，并包含 ADR-061 在 Bullet 阶段后增加的组合位移阶段；Manager 独立 Update 不执行核心玩法结算。
+- 当前 Auto Sync Transforms 关闭；每个 Playing 帧由 LevelManager 在常规移动后和冰火组合位移后各准确调用一次 Physics2D.SyncTransforms，各 Manager 与效果对象不重复同步。
 - elapsedTime 只累计本帧 Gameplay delta，其他模块分别只消费传入的对应域 delta。
 - Army 归零、敌人生成完成且全部死亡、同帧双条件分别得到 GameOver、Victory、GameOver。
 - ArmyReachedZero 和 MonsterKilled 的监听者数量或顺序不改变终局结果。

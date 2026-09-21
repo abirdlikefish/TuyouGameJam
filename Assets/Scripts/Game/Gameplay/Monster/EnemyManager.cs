@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 
 namespace Game.Gameplay
 {
-    public sealed class EnemyManager : MonoBehaviour, IEnemyManager
+    public sealed class EnemyManager : MonoBehaviour, IEnemyManager, IEnemyEffectService
     {
         [FormerlySerializedAs("normalPrefab")]
         [SerializeField] private ChickMonster chickPrefab;
@@ -20,6 +20,10 @@ namespace Game.Gameplay
         private readonly List<MonsterBase> activeMonsters = new List<MonsterBase>();
         private readonly HashSet<MonsterBase> pendingRecycles = new HashSet<MonsterBase>();
         private readonly HashSet<int> reportedDeaths = new HashSet<int>();
+        private readonly Dictionary<int, MonsterBase> monstersByRuntimeId =
+            new Dictionary<int, MonsterBase>();
+        private readonly Dictionary<int, Vector2> pendingDisplacements =
+            new Dictionary<int, Vector2>();
         private readonly Collider2D[] overlapResults = new Collider2D[64];
         private readonly HashSet<int> hitSlotIndices = new HashSet<int>();
 
@@ -109,6 +113,8 @@ namespace Game.Gameplay
             nextRuntimeInstanceId = 0;
             aliveEnemyCount = 0;
             activeMonsters.Clear();
+            monstersByRuntimeId.Clear();
+            pendingDisplacements.Clear();
             pendingRecycles.Clear();
             reportedDeaths.Clear();
             running = true;
@@ -141,6 +147,7 @@ namespace Game.Gameplay
                 OnMonsterRecycleRequested,
                 transform);
             activeMonsters.Add(monster);
+            monstersByRuntimeId.Add(runtimeId, monster);
             aliveEnemyCount++;
             monster.gameObject.SetActive(true);
 
@@ -208,6 +215,25 @@ namespace Game.Gameplay
             }
         }
 
+        public void ApplyPendingDisplacements(int applyingLevelRunId)
+        {
+            if (!IsCurrentRun(applyingLevelRunId))
+            {
+                return;
+            }
+
+            foreach (var pair in pendingDisplacements)
+            {
+                if (monstersByRuntimeId.TryGetValue(pair.Key, out var monster) &&
+                    monster != null && monster.IsRuntimeActive)
+                {
+                    monster.ApplyDisplacement(pair.Value);
+                }
+            }
+
+            pendingDisplacements.Clear();
+        }
+
         public void FlushPendingRecycles(int flushingLevelRunId)
         {
             if (!IsCurrentRun(flushingLevelRunId))
@@ -225,6 +251,8 @@ namespace Game.Gameplay
 
                 pendingRecycles.Remove(monster);
                 activeMonsters.RemoveAt(index);
+                monstersByRuntimeId.Remove(monster.RuntimeInstanceId);
+                pendingDisplacements.Remove(monster.RuntimeInstanceId);
                 Return(monster);
             }
         }
@@ -255,6 +283,8 @@ namespace Game.Gameplay
             }
 
             activeMonsters.Clear();
+            monstersByRuntimeId.Clear();
+            pendingDisplacements.Clear();
             pendingRecycles.Clear();
             reportedDeaths.Clear();
             aliveEnemyCount = 0;
@@ -325,7 +355,7 @@ namespace Game.Gameplay
 
         private void OnMonsterDamaged(
             MonsterBase monster,
-            BulletDamageContext damage,
+            EnemyDamageContext damage,
             int remainingHp,
             bool fatal)
         {
@@ -338,7 +368,7 @@ namespace Game.Gameplay
                 new MonsterDamaged(levelRunId, monster.RuntimeInstanceId, damage, remainingHp, fatal));
         }
 
-        private void OnMonsterDied(MonsterBase monster, BulletDamageContext damage)
+        private void OnMonsterDied(MonsterBase monster, EnemyDamageContext damage)
         {
             if (!IsOwnedCurrentMonster(monster) || !reportedDeaths.Add(monster.RuntimeInstanceId))
             {
@@ -361,6 +391,109 @@ namespace Game.Gameplay
         {
             return monster != null && running && monster.LevelRunId == levelRunId &&
                    activeMonsters.Contains(monster);
+        }
+
+        bool IEnemyEffectService.TryGetAliveEffectTarget(
+            int queriedLevelRunId,
+            int runtimeInstanceId,
+            out EnemyEffectTargetSnapshot target)
+        {
+            if (IsCurrentRun(queriedLevelRunId) &&
+                monstersByRuntimeId.TryGetValue(runtimeInstanceId, out var monster) &&
+                monster != null && monster.IsAlive)
+            {
+                target = new EnemyEffectTargetSnapshot(runtimeInstanceId, monster.EffectCenter);
+                return true;
+            }
+
+            target = default(EnemyEffectTargetSnapshot);
+            return false;
+        }
+
+        void IEnemyEffectService.CollectAliveEffectTargets(
+            int queriedLevelRunId,
+            Vector2 center,
+            float radius,
+            List<EnemyEffectTargetSnapshot> results)
+        {
+            if (results == null)
+            {
+                throw new ArgumentNullException(nameof(results));
+            }
+
+            results.Clear();
+            if (!IsCurrentRun(queriedLevelRunId) || !IsFinite(center) ||
+                !IsFinite(radius) || radius < 0f)
+            {
+                return;
+            }
+
+            var radiusSquared = radius * radius;
+            foreach (var pair in monstersByRuntimeId)
+            {
+                var monster = pair.Value;
+                if (monster == null || !monster.IsAlive)
+                {
+                    continue;
+                }
+
+                var targetCenter = monster.EffectCenter;
+                if ((targetCenter - center).sqrMagnitude <= radiusSquared)
+                {
+                    results.Add(new EnemyEffectTargetSnapshot(pair.Key, targetCenter));
+                }
+            }
+
+            results.Sort(CompareEffectTargets);
+        }
+
+        bool IEnemyEffectService.ApplyEnemyDamage(
+            int queriedLevelRunId,
+            int runtimeInstanceId,
+            EnemyDamageContext damage)
+        {
+            return IsCurrentRun(queriedLevelRunId) &&
+                   monstersByRuntimeId.TryGetValue(runtimeInstanceId, out var monster) &&
+                   monster != null && monster.ApplyEnemyDamage(damage);
+        }
+
+        void IEnemyEffectService.QueueEnemyDisplacement(
+            int queriedLevelRunId,
+            int runtimeInstanceId,
+            Vector2 displacement)
+        {
+            if (!IsCurrentRun(queriedLevelRunId) || !IsFinite(displacement) ||
+                !monstersByRuntimeId.TryGetValue(runtimeInstanceId, out var monster) ||
+                monster == null || !monster.IsRuntimeActive)
+            {
+                return;
+            }
+
+            pendingDisplacements.TryGetValue(runtimeInstanceId, out var accumulated);
+            var combined = accumulated + displacement;
+            if (!IsFinite(combined))
+            {
+                throw new InvalidOperationException("Accumulated enemy displacement is not finite.");
+            }
+
+            pendingDisplacements[runtimeInstanceId] = combined;
+        }
+
+        bool IEnemyEffectService.TryGetRecentElementMask(
+            int queriedLevelRunId,
+            int runtimeInstanceId,
+            out ElementMask elements)
+        {
+            if (IsCurrentRun(queriedLevelRunId) &&
+                monstersByRuntimeId.TryGetValue(runtimeInstanceId, out var monster) &&
+                monster != null && monster.IsAlive)
+            {
+                elements = monster.GetRecentElementMask();
+                return true;
+            }
+
+            elements = ElementMask.None;
+            return false;
         }
 
         private MonsterBase Rent(EnemyType enemyType)
@@ -420,6 +553,13 @@ namespace Game.Gameplay
         private static bool IsFinite(Vector2 value)
         {
             return IsFinite(value.x) && IsFinite(value.y);
+        }
+
+        private static int CompareEffectTargets(
+            EnemyEffectTargetSnapshot left,
+            EnemyEffectTargetSnapshot right)
+        {
+            return left.RuntimeInstanceId.CompareTo(right.RuntimeInstanceId);
         }
     }
 }

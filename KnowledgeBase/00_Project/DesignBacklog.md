@@ -35,7 +35,7 @@
 | DES-021 | 得分、存档和设置持久化是否进入当前 MVP | Accepted | 项目范围、事件、配置、全局服务、测试 | 见 ADR-017；当前不实现、不进入事件和验收，作为后续扩展 |
 | DES-022 | Luban MVP 初始字段和 Unity 资源绑定边界 | Accepted | Config、Army、Monster、Gate、Prop、Bullet、资源 | 见 ADR-020、ADR-035、ADR-038；Army Prefab 与槽位容量由 Unity 序列化绑定，当前不建立 TbElement 或 TbGate，Gate 的关卡内联字段与 Prefab 参数按 ADR-038 分工 |
 | DES-023 | MVP Army 身份与时间倍率范围 | Accepted | Army、Time、事件、全部 Gameplay | 见 ADR-021、ADR-027、ADR-046；`ArmyId` 固定为首行 ID `0`，MVP 所有时间倍率固定为 `1`，倍率和暂停接口不进入当前契约 |
-| DES-024 | 同帧碰撞阶段与同距离命中优先级 | Accepted | Bullet、Gate、Prop、Monster、Level、碰撞契约 | 见 ADR-021；移动阻挡→子弹→Gate/Prop→敌人攻击→终局，同距离按 Enemy > Gate > Prop > RuntimeInstanceId |
+| DES-024 | 同帧碰撞阶段与同距离命中优先级 | Accepted | Bullet、Gate、Prop、Monster、Level、碰撞契约 | 见 ADR-021、ADR-061；移动阻挡→首次同步→子弹/组合结算→冰火位移→第二次同步→Gate/Prop→敌人攻击→终局，同距离按 Enemy > Gate > Prop > RuntimeInstanceId |
 | DES-025 | 道路世界坐标系 | Accepted | Level、Army、Spawn、Monster、Gate、Prop | 见 ADR-021、ADR-023；世界 XY 平面、z=0、右为 +x、上为 +y，出生位置在固定 `SpawnY` 上按 `[0,1]` 横向映射 |
 | DES-026 | Army 横向移动速度来源 | Accepted | Army、Input、Config | 见 ADR-021、ADR-028、ADR-036；`TbArmy.MoveSpeed` 提供基础速度，当前拖拽原始滑动速度限制到 `[-1,1]` 后再乘 Inspector 系数作为最终输入倍率；键盘/手柄延后 |
 | DES-027 | Gate/Prop 统一道路状态快照映射 | Accepted | Gate、Prop、Obstacle、UI、调试 | 见 ADR-021；专用接触状态保留，快照使用统一 `ObstacleState` |
@@ -62,6 +62,7 @@
 | DES-048 | LevelConfig 资产、运行时快照与程序集依赖闭合 | Accepted | Contracts、ConfigGenerated、Foundation、Composition、Scene、Level、Spawn | 见 ADR-042；LevelConfig 资产及转换归 Foundation，Luban 代码归生成程序集，Contracts 定义不可变 LevelConfigSnapshot，IConfigService 只保留查询，具体初始化由 Composition 调用 |
 | DES-049 | 槽位射击、攻击冷却、死亡动画与道路接触/阈值语义 | Accepted | Army、Bullet、Monster、Gate、Prop、Obstacle、Level、Animation、测试 | 见 ADR-043、ADR-060；初始活动槽位和实际换武器立即首发，运行中新激活槽位等待完整间隔，每槽每帧最多一弹并保留周期余量；攻击冷却从起攻计算，Death 末帧登记回收；Gate/Prop 只做终点 Overlap，纵向阈值按根中心判定 |
 | DES-050 | 正式序列帧的导入目录、Prefab 数量与 ID 到 Animator 的预绑定方式 | Accepted | Army、Bullet、Monster、Gate、资源、Prefab、测试 | 见 ADR-048、ADR-049；源包留在 Reference，运行时只导入透明 Sprite；保持单 Army、单 Bullet、单 ElementGate 与三类 Monster Prefab。Army 通过预绑定 AOC 与代码显式状态选择，Bullet/ElementGate 使用 Animator 参数，不运行时按路径加载 |
+| DES-051 | 双元素子弹的派生伤害、目标选择、击退、死亡目标和表现生命周期 | Accepted | Bullet、Monster、ElementCombo、Level、VFX、Prefab、测试 | 见 ADR-061；三个二元素精确匹配并在命中阶段显式一次性结算，三元素延后；死亡目标只保留视觉覆盖，冰火位移后执行第二次物理同步 |
 
 ## 已接受决策
 
@@ -105,6 +106,7 @@
 - `../06_Decisions/ADR-028-MvpRelativeDragInput.md`：定案相对拖动输入、UI 采集与同步命令边界、帧率/分辨率归一化、Inspector 灵敏度系数和清理规则；其中键盘/手柄汇总与回退已由 ADR-036 延后。
 - `../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`：将首个工程切片收窄为单一相对拖拽输入，补齐最小接收接口、代码结构、同步 Tick 顺序、Prefab 与场景绑定。
 - `../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`：移除 TargetSensor，以目标位置距离作为攻击起始权威；允许 Army 槽位与敌人身体重合，并定案六个 Gameplay Layer、显式查询关系和默认关闭的自动碰撞矩阵。
+- `../06_Decisions/ADR-061-ElementComboImpactEffects.md`：定案三个精准二元素命中效果、显式同步结算、死亡目标过滤、冰火延后位移和最近元素记录。
 - `../06_Decisions/ADR-029-EventBusImplementationAndPayloads.md`：定案 EventBus 实现、精确类型与嵌套分发、Token 身份、异常报告、事件载荷类型选择、订阅生命周期和 Monster 死亡事件边界。
 - `../06_Decisions/ADR-030-TimeDomainStructure.md`：定案 MVP 时间域的唯一归属与消费者映射；当前不实现嵌套，未来时间控制采用单父级层次而非任意重叠。
 - `../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`：定案具体类型到规范 Prefab 的唯一池身份、全局类型池所有权、Manager 初始化与归还顺序、未激活借出和防御性失活。

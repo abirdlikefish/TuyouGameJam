@@ -72,6 +72,7 @@ GameplayScene
     │   ├── GateRoot
     │   └── PropRoot
     ├── BulletRoot [BulletManager]
+    ├── ElementComboRoot [ElementComboManager；绑定三个效果 Prefab]
     ├── InputAdapter [GameplayInputAdapter；实现 IGameplayInputController]
     ├── UI [Gameplay Canvas；GraphicRaycaster]
     │   ├── TouchDragArea [PF_UI_TouchDragArea；TouchDragInput；horizontalMultiplier = 1]
@@ -83,7 +84,7 @@ GameplayScene
     └── VFXRoot
 ```
 
-`GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理；Camera 与 AudioListener 不属于单局对象，由 GlobalRoot 的 AppCamera 持有。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 0` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到 LevelConfig 的 `armySpawnPosition`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的 `roadWidth`、`roadHeight` 提供原点居中的视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收。
+`GameplayRoot` 下的对象均属于当前 `LevelRunId`，在 Gameplay 场景卸载时清理；Camera 与 AudioListener 不属于单局对象，由 GlobalRoot 的 AppCamera 持有。`ArmyContainer` 是固定场景容器；GameplaySceneEntry 使用序列化 `ArmyPrefabBinding[]` 按固定 `ArmyId = 0` 选择 Prefab，并在其下实例化唯一 `ArmyRoot [ArmyController]`。ArmyRoot 每局重置到 LevelConfig 的 `armySpawnPosition`，业务状态与序列化槽位引用由 ArmyController 负责，Army 不进入 PoolService。`Road` 根据 LevelConfig 的 `roadWidth`、`roadHeight` 提供原点居中的视觉，不设置玩法 Collider。`MonsterRoot` 保存当前敌人实例，`EnemyManager` 负责生成登记、存活统计和回收；`ObstacleRoot` 下的 Gate/Prop 由 `ObstacleManager` 统一登记、查询和回收；`BulletRoot` 的 BulletManager 负责子弹类型池引用、活动集合和回收；`ElementComboRoot` 持有组合解析器和三个具体类型池，运行时效果实例显示在 `VFXRoot`。
 
 Gameplay Canvas 依次承载 Input 模块的 TouchDragArea、常驻 BattleHud、全屏 LevelIntroVideo 与初始隐藏的 BattleResult。LevelIntroVideo 使用黑色射线遮挡、API Only VideoPlayer 和保持宽高比的 RawImage，按 LevelId 从 GameplaySceneEntry 的序列化绑定选择 VideoClip；未绑定当前关卡时安全跳过。BattleResult 保持最高层级。Gate 自身继续使用世界空间单个 TMP 调试文本显示当前状态。完整最小绑定见 [PrefabSpecifications](../04_Assets/PrefabSpecifications.md)。
 

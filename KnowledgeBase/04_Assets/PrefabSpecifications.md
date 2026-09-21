@@ -2,7 +2,7 @@
 
 ## 范围
 
-本文定义首轮工程切片为验证玩法闭环所需的最小 Unity 层级、组件和 Inspector 绑定。批次 7 起，Army、Monster、Bullet 和 Gate 的正式序列帧、Animator 与 ID 映射进入装配范围；颜色、字体、最终 UI 布局和 VFX 仍可在不改变根脚本、Collider 职责、序列化引用和玩法状态所有权的前提下后续替换。动画目录、命名、导入设置和制作顺序见 [AnimationPipeline](AnimationPipeline.md)。
+本文定义首轮工程切片为验证玩法闭环所需的最小 Unity 层级、组件和 Inspector 绑定。批次 7 起，Army、Monster、Bullet 和 Gate 的正式序列帧、Animator 与 ID 映射进入装配范围；三种元素组合已有最小 LineRenderer 显示，颜色、字体、最终 UI 布局和其他 VFX 仍可在不改变根脚本、Collider 职责、序列化引用和玩法状态所有权的前提下后续替换。动画目录、命名、导入设置和制作顺序见 [AnimationPipeline](AnimationPipeline.md)。
 
 所有必需引用在 Bootstrap 或 Gameplay Preparing 阶段集中校验。缺失或非法时直接 `Debug.LogError` 输出对象路径、字段和原因，并停止进入 Ready；不得运行时 `Find`、`GetComponent`、`AddComponent` 或使用默认资源补齐。
 
@@ -29,6 +29,8 @@ GameplayRoot [GameplaySceneEntry]
 │   ├── GateRoot
 │   └── PropRoot
 ├── BulletRoot [BulletManager]
+├── ElementComboRoot [ElementComboManager]
+├── VFXRoot [运行时元素组合效果实例]
 ├── InputAdapter [GameplayInputAdapter]
 ├── UI [Canvas；GraphicRaycaster]
 │   ├── TouchDragArea [PF_UI_TouchDragArea 实例]
@@ -73,6 +75,27 @@ PF_Bullet [Bullet；Animator]
 - 首轮所有 BulletId 共用该 Prefab；基础伤害和速度由配置快照注入。
 - `BulletId 0`～`9` 各绑定一个循环 Clip。池对象借出时在激活前写入本次 BulletId 并从对应状态起播；归还和复用不能保留上一实例的参数、状态或帧。
 - Bullet 动画不包含玩法 AnimationEvent；Trail 和命中特效仍可延后。
+
+## Element Combo Effects
+
+```text
+PF_Effect_FireLightningExplosion [FireLightningExplosionEffect]
+├── OuterRing [LineRenderer]
+└── InnerRing [LineRenderer]
+
+PF_Effect_IceLightningChain [IceLightningChainEffect]
+├── PrimaryBolt [LineRenderer]
+└── SecondaryBolt [LineRenderer]
+
+PF_Effect_FireIceSteam [FireIceSteamEffect]
+└── SteamLine [LineRenderer]
+```
+
+- `ElementComboManager` 显式绑定上述三个不同根类型的规范 Prefab、`ElementComboRoot` 和 `VFXRoot`，并分别取得类型池；Luban 不保存 PrefabKey。
+- 三个根脚本都验证正数显示时长，并在失活状态通过一次性 `ResolveOnce` 接收命中请求。激活后的 `OnEnable` 只开始显示，`Update` 只由 Manager 传入 VFX 域 delta，不再次结算玩法。
+- 火雷根脚本序列化非负额外伤害与正数爆炸半径，两个 LineRenderer 形成双环；冰雷根脚本序列化非负额外伤害、正数选取半径和正整数目标总数，两个 LineRenderer 绘制同一目标链的双层折线；冰火根脚本序列化正数固定 `+Y` 距离，一个 LineRenderer 显示起点到新位置。
+- LineRenderer 不带 Collider，不参与 Layer 查询。效果实例的显示父节点是 `VFXRoot`；玩法参数仍由根效果脚本持有，不由材质或子显示节点决定。
+- 每个效果实例播放结束时先清除运行时上下文与 LineRenderer，再主动失活并归还对应具体类型池；不得在 `OnDisable` 或 `OnDestroy` 中自行归还。
 
 ## Monster
 
@@ -165,4 +188,5 @@ PF_UI_TouchDragArea [RectTransform；Image；TouchDragInput]
 - 正式 Sprite 尚未到位时允许临时占位 Clip，但 Army 五状态与十套 WeaponId Override、十个 BulletId 循环状态、加法门和三种元素门循环状态、三种 Monster Move/Attack/Death 以及全部必需 Controller/参数必须完整；不得用默认 Sprite 或错误 ID 回退继续 Ready。
 - 三种 Monster 的非循环 Attack/Death Clip 及其 `OnAttackFrame()` / `OnAttackAnimationFinished()` / `OnDeathAnimationFinished()` 事件必须完整绑定。
 - 对象池 Prefab 必须保持一个具体根类型对应一个规范 Prefab。
+- 三种元素组合 Prefab 的根脚本、LineRenderer 数量、玩法参数和显示时长必须完整；三元素掩码不使用其中任一 Prefab。
 - 首轮通过合理的速度、Collider 尺寸和关卡编排避免离散阶段模型中的高速穿透，不额外实现相对运动扫掠或子步进。

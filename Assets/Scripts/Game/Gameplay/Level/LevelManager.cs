@@ -191,6 +191,8 @@ namespace Game.Gameplay
             obstacleManager.TickMovement(levelRunId, gateDelta);
             Physics2D.SyncTransforms();
             bulletManager.TickMovementAndHits(levelRunId, bulletDelta);
+            enemyManager.ApplyPendingDisplacements(levelRunId);
+            Physics2D.SyncTransforms();
             obstacleManager.ResolveContacts(levelRunId);
             enemyManager.ResolveAttacks(levelRunId, monsterDelta);
             bulletManager.FlushPendingRecycles(levelRunId);

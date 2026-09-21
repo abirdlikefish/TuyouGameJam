@@ -90,6 +90,14 @@ namespace Game.Contracts
         Lightning = 3
     }
 
+    public enum ElementComboKind
+    {
+        None = 0,
+        FireIceSteam = 1,
+        FireLightningExplosion = 2,
+        IceLightningChain = 3
+    }
+
     [Flags]
     public enum ElementMask : byte
     {

@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted
+Accepted；ADR-061 在 Bullet 阶段后增加组合位移与第二次物理同步
 
 ## 日期
 
@@ -34,6 +34,8 @@ LevelManager 确认状态为 Playing
 → ObstacleManager.TickMovement
 → Physics2D.SyncTransforms（当前项目 Auto Sync Transforms 关闭）
 → BulletManager.TickMovementAndHits
+→ EnemyManager.ApplyPendingDisplacements
+→ Physics2D.SyncTransforms（ADR-061 冰火组合位移后）
 → ObstacleManager.ResolveContacts
 → EnemyManager.ResolveAttacks
 → 各 Manager FlushPendingRecycles
@@ -42,7 +44,7 @@ LevelManager 确认状态为 Playing
 
 Army 发射产生的新子弹在本帧子弹阶段参与移动和命中。SpawnManager 在移动阶段之前派发到时对象，新生成对象参与本帧后续阶段。三类生成列表之间仍不定义可供玩法依赖的跨类型顺序。
 
-当前 `ProjectSettings/Physics2DSettings.asset` 关闭 Auto Sync Transforms。LevelManager 在 Army、Enemy、Gate/Prop 应用本帧位置后、任何 Bullet/接触/攻击显式查询前准确调用一次 `Physics2D.SyncTransforms()`；各 Manager 和池对象不得重复调用。
+当前 `ProjectSettings/Physics2DSettings.asset` 关闭 Auto Sync Transforms。原始管线在 Army、Enemy、Gate/Prop 应用常规位置后调用一次 `Physics2D.SyncTransforms()`；ADR-061 进一步要求在 Bullet 阶段登记并应用冰火位移后调用第二次，再进入接触与攻击查询。两次同步都只由 LevelManager 调用，各 Manager 和池对象不得重复调用。
 
 进入 `Playing` 时，LevelManager 先调用一次 `SpawnManager.Tick(LevelRunId, 0)`，确保 `spawnTime == 0` 的条目在首个逻辑帧移动前出现。
 

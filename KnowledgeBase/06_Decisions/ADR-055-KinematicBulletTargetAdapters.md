@@ -1,6 +1,6 @@
 # ADR-055：子弹目标侧 Kinematic Rigidbody2D 查询适配
 
-- 状态：Accepted
+- 状态：Accepted；“单次物理同步”部分已由 ADR-061 扩展为常规移动后与组合位移后两次同步
 - 日期：2026-09-21
 - 关联：ADR-016、ADR-037、ADR-043、DES-030
 
@@ -16,7 +16,7 @@
 - 适配刚体固定为 `Kinematic`、`Simulated = true`、`Use Full Kinematic Contacts = false`、`Gravity Scale = 0`、`Collision Detection = Discrete`、`Interpolate = None`，并冻结 Z 轴旋转。
 - Bullet Prefab 不添加 Rigidbody2D。Bullet 继续使用自身 `BodyCollider.Cast`，依靠目标侧 Kinematic Rigidbody2D 返回 Enemy、Gate 和 Prop 候选。
 - Monster 根节点的同一 Kinematic Rigidbody2D 同时为自身 BodyCollider Cast 和其他 Monster 的阻挡候选提供查询适配；`ApplyBlockedMovement` 仍是允许位移的唯一权威。
-- Kinematic Rigidbody2D 不负责移动、推挤、寻路或伤害结算。对象继续由模块按自定义时间域修改 Transform，LevelManager 在全部位移后只调用一次 `Physics2D.SyncTransforms()`。
+- Kinematic Rigidbody2D 不负责移动、推挤、寻路或伤害结算。对象继续由模块按自定义时间域修改 Transform；LevelManager 在常规移动后同步一次，并按 ADR-061 在冰火组合位移后再同步一次。
 - Gameplay Collider 继续保持 Trigger，自动 Layer Collision Matrix 继续关闭；不得新增 `OnTriggerEnter2D`、`OnCollisionEnter2D` 或自动接触结算。
 - Monster、Gate 和 Prop 的 Preparing 校验必须确认 BodyCollider 所属 Rigidbody2D 位于玩法根节点，且为已启用模拟的 Kinematic Body。配置不合法时阻止 Gameplay Ready。
 
@@ -39,4 +39,3 @@
 - 存活 Monster 的 BodyCollider Cast 能检测前方 Monster 并按 `blockingGap` 截断位移。
 - Gameplay Layer 自动碰撞矩阵保持关闭；运行中不存在自动推挤、Trigger/Collision 回调伤害或 Rigidbody2D 驱动位移。
 - 六个目标 Prefab 根节点的 Rigidbody2D 配置和运行前校验一致，代码编译且 Gameplay Preparing 通过。
-

@@ -39,8 +39,8 @@ namespace Game.Gameplay
         private readonly RaycastHit2D[] blockingResults = new RaycastHit2D[32];
 
         private IArmyController army;
-        private Action<MonsterBase, BulletDamageContext, int, bool> damagedCallback;
-        private Action<MonsterBase, BulletDamageContext> deathCallback;
+        private Action<MonsterBase, EnemyDamageContext, int, bool> damagedCallback;
+        private Action<MonsterBase, EnemyDamageContext> deathCallback;
         private Action<MonsterBase> recycleCallback;
         private EnemyConfigSnapshot config;
         private MonsterRuntimeState state;
@@ -53,6 +53,9 @@ namespace Game.Gameplay
         private int pendingAttackSequenceId = -1;
         private float attackCooldownRemaining;
         private float enemyApproachY;
+        private float recentFireRemaining;
+        private float recentIceRemaining;
+        private float recentLightningRemaining;
         private bool runtimeActive;
         private bool attackFrameRegistered;
         private bool deathAnimationFinished;
@@ -67,7 +70,9 @@ namespace Game.Gameplay
         internal int ConfigId => config.Id;
         internal int AttackPower => config.AttackPower;
         internal bool IsAlive => runtimeActive && state != MonsterRuntimeState.Dead && currentHp > 0;
+        internal bool IsRuntimeActive => runtimeActive;
         internal Collider2D BodyCollider => bodyCollider;
+        internal Vector2 EffectCenter => bodyCollider.bounds.center;
 
         BulletTargetKind IRuntimeBulletTarget.BulletTargetKind => BulletTargetKind.Enemy;
         bool IBulletHittable.CanReceiveBulletHit => IsAlive;
@@ -137,8 +142,8 @@ namespace Game.Gameplay
             int initializedRuntimeInstanceId,
             float approachY,
             IArmyController armyController,
-            Action<MonsterBase, BulletDamageContext, int, bool> onDamaged,
-            Action<MonsterBase, BulletDamageContext> onDeath,
+            Action<MonsterBase, EnemyDamageContext, int, bool> onDamaged,
+            Action<MonsterBase, EnemyDamageContext> onDeath,
             Action<MonsterBase> onRecycleRequested,
             Transform parent)
         {
@@ -162,6 +167,9 @@ namespace Game.Gameplay
             attackSequenceId = 0;
             pendingAttackSequenceId = -1;
             attackCooldownRemaining = 0f;
+            recentFireRemaining = 0f;
+            recentIceRemaining = 0f;
+            recentLightningRemaining = 0f;
             attackFrameRegistered = false;
             deathAnimationFinished = false;
             runtimeActive = true;
@@ -188,10 +196,19 @@ namespace Game.Gameplay
 
         internal void TickMovement(float deltaTime, ContactFilter2D enemyBodyFilter)
         {
-            if (!runtimeActive || state == MonsterRuntimeState.Dead)
+            if (!runtimeActive)
             {
                 return;
             }
+
+            if (state == MonsterRuntimeState.Dead)
+            {
+                return;
+            }
+
+            recentFireRemaining = Mathf.Max(0f, recentFireRemaining - deltaTime);
+            recentIceRemaining = Mathf.Max(0f, recentIceRemaining - deltaTime);
+            recentLightningRemaining = Mathf.Max(0f, recentLightningRemaining - deltaTime);
 
             attackCooldownRemaining = Mathf.Max(0f, attackCooldownRemaining - deltaTime);
             if (state == MonsterRuntimeState.Attacking)
@@ -210,17 +227,23 @@ namespace Game.Gameplay
 
         public void ReceiveBulletHit(BulletDamageContext damage)
         {
+            ApplyEnemyDamage(EnemyDamageContext.FromDirectBullet(damage));
+        }
+
+        internal bool ApplyEnemyDamage(EnemyDamageContext damage)
+        {
             if (!IsAlive || damage.Damage <= 0)
             {
-                return;
+                return false;
             }
 
+            RefreshRecentElements(damage.ActiveElements);
             currentHp = (int)Math.Max(0L, (long)currentHp - damage.Damage);
             var fatal = currentHp == 0;
             damagedCallback(this, damage, currentHp, fatal);
             if (!fatal)
             {
-                return;
+                return true;
             }
 
             state = MonsterRuntimeState.Dead;
@@ -235,6 +258,43 @@ namespace Game.Gameplay
 
             animator.SetTrigger(DeathTrigger);
             deathCallback(this, damage);
+            return true;
+        }
+
+        internal ElementMask GetRecentElementMask()
+        {
+            if (!IsAlive)
+            {
+                return ElementMask.None;
+            }
+
+            var result = ElementMask.None;
+            if (recentFireRemaining > 0f)
+            {
+                result |= ElementMask.Fire;
+            }
+
+            if (recentIceRemaining > 0f)
+            {
+                result |= ElementMask.Ice;
+            }
+
+            if (recentLightningRemaining > 0f)
+            {
+                result |= ElementMask.Lightning;
+            }
+
+            return result;
+        }
+
+        internal void ApplyDisplacement(Vector2 displacement)
+        {
+            if (!runtimeActive || !IsFinite(displacement.x) || !IsFinite(displacement.y))
+            {
+                return;
+            }
+
+            transform.position = (Vector2)transform.position + displacement;
         }
 
         public void OnAttackFrame()
@@ -310,9 +370,30 @@ namespace Game.Gameplay
             runtimeInstanceId = -1;
             spawnEntryIndex = -1;
             currentHp = 0;
+            recentFireRemaining = 0f;
+            recentIceRemaining = 0f;
+            recentLightningRemaining = 0f;
             targetSlotIndex = -1;
             pendingAttackSequenceId = -1;
             gameObject.SetActive(false);
+        }
+
+        private void RefreshRecentElements(ElementMask elements)
+        {
+            if ((elements & ElementMask.Fire) != 0)
+            {
+                recentFireRemaining = 1f;
+            }
+
+            if ((elements & ElementMask.Ice) != 0)
+            {
+                recentIceRemaining = 1f;
+            }
+
+            if ((elements & ElementMask.Lightning) != 0)
+            {
+                recentLightningRemaining = 1f;
+            }
         }
 
         private void PrepareMoveAnimation()

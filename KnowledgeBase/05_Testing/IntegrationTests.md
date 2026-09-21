@@ -111,6 +111,13 @@
 - [ ] 单个逻辑帧每槽最多生成一颗子弹；delta 跨过多个 FireInterval 时不补发历史子弹。
 - [ ] 每局初始武器为 WeaponId=0，火/冰/雷剩余时间均为 0；三元素可以同时有效并从 Gameplay delta 扣减到不小于 0。
 - [ ] 子弹保存发射瞬间的 WeaponId 与 ElementMask；Army 后续换武器、获得元素或元素过期不修改飞行中的子弹。
+- [ ] 只有 `Fire|Lightning`、`Ice|Lightning`、`Fire|Ice` 三个精准二元素掩码触发对应效果；None、单元素、三元素、Gate 与 Prop 命中均不误触发。
+- [ ] 火雷以直接目标命中时的 BodyCollider 中心为圆心，只在出现帧查询一次；直接目标受到基础伤害加爆炸伤害，范围内其他存活敌人只受爆炸伤害，同一目标可被同帧多个独立爆炸分别命中。
+- [ ] 冰雷始终把直接目标作为第一目标，并从半径内其他存活目标中按 `LevelRunId + BulletInstanceId + ComboKind` 的确定性随机顺序补足总目标数；每个入选目标只结算一次，连线刷新不追加伤害。
+- [ ] 冰火只造成基础伤害并登记固定世界 `+Y` 位移；同帧多次位移累加，不受道路、Army 或其他敌人阻挡，不改变攻击、动画、目标或冷却。
+- [ ] 组合效果在 Prefab 激活前通过显式一次性入口完成伤害或位移登记；`Awake/OnEnable/Start`、LineRenderer 刷新和播放结束均不产生第二次玩法结算。
+- [ ] 死亡动画中的敌人不再接受派生伤害或刷新最近元素记录，但已生成的爆炸、闪电或蒸汽显示继续按冻结世界坐标播放到结束。
+- [ ] Fire、Ice、Lightning 最近受击记录分别在有效直接/派生伤害时重置为 1 秒，使用 Monster delta 递减；一秒后过期，死亡时不再暴露，回池后不残留。
 - [ ] 正式进入 Playing 时，初始活动槽位在 Attack/Move 动画第 1 帧立即发射；运行中新激活槽位仍等待完整 `FireInterval`。
 - [ ] Attack、MoveLeft、MoveRight 连续切换保持已经播放的攻击周期进度，不从第 0 帧重启，也不改变下一次发射边界。
 - [ ] 实际 WeaponId 改变时活动槽位从新动画第 0 帧立即发射；重复相同 WeaponId 不重播、不发射。
@@ -226,9 +233,9 @@
 
 - [ ] MVP 所有时间域和对象局部倍率均为 `1`，未启用运行时倍率调整。
 - [ ] 所有包含 Army 身份的事件使用 `ArmyId = 0`。
-- [ ] LevelManager 是同一帧阶段顺序的唯一协调者，按生成、移动阻挡、子弹、Gate/Prop、敌人攻击、回收、终局判断的顺序同步调用；Manager/池对象独立 Update 不推进核心玩法。
+- [ ] LevelManager 是同一帧阶段顺序的唯一协调者，按生成、移动阻挡、首次物理同步、子弹与组合结算、冰火位移、第二次物理同步、Gate/Prop、敌人攻击、回收、终局判断的顺序同步调用；Manager/池对象独立 Update 不推进核心玩法。
 - [ ] LevelManager 在帧开始读取 Gameplay、Bullet、Gate、Monster delta 并分别传入对应阶段；具体池对象不直接访问 TimeService。
-- [ ] Physics2D Auto Sync Transforms 关闭时，每个 Playing 帧在全部移动后、首次显式查询前由 LevelManager 准确调用一次 SyncTransforms，其他 Manager 不重复调用。
+- [ ] Physics2D Auto Sync Transforms 关闭时，每个 Playing 帧由 LevelManager 准确调用两次 SyncTransforms：常规移动后一次、冰火组合位移后一次；其他 Manager 和效果对象不重复调用。已起手范围攻击在第二次同步后按新位置查询。
 - [ ] Gameplay Layer 的自动物理矩阵默认全部关闭；目标 Unity 版本中，显式 ContactFilter2D/LayerMask 查询仍只能命中 ADR-037 规定的目标，不产生自动碰撞回调或刚体推挤。
 - [ ] Kinematic 查询适配不通过 Rigidbody2D 速度、MovePosition、力或自动接触推进对象；Monster 阻挡仍只由 ApplyBlockedMovement 的 Cast 距离截断决定，Gate/Prop 接触仍只由终点 OverlapCollider 结算。
 - [ ] `LevelRunStarted` 只让匹配会话进入 Playing，不作为逐帧命令广播；增删事件监听者不改变阶段调用。

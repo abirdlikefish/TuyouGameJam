@@ -36,7 +36,8 @@
 ### 第二优先级：PlayMode
 
 - UGUI Pointer、坐标转换、Raycast、禁用与失焦清理。
-- Collider2D Cast/Overlap、LayerMask 和单帧 `Physics2D.SyncTransforms`。
+- Collider2D Cast/Overlap、LayerMask，以及常规移动后与冰火组合位移后的两阶段 `Physics2D.SyncTransforms`。
+- 双元素精准匹配、组合伤害一次性结算、确定性随机链、死亡目标过滤、最近元素计时和效果池复用。
 - Animator 攻击/死亡事件桥接及重复、过期回调。
 - Army 武器 OverrideController 切换、BulletId/ElementType Animator 状态选择以及池复用重置。
 - Additive 场景加载、SceneEntry Ready/清理、失败恢复和完整重开。

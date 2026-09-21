@@ -23,6 +23,7 @@ namespace Game.Composition
 
         [Header("玩法模块")]
         [SerializeField] private BulletManager bulletManager;
+        [SerializeField] private ElementComboManager elementComboManager;
         [SerializeField] private EnemyManager enemyManager;
         [SerializeField] private ObstacleManager obstacleManager;
         [SerializeField] private GameplayInputAdapter inputAdapter;
@@ -32,8 +33,10 @@ namespace Game.Composition
         [SerializeField] private Transform armySpawnPoint;
         [SerializeField] private Transform armyContainer;
         [SerializeField] private Transform bulletRoot;
+        [SerializeField] private Transform elementComboRoot;
         [SerializeField] private Transform monsterRoot;
         [SerializeField] private Transform obstacleRoot;
+        [SerializeField] private Transform vfxRoot;
 
         [Header("Army Prefab 绑定")]
         [SerializeField] private ArmyPrefabBinding[] armyPrefabBindings = new ArmyPrefabBinding[0];
@@ -95,7 +98,15 @@ namespace Game.Composition
                 }
 
                 // Manager 初始化顺序固定；LevelManager.Initialize 是唯一开始 Preparing/StartRun 的入口。
-                bulletManager.Initialize(dependencies.PoolService, dependencies.ConfigService);
+                elementComboManager.Initialize(
+                    dependencies.PoolService,
+                    enemyManager,
+                    dependencies.TimeService,
+                    vfxRoot);
+                bulletManager.Initialize(
+                    dependencies.PoolService,
+                    dependencies.ConfigService,
+                    elementComboManager);
                 armyInstance.Initialize(
                     MvpArmyId,
                     armyConfig,
@@ -161,6 +172,7 @@ namespace Game.Composition
             RequireSceneComponent(spawnManager, nameof(spawnManager));
             RequireSceneComponent(roadView, nameof(roadView));
             RequireSceneComponent(bulletManager, nameof(bulletManager));
+            RequireSceneComponent(elementComboManager, nameof(elementComboManager));
             RequireSceneComponent(enemyManager, nameof(enemyManager));
             RequireSceneComponent(obstacleManager, nameof(obstacleManager));
             RequireSceneComponent(inputAdapter, nameof(inputAdapter));
@@ -175,14 +187,17 @@ namespace Game.Composition
             RequireSceneTransform(armySpawnPoint, nameof(armySpawnPoint));
             RequireSceneTransform(armyContainer, nameof(armyContainer));
             RequireSceneTransform(bulletRoot, nameof(bulletRoot));
+            RequireSceneTransform(elementComboRoot, nameof(elementComboRoot));
             RequireSceneTransform(monsterRoot, nameof(monsterRoot));
             RequireSceneTransform(obstacleRoot, nameof(obstacleRoot));
+            RequireSceneTransform(vfxRoot, nameof(vfxRoot));
 
             if (bulletManager.transform != bulletRoot || enemyManager.transform != monsterRoot ||
-                obstacleManager.transform != obstacleRoot)
+                obstacleManager.transform != obstacleRoot ||
+                elementComboManager.transform != elementComboRoot)
             {
                 throw new InvalidOperationException(
-                    "BulletManager, EnemyManager and ObstacleManager must be attached to their bound fixed roots.");
+                    "Gameplay Managers must be attached to their bound fixed roots.");
             }
 
             if (gameplayCanvas.gameObject != graphicRaycaster.gameObject)
@@ -232,6 +247,11 @@ namespace Game.Composition
             if (!bulletManager.TryValidate(out var bulletError))
             {
                 throw new InvalidOperationException(bulletError);
+            }
+
+            if (!elementComboManager.TryValidate(out var elementComboError))
+            {
+                throw new InvalidOperationException(elementComboError);
             }
 
             if (!enemyManager.TryValidate(out var enemyError))
@@ -403,6 +423,11 @@ namespace Game.Composition
             if (levelInitialized && levelManager != null)
             {
                 levelManager.StopRun();
+            }
+
+            if (elementComboManager != null)
+            {
+                elementComboManager.Cleanup();
             }
 
             levelInitialized = false;

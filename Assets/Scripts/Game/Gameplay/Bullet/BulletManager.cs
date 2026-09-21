@@ -18,13 +18,17 @@ namespace Game.Gameplay
 
         private IComponentPool<Bullet> pool;
         private IBulletConfigProvider configProvider;
+        private IElementComboResolver elementComboResolver;
         private int levelRunId;
         private int nextRuntimeInstanceId;
         private float topBoundary;
         private bool initialized;
         private bool running;
 
-        public void Initialize(IPoolService poolService, IBulletConfigProvider bulletConfigProvider)
+        public void Initialize(
+            IPoolService poolService,
+            IBulletConfigProvider bulletConfigProvider,
+            IElementComboResolver initializedElementComboResolver)
         {
             if (poolService == null)
             {
@@ -34,6 +38,11 @@ namespace Game.Gameplay
             if (bulletConfigProvider == null)
             {
                 throw new ArgumentNullException(nameof(bulletConfigProvider));
+            }
+
+            if (initializedElementComboResolver == null)
+            {
+                throw new ArgumentNullException(nameof(initializedElementComboResolver));
             }
 
             if (initialized)
@@ -48,6 +57,7 @@ namespace Game.Gameplay
 
             pool = poolService.GetOrCreatePool(bulletPrefab);
             configProvider = bulletConfigProvider;
+            elementComboResolver = initializedElementComboResolver;
             initialized = true;
         }
 
@@ -91,6 +101,7 @@ namespace Game.Gameplay
             nextRuntimeInstanceId = 0;
             activeBullets.Clear();
             pendingRecycles.Clear();
+            elementComboResolver.StartRun(levelRunId);
             running = true;
         }
 
@@ -153,7 +164,19 @@ namespace Game.Gameplay
                     }
 
                     bullet.ApplyPosition(hitPosition);
-                    candidate.Target.ReceiveBulletHit(bullet.CreateDamageContext(hitPosition));
+                    var damage = bullet.CreateDamageContext(hitPosition);
+                    var resolvedCombo = candidate.Target.BulletTargetKind == BulletTargetKind.Enemy &&
+                                        elementComboResolver.TryResolveEnemyHit(
+                                            new ElementComboHitRequest(
+                                                levelRunId,
+                                                candidate.Target.RuntimeInstanceId,
+                                                candidate.Hit.collider.bounds.center,
+                                                damage));
+                    if (!resolvedCombo)
+                    {
+                        candidate.Target.ReceiveBulletHit(damage);
+                    }
+
                     pendingRecycles.Add(bullet);
                     continue;
                 }
@@ -209,6 +232,7 @@ namespace Game.Gameplay
 
             activeBullets.Clear();
             pendingRecycles.Clear();
+            elementComboResolver.StopRun(levelRunId);
             running = false;
             levelRunId = 0;
         }

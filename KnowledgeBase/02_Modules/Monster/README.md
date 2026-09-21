@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator 池复用重置已实现并通过编译；剩余正式动画、Prefab 字段、Layer 与战斗手测待完成）
 - 依赖：Bullet、Army、Level、EventBus、IEnemyConfigProvider、PoolService
-- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-056-ChickenEnemyIdentityNaming.md`
+- 决策：`../../06_Decisions/ADR-005-MonsterCombatAndManager.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-037-MonsterDistanceTargetingAndCollisionLayers.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-056-ChickenEnemyIdentityNaming.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`
 
 ## 职责
 
@@ -123,7 +123,11 @@ PF_Monster_Rooster [RoosterMonster；Animator]
 
 ## 受击与反馈
 
-子弹碰撞向敌人传入 `BulletDamageContext`，包含 `BulletId`、`WeaponId`、发射瞬间的 `ActiveElements`、最终伤害、命中位置和方向。Monster 通过 Manager 注入的发布回调报告 `MonsterDamaged`；生命值归零时先调用 EnemyManager 的必执行死亡回调，由 EnemyManager 完成死亡去重和 `AliveEnemyCount` 更新，再发布携带最后一击上下文的 `MonsterKilled`。MVP 的反馈表现由 Animator、VFX 或其他视觉适配器消费，不在 Monster 内写死具体资源；声音功能延后。
+Monster 的统一受击入口接收 `EnemyDamageContext`。它保留来源 `BulletDamageContext`，并额外区分组合种类、直接伤害、效果伤害、命中位置和方向；`Damage` 是两部分的饱和求和。Monster 通过 Manager 注入的发布回调报告 `MonsterDamaged`；生命值归零时先调用 EnemyManager 的必执行死亡回调，由 EnemyManager 完成死亡去重和 `AliveEnemyCount` 更新，再发布携带最后一击上下文的 `MonsterKilled`。
+
+每个存活敌人分别记录 Fire、Ice、Lightning 最近一次有效受击后的剩余时间，窗口固定为 1 秒。直接伤害和范围/链式组合伤害都会刷新本次上下文携带的元素；无效、重复、已死亡目标不刷新。该记录只描述历史状态，本轮不参与组合触发。
+
+冰火效果只登记固定世界 `+Y` 位移。EnemyManager 在子弹阶段结束后统一应用，允许越过道路、其他敌人和 Army，不修改动作状态或动画；致命命中也先在新位置播放死亡动画。若范围攻击已经起手，其后续判定使用位移后的 Collider 姿态。死亡中的敌人仍可被组合特效视觉覆盖，但不再进入伤害候选或元素记录更新。反馈表现由 Animator、VFX 或其他视觉适配器消费，不在 Monster 内写死具体资源；声音功能延后。
 
 ## 性能约束
 
@@ -161,6 +165,9 @@ PF_Monster_Rooster [RoosterMonster；Animator]
 - MVP 不实现局部时停；敌人进入 `Dead` 后立即退出受击和阻挡查询。未来启用局部时停时另行确认其碰撞行为。
 - 首版不实现后方敌人从侧面绕行、通道预留或局部导航。
 - 子弹碰撞只对敌人造成一次伤害，并将 BulletId、WeaponId、ActiveElements 传递到受击/击杀事件。
+- 直接命中与组合效果统一生成 `EnemyDamageContext`；火雷范围和冰雷链只选择当时仍存活的敌人，同一目标可因同一帧多个独立效果分别受伤。
+- 最近元素记录按元素分别计时 1 秒；组合范围伤害会刷新记录，死亡中或已死亡目标不会刷新。
+- 冰火位移固定沿世界 `+Y`，不打断动作、不做碰撞/道路修正；已起手范围攻击在统一位移和第二次物理同步后按新位置结算。
 - 生命值为 0 时只死亡一次；死亡后不再移动、攻击或接受新的伤害结算。
 - `AliveEnemyCount` 的减少不依赖 `MonsterKilled` 监听者；移除所有事件监听者后，死亡去重、计数、注销和对象池回收仍保持正确。
 - `MonsterKilled` 只在 EnemyManager 接受有效死亡报告并更新 `AliveEnemyCount` 后发布一次。

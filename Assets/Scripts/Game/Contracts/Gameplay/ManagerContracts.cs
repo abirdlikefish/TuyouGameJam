@@ -48,6 +48,7 @@ namespace Game.Contracts
         void StartRun(int levelRunId, RoadLayoutSnapshot roadLayout);
         void Spawn(EnemySpawnRequest request);
         void TickMovement(int levelRunId, float monsterDeltaTime);
+        void ApplyPendingDisplacements(int levelRunId);
         void ResolveAttacks(int levelRunId, float monsterDeltaTime);
         void FlushPendingRecycles(int levelRunId);
         int GetAliveEnemyCount();
