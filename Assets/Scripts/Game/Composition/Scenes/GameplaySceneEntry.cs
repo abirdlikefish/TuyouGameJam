@@ -51,6 +51,9 @@ namespace Game.Composition
         [SerializeField] private BattleHudView battleHudView;
         [SerializeField] private BattleResultView battleResultView;
 
+        [Header("奖励特效")]
+        [SerializeField] private ArmyRewardVfxPresenter armyRewardVfxPresenter;
+
         [Header("关卡开场视频")]
         [SerializeField] private LevelIntroVideoView levelIntroVideoView;
         [SerializeField] private LevelIntroVideoBinding[] levelIntroVideoBindings =
@@ -113,6 +116,12 @@ namespace Game.Composition
                     dependencies.ConfigService,
                     bulletManager,
                     dependencies.EventBus);
+                armyRewardVfxPresenter.Initialize(
+                    request.LevelRunId,
+                    armyInstance,
+                    dependencies.EventBus,
+                    dependencies.TimeService,
+                    armyInstance.transform);
                 inputAdapter.Initialize(armyInstance);
                 obstacleManager.Initialize(
                     dependencies.PoolService,
@@ -184,6 +193,7 @@ namespace Game.Composition
             RequireSceneComponent(standaloneInputModule, nameof(standaloneInputModule));
             RequireSceneComponent(battleHudView, nameof(battleHudView));
             RequireSceneComponent(battleResultView, nameof(battleResultView));
+            RequireSceneComponent(armyRewardVfxPresenter, nameof(armyRewardVfxPresenter));
             RequireSceneComponent(levelIntroVideoView, nameof(levelIntroVideoView));
             RequireSceneTransform(armySpawnPoint, nameof(armySpawnPoint));
             RequireSceneTransform(armyContainer, nameof(armyContainer));
@@ -195,10 +205,11 @@ namespace Game.Composition
 
             if (bulletManager.transform != bulletRoot || enemyManager.transform != monsterRoot ||
                 obstacleManager.transform != obstacleRoot ||
-                elementComboManager.transform != elementComboRoot)
+                elementComboManager.transform != elementComboRoot ||
+                armyRewardVfxPresenter.transform.parent != vfxRoot)
             {
                 throw new InvalidOperationException(
-                    "Gameplay Managers must be attached to their bound fixed roots.");
+                    "Gameplay Managers and reward VFX must be attached to their bound fixed roots.");
             }
 
             if (gameplayCanvas.gameObject != graphicRaycaster.gameObject)
@@ -248,6 +259,11 @@ namespace Game.Composition
             if (!bulletManager.TryValidate(out var bulletError))
             {
                 throw new InvalidOperationException(bulletError);
+            }
+
+            if (!armyRewardVfxPresenter.TryValidate(out var armyRewardVfxError))
+            {
+                throw new InvalidOperationException(armyRewardVfxError);
             }
 
             if (!elementComboManager.TryValidate(out var elementComboError))
@@ -419,6 +435,11 @@ namespace Game.Composition
             if (battleHudView != null)
             {
                 battleHudView.Cleanup();
+            }
+
+            if (armyRewardVfxPresenter != null)
+            {
+                armyRewardVfxPresenter.Cleanup();
             }
 
             if (levelInitialized && levelManager != null)

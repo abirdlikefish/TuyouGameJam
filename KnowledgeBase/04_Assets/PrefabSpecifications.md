@@ -156,7 +156,7 @@ PF_Monster_Ikun [IkunMonster；Animator；Kinematic Rigidbody2D]
 - 四种 Prefab 根脚本都显式绑定三个互不重复的直属元素效果子节点。节点自身默认关闭且不带玩法组件；后续具体表现只能挂在对应节点内部，不替换根脚本引用。
 - `blockingGap` 只来自当前规范 Prefab，不进入 Luban 或 LevelConfig。
 - 四种 Prefab 的 Animator 使用相同的默认 Move、Attack Trigger、Death Trigger 和整数 `DeathVariant` 语义；Move Clip 循环，Attack 与普通/火/冰/雷 Death Clip 非循环。每种 Prefab 绑定基于公共状态机的本类型 OverrideController。
-- 四种非循环 Attack Clip 都必须包含恰好一个调用 `OnAttackFrame()` 的命中关键帧事件，以及末帧一个调用 `OnAttackAnimationFinished()` 的结束事件。AnimationEvent 只登记请求，实际伤害由 EnemyManager.ResolveAttacks 执行。
+- 四种非循环近战 Attack Clip 都必须包含恰好一个调用 `OnAttackFrame()` 的命中关键帧事件，以及末帧一个调用 `OnAttackAnimationFinished()` 的结束事件。Ikun 的独立非循环 RangedAttack Clip 必须在篮球离手帧调用一次 `OnBasketballReleaseFrame()`，并在末帧调用一次 `OnRangedAttackAnimationFinished()`。AnimationEvent 只登记请求，实际伤害或篮球生成命令由 EnemyManager.ResolveAttacks 执行。
 - 每类敌人的四种非循环 Death Clip 都必须在结束时间包含一个调用 `OnDeathAnimationFinished()` 的事件。该事件只向 EnemyManager 登记延后回收，不负责减少存活数、发布 `MonsterKilled` 或直接操作对象池。
 - Hen/Rooster/Ikun 的 AttackCollider 可以保持启用作为查询形状；它不参与自动碰撞，只在 ResolveAttacks 消费关键帧请求时执行显式查询。
 

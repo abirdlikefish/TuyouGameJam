@@ -543,6 +543,7 @@ namespace Game.Foundation
                 levelConfig.SpawnY,
                 levelConfig.EnemyApproachY,
                 levelConfig.DespawnY,
+                levelConfig.BulletDespawnY,
                 enemySpawns,
                 gateSpawns,
                 propSpawns,
@@ -846,9 +847,13 @@ namespace Game.Foundation
             var spawnY = levelConfig.SpawnY;
             var enemyApproachY = levelConfig.EnemyApproachY;
             var despawnY = levelConfig.DespawnY;
-            if (!IsFinite(spawnY) || !IsFinite(enemyApproachY) || !IsFinite(despawnY))
+            var bulletDespawnY = levelConfig.BulletDespawnY;
+            if (!IsFinite(spawnY) || !IsFinite(enemyApproachY) || !IsFinite(despawnY) ||
+                !IsFinite(bulletDespawnY))
             {
-                ThrowInvalidLevel(source, "SpawnY, EnemyApproachY, and DespawnY must be finite.");
+                ThrowInvalidLevel(
+                    source,
+                    "SpawnY, EnemyApproachY, DespawnY, and BulletDespawnY must be finite.");
             }
 
             if (despawnY >= enemyApproachY || enemyApproachY >= spawnY)

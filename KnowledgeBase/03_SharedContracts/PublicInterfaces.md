@@ -628,13 +628,14 @@ public readonly struct RoadLayoutSnapshot
     public float SpawnY { get; }
     public float EnemyApproachY { get; }
     public float DespawnY { get; }
+    public float BulletDespawnY { get; }
 }
 
 ```
 
-道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadWidth`、`roadHeight` 是唯一序列化道路尺寸，中心固定为世界原点，四边由半宽和半高派生；ArmyRoot 每局从 `ArmySpawnPosition` 开始且世界 Y 固定为该配置值。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。SpawnY、EnemyApproachY、DespawnY 和子弹 TopBoundary 都比较根 GameObject 中心，不考虑 Collider、Renderer 或 Prefab 尺寸；Army 横向合并 AABB 是明确例外。
+道路快照和所有位置字段使用世界 XY 坐标，运行时 `z = 0`，右方为 `+x`、上方为 `+y`。`LevelConfig.roadWidth`、`roadHeight` 是唯一序列化道路尺寸，中心固定为世界原点，四边由半宽和半高派生；ArmyRoot 每局从 `ArmySpawnPosition` 开始且世界 Y 固定为该配置值。道路不使用玩法 Collider。生成项的 `SpawnPosition` 必须已校验为 `[0,1]`，SpawnManager 按 `Lerp(LeftBoundary, RightBoundary, SpawnPosition)` 计算中心点 `x`，并使用 `SpawnY` 作为 `y`。SpawnY、EnemyApproachY、DespawnY 和 BulletDespawnY 都比较根 GameObject 中心，不考虑 Collider、Renderer 或 Prefab 尺寸；Army 横向合并 AABB 是明确例外。
 
-配置校验必须满足 Army 根坐标位于道路内，且 `BottomBoundary <= DespawnY < ArmySpawnPosition.y < EnemyApproachY < SpawnY <= TopBoundary`；无效值不得在运行时 Clamp 或回退到场景 Renderer Bounds。依赖 Prefab Collider 的初始阵型 AABB 若越过左右边界，则在 Preparing 失败。
+配置校验必须满足 Army 根坐标位于道路内、`BottomBoundary <= DespawnY < ArmySpawnPosition.y < EnemyApproachY < SpawnY <= TopBoundary`，并单独满足 `ArmySpawnPosition.y < BulletDespawnY <= TopBoundary`；BulletDespawnY 可以低于 EnemyApproachY 或 SpawnY。无效值不得在运行时 Clamp 或回退到 TopBoundary、场景 Renderer Bounds。依赖 Prefab Collider 的初始阵型 AABB 若越过左右边界，则在 Preparing 失败。
 
 ## 时间接口
 

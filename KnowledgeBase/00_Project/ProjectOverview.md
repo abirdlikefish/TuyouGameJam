@@ -70,7 +70,7 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 胜利或失败后停止本局逻辑并冻结 HUD，留在 GameplayScene 显示对应结算根节点。玩家可以返回选关；失败时还可重试当前关，胜利且存在有效解锁目标时还可挑战 `unlockedLevelIds` 首项。重试和下一关都创建新的 `LevelRunId` 并重新加载 GameplayScene。
 - 军队逻辑上使用整数总人数，画面使用 Army Prefab 序列化槽位数组决定的固定数量上场槽位；总人数超过槽位数时由槽位代表多人。
 - 每个上场槽位拥有独立聚合生命值、碰撞体和子弹生成点，军队整体通过 ArmyRoot 横向移动。
-- 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。初始活动槽位和实际换武器后的活动槽位在攻击周期第 0 帧立即发射，运行中新激活槽位等待完整 `FireInterval`；每槽每逻辑帧最多发射一颗且不追赶补发，但保留周期余量。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
+- 军队每局以 `WeaponId = 0` 的弹弓开始；火、冰、雷分别保存剩余持续时间且初始为 `0`。初始活动槽位和实际换武器后的活动槽位在攻击周期第 0 帧立即发射，运行中新激活槽位等待完整 `FireInterval`；每槽每逻辑帧最多触发一次齐射且不追赶补发，但保留周期余量。弹弓与弓单发，普通及元素法杖固定同时发射竖直、上偏左、上偏右三颗等速子弹。子弹保存发射瞬间的 WeaponId 和 ElementMask，飞行中不随 Army 状态变化。
 - SpawnY、EnemyApproachY、DespawnY 与子弹 `TopBoundary` 离场阈值都按实例根 GameObject 中心判断；Army 横向边界仍使用激活槽位合并 AABB。
 - 加法门数字可以为负数；每次有效子弹命中按本次实际伤害累加，不按命中次数使用固定增量。
 - 非负加法门增加人数并受 ArmyCountLimit 限制；负数门请求 Army 按等价单兵 HP 伤害执行减员，标记失败但仍只结算一次。
@@ -83,7 +83,7 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 - 存活敌人的身体 Collider 使用上一同步姿态执行 Cast 阻挡。前方敌人较慢或静止时，后方敌人尽量按安全间距排队；该离散规则在 MVP 参数下减少穿透和重叠，但不保证同帧移动后的绝对不重叠，首版不实现事后分离或侧向绕行。
 - Army 在 Preparing 播放 Idle；进入 Playing 后持续自动攻击，原地、实际左移、实际右移分别由循环 Attack、MoveLeft、MoveRight 表达。子弹仍由 FireInterval 逻辑生成，Animator 不决定射击。Victory 停止玩法推进并保留士兵表现，Gameplay HUD 与结算数据冻结；玩家选择返回、重试或下一关后卸载场景并执行最终 Army StopRun。
 - 敌人阻挡安全间距由各敌人规范 Prefab 的 `blockingGap` 序列化字段提供，不进入 Luban 或 LevelConfig。
-- 怪物进入攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
+- 怪物进入近战攻击状态后由 Animator 播放非循环 Attack 序列帧；AttackCooldown 从起攻时计算。Clip 命中关键帧调用 `OnAttackFrame()` 登记攻击请求，实际伤害统一在 EnemyManager 的 `ResolveAttacks` 阶段校验并结算，末帧调用 `OnAttackAnimationFinished()` 结束本次攻击。Ikun 在接近线前的篮球间隔到期时停止移动并播放独立 RangedAttack，离手帧登记篮球生成请求，末帧恢复移动；非循环 Death Clip 末帧用 `OnDeathAnimationFinished()` 登记回收。
 - 首轮工程切片通过合理的移动速度、Collider 尺寸和关卡编排控制离散碰撞风险；不实现相对运动扫掠、子步进或任意高速/严重掉帧下的绝对不穿透保证。
 - 批次 7 已导入 Army、Monster、Bullet 和 Gate 的正式序列帧并完成 Animator/Prefab 预绑定；Gate 仍保留单个调试文本。Gameplay Canvas 已按 ADR-058 增加功能性 HUD、退出确认和结算控制器；击杀进度条、三种结算根节点及其按钮的具体视觉和 Inspector 绑定由后续场景装配完成。
 - Luban 表、LevelCatalog 或 LevelConfig 数据非法时由 ConfigService 输出首个明确错误并立即退出应用；ADR-044 明确允许的 `unlockedLevelIds` 目录缺失 ID 是唯一例外，只警告并过滤。Prefab、Collider、Layer 或 Inspector 引用非法时输出错误并阻止对应 Ready。两类错误都不使用默认值、自动补组件、降级或重试继续运行。
@@ -92,4 +92,4 @@ MainMenu、LevelSelect 和 Gameplay 当前都使用实际 Additive 场景和固�
 
 本阶段不包含联网、账号、支付、广告、在线排行榜、得分系统、云存档、多存档槽、设置持久化、声音、暂停、减速、局部时停、通用调试服务和复杂养成系统。本地存档仅保存关卡完成与解锁状态。
 
-HUD 与胜负面板的最终美术、Gate 最终美术、VFX 和音频仍不属于当前功能切片；现有基础 UI、调试文本、结构化日志和测试负责提供验证反馈。
+HUD 与胜负面板的最终美术、Gate 最终美术和音频仍不属于当前功能切片；VFX 当前只包含三种元素组合最小显示与 Army 奖励槽位粒子，其余反馈继续后置。现有基础 UI、调试文本、结构化日志和测试负责提供验证反馈。

@@ -18,6 +18,7 @@ MonoBehaviour:
   spawnY: 8
   enemyApproachY: 0
   despawnY: -9
+  bulletDespawnY: 3
   elementDurationSecondsPerDamage: 1
   ikunBasketballConfigId: 0
   enemySpawns:

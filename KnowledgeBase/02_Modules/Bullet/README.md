@@ -6,12 +6,13 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与命中流程手测待完成）
 - 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`、`../../06_Decisions/ADR-070-StaffThreeProjectileSpread.md`、`../../06_Decisions/ADR-071-LevelConfiguredBulletDespawnY.md`
 
 ## 职责
 
 - `BulletManager` 创建、登记、逐帧驱动和回收子弹。
 - 消费 Army 槽位提供的运行时发射快照，使用 Weapon 引用的基础子弹参数并携带发射瞬间的 ElementMask。
+- 将根节点默认向上的朝向对齐归一化飞行方向，使斜向子弹的视觉和碰撞体与轨迹一致；方向不缩放配置速度。
 - 与怪物、Gate 和 Prop 碰撞并造成伤害或触发对应效果。
 - 每个运行时子弹都绑定 `BodyCollider`；移动使用自定义时间，沿上一位置到期望位置执行 Collider Cast 或等价扫掠查询。
 - 子弹通过目标的受击碰撞体命中；一次命中后立即标记并回收，避免多个子碰撞体重复结算。
@@ -28,7 +29,7 @@
 ## 规则
 
 - 子弹命中后立即回收。
-- 子弹根 GameObject 中心的世界坐标满足 `position.y > RoadLayoutSnapshot.TopBoundary` 时回收；不使用 Renderer、Collider 或摄像机视口边缘。
+- 子弹根 GameObject 中心的世界坐标满足 `position.y > RoadLayoutSnapshot.BulletDespawnY` 时回收；默认回收线为世界 `Y=3`，不使用 Renderer、Collider 或摄像机视口边缘。单帧跨线时 Cast 截断到回收线，不能命中线外目标。
 - 命中 Collider 节点必须存在已在 Preparing 验证的同节点 `BulletHitProxy`；代理显式绑定实现 `IBulletHittable` 的 Enemy/Gate/Prop 根组件，并提供对象类别和 RuntimeInstanceId。候选还必须满足 `CanReceiveBulletHit = true`；BulletManager 不通过父级搜索或 HP 推断目标。
 - HP 已归零但仍处于 `Pending` 的元素门保持 `CanReceiveBulletHit = true`，命中后子弹照常消费，伤害交由 Gate 累计为可兑换额外伤害。Failed 元素门和 Prop 仍保持可命中，子弹照常消费，但目标 HP 最低锁在 `1`，不再产生奖励、击破或伤害回收。
 - 移动使用 LevelManager 在帧开始读取并传入的 Bullet 时间域 delta；Bullet 和 BulletManager 不自行再次读取 TimeService。
@@ -73,9 +74,10 @@ Bullet 自身不添加 Rigidbody2D，避免高弹量场景为每颗活动子弹�
 - ElementMask 能表达 None 和三元素的全部组合；Army 后续元素获得或过期不修改飞行中的子弹。
 - 只有三个精准二元素掩码触发组合效果；三元素掩码不会误匹配任一二元素效果。
 - 组合效果的玩法入口每个实例只能成功调用一次，所有本帧伤害在子弹命中阶段完成；显示生命周期不能重复结算。
-- 改变代表人数不会改变单次发射数量、伤害或速度；发射源数量只取决于激活槽位数。
+- 改变代表人数不会改变单次射击数量、伤害或速度；弹弓和弓固定单发，法杖家族固定三发，发射源数量只取决于激活槽位数。
+- 法杖三颗子弹的归一化方向分别为 `(0,1)`、`(-3,13)`、`(3,13)`；速度大小均来自同一 Bullet 配置，根节点朝向与各自轨迹一致。
 - 子弹命中目标后只结算一次伤害并回收。
-- 子弹中心等于 TopBoundary 时仍保留，严格大于派生上边界后回收；不同 Collider 或 Sprite 尺寸不改变阈值。
+- 子弹中心等于 BulletDespawnY 时仍保留，严格大于关卡回收线后当帧回池；不同 Collider、Sprite 尺寸或飞行方向不改变阈值。
 - 加法门没有 HP 仍可合法消费子弹并按实际 `BulletDamageContext.Damage` 增加门值；零 HP、待接触的元素门也仍可合法消费子弹并累计额外伤害。
 - 子弹 Collider Cast 覆盖 Bullet 自身在一个逻辑帧内从上一位置到期望位置的位移；在 MVP 约定速度、Collider 尺寸和测试帧率范围内可以稳定命中目标。首轮不验收双方高速相对运动或严重掉帧下的绝对不穿透。
 - Bullet 保持无 Rigidbody2D 时，三类 Monster、两类 Gate 和 WeaponProp 都通过根 Kinematic Rigidbody2D 适配被同一 Cast 命中；删除或误配任一适配刚体会在 Preparing 阶段失败。

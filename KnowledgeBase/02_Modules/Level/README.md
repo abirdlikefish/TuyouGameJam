@@ -7,7 +7,7 @@
 - 状态：`InProgress`（批次 5 脚本已实现；Road Prefab、GameplayScene 装配与完整玩法手测待完成）
 - 依赖：IGameStateService、ITimeService、IEventBus、ISpawnManager、IArmyRunController、IBulletManager、IEnemyManager、IObstacleManager、IGameplayInputController
 - 被依赖模块：Army、Spawn、Monster、GameplaySceneEntry、Input、UI
-- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-052-CenteredRoadAndConfigurableArmySpawn.md`
+- 决策：`../../06_Decisions/ADR-009-FixedRoadSingleLevelTimeline.md`、`../../06_Decisions/ADR-013-SpawnCursorOwnershipAndDispatch.md`、`../../06_Decisions/ADR-021-MvpRuntimeDeterminismAndBindings.md`、`../../06_Decisions/ADR-023-NormalizedSpawnPosition.md`、`../../06_Decisions/ADR-033-LevelManagerFramePipeline.md`、`../../06_Decisions/ADR-034-NumericRoadBoundsAndArmyOrigin.md`、`../../06_Decisions/ADR-036-DragOnlyInputImplementationSlice.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-044-UnlockedLevelIdsValidation.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-052-CenteredRoadAndConfigurableArmySpawn.md`、`../../06_Decisions/ADR-071-LevelConfiguredBulletDespawnY.md`
 
 ## 模块目标
 
@@ -56,6 +56,7 @@ armySpawnPosition: Vector2
 spawnY
 enemyApproachY
 despawnY
+bulletDespawnY
 enemySpawns
 gateSpawns
 propSpawns
@@ -223,11 +224,12 @@ ConfigService 在应用启动初始化中验证目录内全部关卡：
 
 ```text
 levelId 有效且与目录唯一条目一致
-roadWidth、roadHeight、armySpawnPosition 及三条 Y 线均为有限值
+roadWidth、roadHeight、armySpawnPosition 及四条 Y 线均为有限值
 roadWidth > 0 且 roadHeight > 0
 ArmySpawnPosition 位于派生道路边界内
 BottomBoundary <= despawnY < armySpawnPosition.y
 armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary
+armySpawnPosition.y < bulletDespawnY <= TopBoundary；bulletDespawnY 不要求高于 enemyApproachY 或 spawnY
 enemySpawns 非空
 三个生成列表按 spawnTime 非递减
 spawnTime >= 0 且为有限值

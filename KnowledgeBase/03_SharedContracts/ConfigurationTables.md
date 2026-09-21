@@ -32,7 +32,7 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 初始字段：`Id`、`FireInterval`、`BulletId`。
 
-`Id` 是唯一的武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`、`3 = FireStaff`、`4 = IceStaff`、`5 = LightningStaff`、`6 = FireIceStaff`、`7 = FireLightningStaff`、`8 = IceLightningStaff`、`9 = FireIceLightningStaff`，十行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个武器引用独立 BulletId。每个活动槽位按对应行的 `FireInterval` 独立发射一枚非负 `BulletId` 对应的子弹；`FireInterval` 必须有限且大于 `0`，单位为秒，也是 Attack、MoveLeft、MoveRight 的权威攻击周期。本局初始活动槽位和实际换到不同武器的活动槽位在周期第 0 帧立即发射；运行中新激活或重新激活的槽位等待完整间隔。单槽每逻辑帧最多发射一颗且不追赶补发，但保留周期余量；重复当前 WeaponId 不重置。多弹道、散射和代表人数缩放不属于 MVP。
+`Id` 是唯一的武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`、`3 = FireStaff`、`4 = IceStaff`、`5 = LightningStaff`、`6 = FireIceStaff`、`7 = FireLightningStaff`、`8 = IceLightningStaff`、`9 = FireIceLightningStaff`，十行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个武器引用独立 BulletId。每个活动槽位按对应行的 `FireInterval` 独立触发一次射击；WeaponId 0～1 生成一枚子弹，WeaponId 2～9 按 `(0,1)`、`(-3,13).normalized`、`(3,13).normalized` 固定生成三枚等速子弹。`FireInterval` 必须有限且大于 `0`，单位为秒，也是 Attack、MoveLeft、MoveRight 的权威攻击周期。本局初始活动槽位和实际换到不同武器的活动槽位在周期第 0 帧立即发射；运行中新激活或重新激活的槽位等待完整间隔。单槽每逻辑帧最多触发一次射击且不追赶补发，但保留周期余量；重复当前 WeaponId 不重置。代表人数不缩放射速、伤害或弹丸数量。
 
 当前不建立 `TbElement`。火、冰、雷使用固定 `ElementType`，元素门按 LevelConfig 中的关卡系数和 HP 归零后的额外伤害计算持续时间，Army 保存本局剩余时间；具体元素效果进入范围后再决定是否新增元素配置表。
 
@@ -96,12 +96,12 @@ entries[].initiallyUnlocked bool
 - 关卡 ID 和展示信息。
 - 通关后应解锁的关卡 ID 列表 `unlockedLevelIds`；它不是当前玩家已解锁状态。空列表表示结算时没有下一关；非空列表的首个有效 ID 是“挑战下一关”的目标，其余有效 ID 仍加入运行期解锁集合。重复 ID 或当前 `levelId` 自引用按 `InvalidLevelConfig` 致命失败；当前 LevelCatalog 中不存在的未来关卡 ID 使用 `Debug.LogWarning` 后忽略。ConfigService 保持其余有效 ID 的原始顺序并只把过滤后的防御性副本写入 `LevelConfigSnapshot.UnlockedLevelIds`。
 - 固定道路只配置 `roadWidth`、`roadHeight`，中心永久为世界原点，四边由半宽和半高派生；ArmyRoot 初始世界坐标使用 `armySpawnPosition: Vector2`。
-- `spawnY`、`enemyApproachY`、`despawnY` 等关卡空间参数。
+- `spawnY`、`enemyApproachY`、`despawnY`、`bulletDespawnY` 等关卡空间参数；`bulletDespawnY` 默认值为 `3`，控制士兵子弹根中心严格越过该世界 Y 后回池。
 - 本关元素门统一使用的 `elementDurationSecondsPerDamage`。
 - `ikunBasketballConfigId`：包含 ikun 时必须引用 `PropType.Basketball`；无 ikun 时使用中性值 `0`。
 - `enemySpawns`、`gateSpawns`、`propSpawns` 三个按本局开始时间编排的列表。
 
-`levelId` 必须为非负整数且在目录中唯一。`roadWidth`、`roadHeight` 必须有限且大于 0，`armySpawnPosition` 分量必须有限且位于派生道路边界内。ArmyRoot 每局从该坐标开始且只沿世界 X 轴移动。MVP 的 Y 顺序固定为 `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary`。道路只提供数值边界与视觉，不设置玩法 Collider。
+`levelId` 必须为非负整数且在目录中唯一。`roadWidth`、`roadHeight` 必须有限且大于 0，`armySpawnPosition` 分量必须有限且位于派生道路边界内。ArmyRoot 每局从该坐标开始且只沿世界 X 轴移动。MVP 的对象生成与离场顺序固定为 `BottomBoundary <= despawnY < armySpawnPosition.y < enemyApproachY < spawnY <= TopBoundary`；子弹回收线单独满足 `armySpawnPosition.y < bulletDespawnY <= TopBoundary`，不要求高于 `enemyApproachY` 或 `spawnY`。道路只提供数值边界与视觉，不设置玩法 Collider。
 
 所有生成项包含：
 
@@ -157,3 +157,4 @@ TbProp.weaponId            -> TbWeapon.Id（仅 WeaponBox）
 - 固定出生横线与 `spawnPosition` 的坐标解析和校验见 `../06_Decisions/ADR-023-NormalizedSpawnPosition.md`。
 - 类型化 Provider、不可变快照与配置错误单点退出见 `../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`。
 - LevelConfig 资产、运行时快照与程序集依赖边界见 `../06_Decisions/ADR-042-LevelConfigSnapshotAssemblyBoundary.md`。
+- 士兵子弹的关卡回收线与跨线命中边界见 `../06_Decisions/ADR-071-LevelConfiguredBulletDespawnY.md`。

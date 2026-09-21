@@ -100,7 +100,8 @@ namespace Game.Gameplay
 
             transform.SetParent(parent, false);
             transform.position = request.WorldPosition;
-            transform.rotation = Quaternion.identity;
+            // 子弹美术默认朝上，根节点对齐飞行方向可同时旋转视觉和碰撞体。
+            transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
             PrepareAnimation(animationState);
         }
 

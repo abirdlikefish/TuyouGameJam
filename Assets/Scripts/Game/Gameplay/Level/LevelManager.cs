@@ -369,7 +369,8 @@ namespace Game.Gameplay
                 new Vector2(armySpawnPosition.x, armySpawnPosition.y),
                 levelConfig.SpawnY,
                 levelConfig.EnemyApproachY,
-                levelConfig.DespawnY);
+                levelConfig.DespawnY,
+                levelConfig.BulletDespawnY);
 
             ValidateRoadLayout(layout);
             return layout;
@@ -404,7 +405,8 @@ namespace Game.Gameplay
 
             if (!IsFinite(levelConfig.SpawnY) ||
                 !IsFinite(levelConfig.EnemyApproachY) ||
-                !IsFinite(levelConfig.DespawnY))
+                !IsFinite(levelConfig.DespawnY) ||
+                !IsFinite(levelConfig.BulletDespawnY))
             {
                 throw new ArgumentException("Level config contains invalid vertical lines.", nameof(levelConfig));
             }
@@ -424,12 +426,14 @@ namespace Game.Gameplay
                 layout.DespawnY >= armySpawnPosition.y ||
                 layout.EnemyApproachY <= armySpawnPosition.y ||
                 layout.EnemyApproachY >= layout.SpawnY ||
-                layout.SpawnY > layout.TopBoundary)
+                layout.SpawnY > layout.TopBoundary ||
+                layout.BulletDespawnY <= armySpawnPosition.y ||
+                layout.BulletDespawnY > layout.TopBoundary)
             {
                 throw new ArgumentException(
                     "Scene layout must satisfy positive centered road dimensions, an Army spawn point inside " +
                     "the road, and BottomBoundary <= DespawnY < ArmySpawnPoint.y < EnemyApproachY < " +
-                    "SpawnY <= TopBoundary.",
+                    "SpawnY <= TopBoundary plus ArmySpawnPoint.y < BulletDespawnY <= TopBoundary.",
                     nameof(layout));
             }
         }

@@ -4,8 +4,8 @@
 
 本文是批次 7 正式动画资源的执行入口，覆盖 Army、Monster、Bullet、Gate 和 Prop 的源资源整理、Sprite 导入、AnimationClip、Animator Controller、Prefab 预绑定与手工验证。
 
-- 状态：`InProgress`（已登记 103 个正式 Clip；Basketball、WeaponProp 与 GooseCage 五个循环动作已纳入管线，GooseCage/WeaponProp 正式帧、正式死亡帧、竖屏目标分辨率与 Player 内存验收待完成）
-- 决策：[ADR-048](../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md)、[ADR-049](../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md)、[ADR-057](../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md)、[ADR-065](../06_Decisions/ADR-065-ElementalMonsterDeathAnimations.md)、[ADR-066](../06_Decisions/ADR-066-ArmySlotDeathPresentation.md)
+- 状态：`InProgress`（已登记 104 个正式 Clip；Basketball、WeaponProp、GooseCage 与 Ikun RangedAttack 已纳入管线，GooseCage/WeaponProp 正式帧、正式死亡帧、竖屏目标分辨率与 Player 内存验收待完成）
+- 决策：[ADR-048](../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md)、[ADR-049](../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md)、[ADR-057](../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md)、[ADR-065](../06_Decisions/ADR-065-ElementalMonsterDeathAnimations.md)、[ADR-066](../06_Decisions/ADR-066-ArmySlotDeathPresentation.md)、[ADR-068](../06_Decisions/ADR-068-IkunRangedAttackAnimation.md)
 - 不包含：运行时资源下载、Addressables、Resources 路径加载、骨骼动画、音频、VFX、Prop 非循环击破动画，以及尚未收到的 WeaponProp 正式帧美术。
 
 ## 目录边界
@@ -25,6 +25,7 @@ Assets/Art/Sprites/                    只保存最终透明 PNG 帧
 ├── Army/Weapons/Weapon_008_IceLightningStaff/{Idle,Victory,Attack,MoveLeft,MoveRight,Death}
 ├── Army/Weapons/Weapon_009_FireIceLightningStaff/{Idle,Victory,Attack,MoveLeft,MoveRight,Death}
 ├── Monsters/{Normal,Elite,Boss,Ikun}/{Move,Attack}
+├── Monsters/Ikun/RangedAttack
 ├── Monsters/{Normal,Elite,Boss,Ikun}/Death/{Fire,Ice,Lightning}
 ├── Bullets/Bullet_000/Loop
 ├── Bullets/Bullet_001/Loop
@@ -127,7 +128,7 @@ AN_Prop_Weapon_000_Loop.anim
 
 ## 重复导入工具
 
-`Assets/Scripts/Tools/Editor/SequenceAnimationBuilder.cs` 登记当前 102 个正式动作，提供以下 Unity 菜单：
+`Assets/Scripts/Tools/Editor/SequenceAnimationBuilder.cs` 登记当前 104 个正式动作，提供以下 Unity 菜单：
 
 - `Tools/Game Jam/Sequence Animation Builder/Open`：打开可视化窗口，扫描后选择性应用。
 - `Tools/Game Jam/Sequence Animation Builder/Scan Report`：只读扫描并把每个动作的状态、帧数和问题写入 Console。
@@ -137,12 +138,14 @@ AN_Prop_Weapon_000_Loop.anim
 - `Tools/Game Jam/Sequence Animation Builder/Apply Prop Pending`：只应用五个 Prop 动作，避免触碰工作树中其他正在整理的 Army、Monster、Bullet 或 Gate 帧。
 - `Tools/Game Jam/Sequence Animation Builder/Create Missing Army Death Assets`：只补齐十种 WeaponId 的 Death 目录/Clip、Army 基础 Death 状态、AOC 覆盖、末帧事件与 Prefab 事件代理绑定。
 - `Tools/Game Jam/Sequence Animation Builder/Create Missing Monster Death Assets`：只补齐四类 Monster 的目录/Clip、公共死亡状态机、AOC 与 Prefab Animator 绑定；适合在其他帧仍处于导入中时单独运行。
+- `Tools/Game Jam/Sequence Animation Builder/Create Missing Ikun Ranged Attack Assets`：只补齐 Ikun 远程攻击基础/正式 Clip、公共状态与 Trigger、AOC 覆盖和 Prefab Animator 绑定。
+- `Tools/Game Jam/Sequence Animation Builder/Apply Ikun Attack Pending`：只应用 Ikun 的 Attack 与 RangedAttack 两个动作，避免触碰其他正在整理的序列帧。
 
 工具按帧号而非字符串排序，要求编号从 `0001` 连续递增；发现缺号、重复号、不同尺寸、目标 Clip 缺失或无法导入时停止该次操作。应用时通过 `AssetDatabase.RenameAsset` 保留 Sprite GUID，统一本页导入参数，并只替换目标 Clip 的 `SpriteRenderer.m_Sprite` 曲线；Clip GUID、AnimationEvent、其他曲线、Controller、OverrideController、Prefab 和场景不变。
 
 如果只在原路径覆盖 PNG 内容且保留 `.meta`、帧数和顺序不变，Unity 重新导入即可；帧数、顺序、名称或 Sprite GUID 变化时，应先运行 Scan Report，再通过窗口或 Apply All Pending 重建。仓库内 `.agents/skills/sequence-animation-import/SKILL.md` 记录 Codex 重复执行此流程时的授权和验证边界。
 
-截至 2026-09-21，工具已登记四类 Monster 的 Move、Attack 与普通/火/冰/雷死亡动作。当前工作树内仍有用户正在处理的帧重命名与导入，正式帧同步数量以完成导入后的最新 `Scan Report` 为准；本次不批量应用这些待处理动作。
+截至 2026-09-22，工具已登记四类 Monster 的 Move、Attack 与普通/火/冰/雷死亡动作，并额外登记 Ikun 专用 RangedAttack。Ikun 的 Attack 与 RangedAttack 已通过专用入口完成导入；其他正式帧同步数量以最新 `Scan Report` 为准。
 
 ## Clip 与循环规则
 
@@ -155,6 +158,7 @@ AN_Prop_Weapon_000_Loop.anim
 | Army 每种武器 | Death | 否 | 结束时间一个槽位表现完成事件；不延迟权威人数死亡 |
 | 每种 Monster | Move | 是 | 默认状态 |
 | 每种 Monster | Attack | 否 | 一个命中事件和一个结束事件 |
+| Ikun | RangedAttack | 否 | 一个篮球离手事件和一个结束事件 |
 | 每种 Monster | Death / Death_Fire / Death_Ice / Death_Lightning | 否 | 结束时间一个回收登记事件 |
 | 每个 BulletId | Loop | 是 | 不含玩法事件 |
 | AdditiveGate | Loop | 是 | 不含玩法事件 |
@@ -180,6 +184,8 @@ Clip 的 Samples 当前统一为 8 FPS。生成后必须核对最后一帧持有
 ### Monster
 
 `AC_Monster_Base` 的公共状态结构为默认 `Move`，`Attack` Trigger 进入非循环 Attack 并在结束后回 Move；`Death` Trigger 配合整数 `DeathVariant` 从任意状态分别进入 `Death`、`DeathFire`、`DeathIce`、`DeathLightning`，四个死亡状态均不退出。Normal、Elite、Boss、Ikun 各使用一个预创建 OverrideController，完整覆盖 Move、Attack 与四个死亡基础占位 Clip。
+
+Ikun 另外使用 `RangedAttack` Trigger 和非循环远程状态：从 Move 零时长进入，结束后回 Move，Death 仍可从任意状态中断。`Assets/Art/Sprites/Monsters/Ikun/RangedAttack` 的 12 帧已生成 8 FPS、1.5 秒的正式 Clip，并由 Ikun AOC 覆盖基础远程 Clip。远程 Clip 的篮球离手帧仍需用户绑定 `OnBasketballReleaseFrame()`，末帧仍需用户绑定 `OnRangedAttackAnimationFinished()`。
 
 Attack Clip：
 
@@ -252,6 +258,10 @@ Death Clip：
 - 分别生成十个 BulletId，确认循环动画、方向、命中和回池。
 - 分别生成加法门及三种元素门，确认动画与运行时类型匹配。
 - 使用 Profiler/Memory Profiler 或 Unity Inspector 记录目标平台的纹理内存；发现单动作过大时优先降低 Max Size、统一裁切或重新打包，不直接启用供应方 4K 图集。
+
+2026-09-22 执行记录：
+
+- Ikun Attack 的 6 帧与 RangedAttack 的 12 帧已统一命名、导入并生成 8 FPS 非循环 Clip，停止时间分别为 0.75 秒与 1.5 秒；公共 Monster Controller 已加入 `RangedAttack` Trigger、Move → RangedAttack 与 RangedAttack → Move，Ikun AOC 已覆盖正式远程 Clip。最新全局扫描为 82 UpToDate、0 Pending、22 Empty、0 Invalid。按本次约束未新增、移动或删除 AnimationEvent；Attack Clip 原有事件保持原时间，RangedAttack Clip 事件留给用户手工添加。
 
 2026-09-21 执行记录：
 

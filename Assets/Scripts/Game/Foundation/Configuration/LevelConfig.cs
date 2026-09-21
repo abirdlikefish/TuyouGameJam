@@ -32,6 +32,10 @@ namespace Game.Foundation
         [Tooltip("对象根节点中心到达或低于此世界 Y 时按离场处理。必须位于场景道路下边界与 Army 出生点之间。")]
         private float despawnY;
 
+        [SerializeField]
+        [Tooltip("士兵子弹根节点中心严格高于此世界 Y 时回池。必须高于 Army 出生点且不高于场景道路上边界。")]
+        private float bulletDespawnY = 3f;
+
         [Header("元素门奖励")]
         [SerializeField]
         [Tooltip("元素门 HP 清空后的额外伤害每 1 点可兑换的元素持续秒数。关卡存在元素门时必须大于 0；没有元素门时必须为 0。")]
@@ -61,6 +65,7 @@ namespace Game.Foundation
         public float SpawnY => spawnY;
         public float EnemyApproachY => enemyApproachY;
         public float DespawnY => despawnY;
+        public float BulletDespawnY => bulletDespawnY;
         public float ElementDurationSecondsPerDamage => elementDurationSecondsPerDamage;
         public int IkunBasketballConfigId => ikunBasketballConfigId;
         public IReadOnlyList<EnemySpawnEntry> EnemySpawns => enemySpawns;

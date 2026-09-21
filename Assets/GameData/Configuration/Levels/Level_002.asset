@@ -19,8 +19,13 @@ MonoBehaviour:
   spawnY: 8
   enemyApproachY: 0
   despawnY: -9
+<<<<<<< HEAD
   elementDurationSecondsPerDamage: 0
   ikunBasketballConfigId: 0
+=======
+  bulletDespawnY: 3
+  elementDurationSecondsPerDamage: 1
+>>>>>>> 1faa462cf7d7b1b2c7573b4897552db5a70be4bb
   enemySpawns:
   - spawnTime: 6.5
     spawnPosition: 0.222222
@@ -375,6 +380,7 @@ MonoBehaviour:
   - spawnTime: 11
     spawnPosition: 0.166667
     configId: 1
+<<<<<<< HEAD
   - spawnTime: 11
     spawnPosition: 0.833333
     configId: 4
@@ -396,3 +402,5 @@ MonoBehaviour:
   - spawnTime: 25
     spawnPosition: 0.5
     configId: 4
+=======
+>>>>>>> 1faa462cf7d7b1b2c7573b4897552db5a70be4bb

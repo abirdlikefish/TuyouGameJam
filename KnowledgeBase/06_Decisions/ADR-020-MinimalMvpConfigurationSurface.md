@@ -1,5 +1,7 @@
 # ADR-020：MVP 最小配置面与 Unity 资源绑定
 
+> ADR-070 已覆盖本文“每个活动槽位只发射一枚子弹”以及“多弹道不属于 MVP”的范围限制：法杖家族 WeaponId 2～9 现固定为三弹道散射；代表人数不缩放射速、伤害或弹丸数量的原则继续有效。
+
 ## 状态
 
 Accepted（池化规范 Prefab 与类型身份由 ADR-031 收敛；Army、Weapon 与 Element 字段由 ADR-035 修订；Gate 配置由 ADR-038 修订）

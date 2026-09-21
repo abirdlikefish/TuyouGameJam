@@ -47,11 +47,12 @@
 | `LeftBoundary` | `float` | Army 可移动道路左边界 | 由 `-RoadWidth/2` 派生 |
 | `RightBoundary` | `float` | Army 可移动道路右边界 | 由 `RoadWidth/2` 派生 |
 | `BottomBoundary` | `float` | 道路下边界 | 由 `-RoadHeight/2` 派生 |
-| `TopBoundary` | `float` | 道路上边界 | 由 `RoadHeight/2` 派生；子弹根 GameObject 中心严格大于该值时回收 |
+| `TopBoundary` | `float` | 道路上边界 | 由 `RoadHeight/2` 派生；也是 `BulletDespawnY` 的合法上限 |
 | `ArmySpawnPosition` | `Vector2` | ArmyRoot 每局初始世界 XY 坐标 | 分量有限且根坐标位于道路内；运行中世界 Y 保持该配置值 |
 | `SpawnY` | `float` | 敌人、Gate、Prop 根 GameObject 中心共用的固定出生横线高度 | `0 < EnemyApproachY < SpawnY <= TopBoundary` |
 | `EnemyApproachY` | `float` | 敌人根 GameObject 中心结束垂直下移、开始接近 Army 的高度 | `0 < value < SpawnY` |
 | `DespawnY` | `float` | Gate/Prop 根 GameObject 中心离开道路并触发离场处理的高度 | `BottomBoundary <= value < 0`；`position.y <= value` 时离场 |
+| `BulletDespawnY` | `float` | 士兵子弹根 GameObject 中心的世界 Y 回收线 | LevelConfig 默认 `3`；`ArmySpawnPosition.y < value <= TopBoundary`；`position.y > value` 时当帧回池 |
 | `ObstacleKind` | `enum` | 道路对象类别 | `Gate`、`Prop` |
 | `ObstacleState` | `enum` | 道路对象当前生命周期/交互状态 | `MovingDown`、`ContactPending`、`ContactSucceeded`、`ContactFailed`、`ExitedUncontacted`、`Broken`、`Recycled` |
 | `GateType` | `enum` | 门的规则类型 | `Additive`、`Element` |

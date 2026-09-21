@@ -10,6 +10,7 @@ namespace Game.Gameplay
         ApproachingTarget,
         Blocked,
         Attacking,
+        RangedAttacking,
         Dead
     }
 
@@ -36,6 +37,7 @@ namespace Game.Gameplay
     public abstract class MonsterBase : MonoBehaviour, IRuntimeBulletTarget
     {
         private static readonly int AttackTrigger = Animator.StringToHash("Attack");
+        protected static readonly int RangedAttackTrigger = Animator.StringToHash("RangedAttack");
         private static readonly int DeathTrigger = Animator.StringToHash("Death");
         private static readonly int DeathVariantParameter = Animator.StringToHash("DeathVariant");
         private static readonly int MoveState = Animator.StringToHash("Base Layer.Move");
@@ -67,6 +69,8 @@ namespace Game.Gameplay
         private int pendingAttackSequenceId = -1;
         private float attackCooldownRemaining;
         private float enemyApproachY;
+        private float roadLeftBoundary;
+        private float roadRightBoundary;
         private float recentFireRemaining;
         private float recentIceRemaining;
         private float recentLightningRemaining;
@@ -89,6 +93,8 @@ namespace Game.Gameplay
         internal Collider2D BodyCollider => bodyCollider;
         internal Vector2 EffectCenter => bodyCollider.bounds.center;
         internal MonsterDeathVariant DeathVariant => deathVariant;
+        protected float RoadLeftBoundary => roadLeftBoundary;
+        protected float RoadRightBoundary => roadRightBoundary;
 
         BulletTargetKind IRuntimeBulletTarget.BulletTargetKind => BulletTargetKind.Enemy;
         bool IBulletHittable.CanReceiveBulletHit => IsAlive;
@@ -178,6 +184,8 @@ namespace Game.Gameplay
             EnemyConfigSnapshot enemyConfig,
             int initializedRuntimeInstanceId,
             float approachY,
+            float initializedRoadLeftBoundary,
+            float initializedRoadRightBoundary,
             IArmyController armyController,
             Action<MonsterBase, EnemyDamageContext, int, bool> onDamaged,
             Action<MonsterBase, EnemyDamageContext> onDeath,
@@ -189,6 +197,14 @@ namespace Game.Gameplay
                 throw new ArgumentException("Enemy config type does not match the concrete monster type.");
             }
 
+            if (!IsFinite(approachY) ||
+                !IsFinite(initializedRoadLeftBoundary) ||
+                !IsFinite(initializedRoadRightBoundary) ||
+                initializedRoadLeftBoundary >= initializedRoadRightBoundary)
+            {
+                throw new ArgumentException("Monster road movement bounds are invalid.");
+            }
+
             army = armyController ?? throw new ArgumentNullException(nameof(armyController));
             damagedCallback = onDamaged ?? throw new ArgumentNullException(nameof(onDamaged));
             deathCallback = onDeath ?? throw new ArgumentNullException(nameof(onDeath));
@@ -198,6 +214,8 @@ namespace Game.Gameplay
             runtimeInstanceId = initializedRuntimeInstanceId;
             spawnEntryIndex = request.SpawnEntryIndex;
             enemyApproachY = approachY;
+            roadLeftBoundary = initializedRoadLeftBoundary;
+            roadRightBoundary = initializedRoadRightBoundary;
             currentHp = config.MaxHp;
             state = MonsterRuntimeState.MovingDown;
             targetSlotIndex = -1;
@@ -252,7 +270,8 @@ namespace Game.Gameplay
             SyncElementEffectNodes();
 
             attackCooldownRemaining = Mathf.Max(0f, attackCooldownRemaining - deltaTime);
-            if (state == MonsterRuntimeState.Attacking)
+            if (state == MonsterRuntimeState.Attacking ||
+                state == MonsterRuntimeState.RangedAttacking)
             {
                 return;
             }
@@ -405,6 +424,14 @@ namespace Game.Gameplay
             if (animator.gameObject.activeInHierarchy)
             {
                 animator.ResetTrigger(AttackTrigger);
+                if (HasAnimatorParameter(
+                        animator,
+                        RangedAttackTrigger,
+                        AnimatorControllerParameterType.Trigger))
+                {
+                    animator.ResetTrigger(RangedAttackTrigger);
+                }
+
                 animator.ResetTrigger(DeathTrigger);
                 animator.Rebind();
                 animator.SetInteger(DeathVariantParameter, (int)deathVariant);
@@ -424,6 +451,9 @@ namespace Game.Gameplay
             levelRunId = 0;
             runtimeInstanceId = -1;
             spawnEntryIndex = -1;
+            enemyApproachY = 0f;
+            roadLeftBoundary = 0f;
+            roadRightBoundary = 0f;
             currentHp = 0;
             recentFireRemaining = 0f;
             recentIceRemaining = 0f;
@@ -548,6 +578,14 @@ namespace Game.Gameplay
             RequireAnimatorParameters();
             deathVariant = MonsterDeathVariant.Normal;
             animator.ResetTrigger(AttackTrigger);
+            if (HasAnimatorParameter(
+                    animator,
+                    RangedAttackTrigger,
+                    AnimatorControllerParameterType.Trigger))
+            {
+                animator.ResetTrigger(RangedAttackTrigger);
+            }
+
             animator.ResetTrigger(DeathTrigger);
             animator.SetInteger(DeathVariantParameter, (int)deathVariant);
             animator.Play(MoveState, 0, 0f);
@@ -565,10 +603,15 @@ namespace Game.Gameplay
                 return;
             }
 
-            TickBeforeApproach(deltaTime);
+            if (TickBeforeApproach(deltaTime))
+            {
+                return;
+            }
+
             var distance = config.MoveSpeed * deltaTime;
             var maximumDistance = position.y - enemyApproachY;
-            var movement = Vector2.down * Mathf.Min(distance, maximumDistance);
+            var downwardDistance = Mathf.Min(distance, maximumDistance);
+            var movement = CalculateMovingDownMovement(deltaTime, downwardDistance);
             ApplyBlockedMovement(movement, enemyBodyFilter);
             if (transform.position.y <= enemyApproachY)
             {
@@ -651,6 +694,32 @@ namespace Game.Gameplay
             animator.SetTrigger(AttackTrigger);
         }
 
+        protected bool TryBeginRangedAttack()
+        {
+            if (!runtimeActive || state != MonsterRuntimeState.MovingDown)
+            {
+                return false;
+            }
+
+            state = MonsterRuntimeState.RangedAttacking;
+            animator.SetTrigger(RangedAttackTrigger);
+            return true;
+        }
+
+        protected bool TryFinishRangedAttack()
+        {
+            if (!runtimeActive || state != MonsterRuntimeState.RangedAttacking)
+            {
+                return false;
+            }
+
+            state = MonsterRuntimeState.MovingDown;
+            return true;
+        }
+
+        protected bool IsRangedAttacking =>
+            runtimeActive && state == MonsterRuntimeState.RangedAttacking;
+
         private static bool IsFinite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);
@@ -673,6 +742,14 @@ namespace Game.Gameplay
             return false;
         }
 
+        protected bool HasAnimatorTrigger(int parameterNameHash)
+        {
+            return HasAnimatorParameter(
+                animator,
+                parameterNameHash,
+                AnimatorControllerParameterType.Trigger);
+        }
+
         private void RequireAnimatorParameters()
         {
             if (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
@@ -689,7 +766,17 @@ namespace Game.Gameplay
 
         protected virtual void OnRuntimeInitialized() { }
 
-        protected virtual void TickBeforeApproach(float deltaTime) { }
+        protected virtual bool TickBeforeApproach(float deltaTime)
+        {
+            return false;
+        }
+
+        protected virtual Vector2 CalculateMovingDownMovement(
+            float deltaTime,
+            float downwardDistance)
+        {
+            return Vector2.down * downwardDistance;
+        }
 
         protected virtual void OnPrepareForPool() { }
     }

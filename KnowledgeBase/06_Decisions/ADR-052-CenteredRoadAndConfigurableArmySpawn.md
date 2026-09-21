@@ -1,5 +1,7 @@
 # ADR-052：原点居中道路与可配置 Army 出生坐标
 
+> ADR-071 已将子弹回收线从派生道路上边界改为 `LevelConfig.bulletDespawnY`；`TopBoundary` 仍作为该配置的合法上限。
+
 ## 状态
 
 Accepted
