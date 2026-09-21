@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7042696175884412699}
   - component: {fileID: 7964569129103471310}
   - component: {fileID: 4976361363353718414}
+  - component: {fileID: 5446924589042165248}
   m_Layer: 0
   m_Name: StateText
   m_TagString: Untagged
@@ -171,6 +172,21 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 7964569129103471310}
   m_maskType: 0
+--- !u!114 &5446924589042165248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4385470639615646561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb34c9f4e2fb01a46a641f5222c56b43, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  targetText: {fileID: 4976361363353718414}
+  pulseScaleMultiplier: 1.25
+  pulseDuration: 0.08
 --- !u!1 &5607873604925394503
 GameObject:
   m_ObjectHideFlags: 0
@@ -328,7 +344,7 @@ MonoBehaviour:
   bodyCollider: {fileID: 3403300288364643078}
   bulletHitProxy: {fileID: 8234131180841254664}
   moveSpeed: 1
-  stateText: {fileID: 4976361363353718414}
+  valueText: {fileID: 5446924589042165248}
   visual: {fileID: 8115508436982732681}
   animator: {fileID: 2647954411640409464}
 --- !u!50 &429198767374649772

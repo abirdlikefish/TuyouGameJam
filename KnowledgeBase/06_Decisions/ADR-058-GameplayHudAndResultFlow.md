@@ -16,7 +16,7 @@
 4. `IGameStateService.TryReturnToLevelSelect()` 是 Gameplay 返回选关的唯一 UI 命令。战斗中调用表示主动放弃，不发布结果且不解锁；结算后调用只结束展示并返回选关。
 5. 战斗中的退出按钮先显示二次确认层。确认层显示期间 Gameplay 继续计时和推进，确认层通过 UGUI 射线遮挡拖拽；取消后恢复拖拽。若确认期间自然终局，关闭确认层并显示结果面板。
 6. 结算耗时只累计 `LevelRunState.Playing`，不包含加载、Preparing 或结果停留时间。结算返回不再二次确认。
-7. HUD 不再直接显示击杀文本，改用 `Image.Type.Filled` 的进度条展示 `KilledEnemyCount / TotalEnemyCount`；最后一个敌人死亡后填充值为 `1`。关卡名、耗时和三元素剩余时间保持原行为。
+7. HUD 使用 `Image.Type.Filled` 的进度条展示剩余敌人比例 `(TotalEnemyCount - KilledEnemyCount) / TotalEnemyCount`，并用图片数字显示剩余敌人数；战斗开始时填充值为 `1`，随敌人死亡递减，最后一个敌人死亡后为 `0`。BattleResult 仍显示本局最终击杀数；关卡名、耗时和三元素剩余时间保持原行为。
 8. 失败结算提供“再次挑战”和“返回选关”；两种胜利结算都提供“返回选关”，有下一关的胜利结算另外提供“挑战下一关”。`GameStateService` 是重试和下一关切换的唯一所有者，每次接受命令都创建新的 `LevelRunId` 并重新加载 GameplayScene。
 9. 胜利事件中的 `UnlockedLevelIds` 已由 ConfigService 按 ADR-044 过滤。空列表表示没有下一关；非空列表的第一个 ID 是“挑战下一关”的目标，其余 ID 仍正常加入运行期解锁集合，但只在选关界面选择。
 
@@ -30,7 +30,7 @@
 
 ## 验收
 
-- HUD 从 Gameplay Ready 后持续显示，击杀进度按敌人死亡推进，胜利时填满；胜负后数据冻结且只出现匹配的一个结果根节点，场景不会自动切换。
+- HUD 从 Gameplay Ready 后持续显示，剩余敌人进度随敌人死亡从 `1` 递减到 `0`，数字同步显示剩余敌人数；BattleResult 仍显示最终击杀数。胜负后数据冻结且只出现匹配的一个结果根节点，场景不会自动切换。
 - 战斗中确认退出不发布胜负、不解锁；取消确认后继续本局。
 - 失败时可以重试当前关或返回选关；胜利时根据过滤后的 `UnlockedLevelIds` 显示对应成功根节点，有下一关时可进入列表首项。
 - 胜负结果只接受一次，结算按钮快速重复点击只发起一次场景切换；重试和下一关均使用新的 `LevelRunId`。

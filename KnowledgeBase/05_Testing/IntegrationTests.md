@@ -24,7 +24,7 @@
 - [ ] Gameplay 加载失败时不发布 `LevelRunStarted`，清除待启动会话并请求恢复 LevelSelectScene；只有 LevelSelect Ready 后才进入 LevelSelect。
 - [ ] 异步卸载失败发布 `AppSceneUnloadFailed`，停止本次切换且不加载目标场景。
 - [ ] Victory 或 GameOver 只接受并发布一次；GameStateService 进入 `GameplayResult` 后停留在 GameplayScene，等待返回选关、失败重试或胜利下一关命令。
-- [ ] `BattleHud` 在 Playing 与 GameplayResult 都保持显示；终局前显示实时耗时、三元素剩余时间和 Filled 击杀进度条，进度按 `KilledEnemyCount / TotalEnemyCount` 递增且 Victory 时为 `1`，不显示击杀文本；终局后全部数值冻结。
+- [ ] `BattleHud` 在 Playing 与 GameplayResult 都保持显示；终局前显示实时耗时、三元素剩余时间、剩余敌人数和 Filled 剩余敌人进度条，进度按 `(TotalEnemyCount - KilledEnemyCount) / TotalEnemyCount` 从 `1` 递减且 Victory 时为 `0`；终局后全部数值冻结，BattleResult 仍显示最终击杀数。
 - [ ] GameOver 只显示失败根节点，提供再次挑战当前关和返回选关；重试使用相同 LevelId、全新 LevelRunId，并经过 GameplayLoading 和开场门禁进入新一局。
 - [ ] Victory 的过滤后 `UnlockedLevelIds` 非空时只显示有下一关的成功根节点，挑战按钮以列表首项为目标并创建新 LevelRunId；列表为空时只显示无下一关的成功根节点且不存在下一关按钮。两种成功根节点都能返回选关。
 - [ ] 战斗中退出先显示二次确认；确认层显示期间玩法与计时继续但 Pointer 拖拽被遮挡，取消后恢复操作，确认后不发布 Victory/GameOver、不解锁并返回 LevelSelect。
@@ -106,7 +106,9 @@
 - [ ] 元素门接触失败后永久锁定奖励；继续受击可以消费子弹和播放表现，但 HP 最低锁在 `1`，不再累计可兑换伤害、不能归零或获得元素。
 - [ ] 门只对 Army 进行一次接触判定；未接触门可以直接从道路下方离场。
 - [ ] Gate/Prop 先通过 `IArmyController` 完成状态变更再发布事实事件；增删 UI 或 VFX 监听者不会改变结算结果。
-- [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱按固定 WeaponId `0/1/2` 更新武器并保留三元素剩余时间。配置保证获得法杖后不再生成其他武器箱，元素法杖 3～9 不作为武器箱直接掉落。
+- [ ] 道具在接触前击破后只触发一次配置的击破效果；当前 MVP 的三种武器箱固定提交 WeaponId `0/1/2`，按 `Staff > Bow > Slingshot` 只允许保持或升级当前武器并保留三元素剩余时间，元素法杖 3～9 不作为武器箱直接掉落。
+- [ ] 武器拾取覆盖弹弓、弓、法杖三种当前家族与三种箱子的完整组合：弓拒绝弹弓，任意 WeaponId 2～9 拒绝弓和弹弓；被拒绝时不发布 `ArmyWeaponChanged`、不切换 Animator、不重置冷却、不立即发射，WeaponId 9 的五秒阶段也不中断。
+- [ ] 较低优先级武器箱被击破时仍只发布一次成功 `PropBroken` 并正常回收和播放既有奖励表现；相同或更高优先级继续既有相同武器 no-op、升级和法杖元素派生规则。
 - [ ] BasketballProp 接触前击破时不改变武器、人数或元素；接触时对当次去重后的每个有效槽位伤害一次并进入 Failed，后续命中锁血 1 且不能击破。
 - [ ] Ikun 出生后等待完整间隔，仅在 MovingDown 到期时进入 RangedAttacking；到期当帧停止移动，动画期间冻结下一轮计时，末帧后恢复移动；到达 EnemyApproachY 或死亡后停止远程攻击，已有篮球继续存在且不阻止胜利。
 - [ ] Ikun RangedAttack Clip 的篮球离手帧恰好调用一次 `OnBasketballReleaseFrame()`，末帧恰好调用一次 `OnRangedAttackAnimationFinished()`；重复释放事件最多生成一颗，事件前死亡、StopRun 或回池不生成，远程事件不触发 AttackCollider 范围伤害。
@@ -117,13 +119,13 @@
 - [ ] 槽位受击只减少当前槽位人数，不主动重新平均其他槽位。
 - [ ] 新增人数优先补充受击后人数较少或为空的槽位。
 - [ ] 槽位聚合 HP 按 `HpPerSoldier` 计算，伤害按比例转换为槽位人数损失。
-- [ ] 每个激活槽位从独立发射点按同一武器间隔触发射击；WeaponId 0～1 单发，WeaponId 2～9 从同一 FirePoint 同帧生成竖直、上偏左、上偏右三颗；改变代表人数不改变对应武器的固定弹丸数量、伤害或速度。
+- [ ] 每个激活槽位从独立发射点按同一武器间隔触发射击；WeaponId 0～1 单发，WeaponId 2～8 从同一 FirePoint 同帧生成固定竖直、上偏左、上偏右三颗，WeaponId 9 同帧生成一颗竖直和两颗动态偏角子弹；改变代表人数不改变对应武器的固定弹丸数量。
 - [ ] 本局初始活动槽位在首个 Playing Tick 立即首发；运行中新激活槽位和失活后重新激活的槽位等待完整 `FireInterval` 后首发。
 - [ ] 实际切换到不同 WeaponId 后全部激活槽位按新武器完整间隔重置；重复当前 WeaponId 不重置。
 - [ ] 单个逻辑帧每槽最多触发一次射击；法杖一次固定生成三颗，delta 跨过多个 FireInterval 时不补发历史齐射。
 - [ ] 每局初始武器为 WeaponId=0，火/冰/雷剩余时间均为 0；三元素可以同时有效并从 Gameplay delta 扣减到不小于 0。
 - [ ] 子弹保存发射瞬间的 WeaponId 与 ElementMask；Army 后续换武器、获得元素或元素过期不修改飞行中的子弹。
-- [ ] 只有 `Fire|Lightning`、`Ice|Lightning`、`Fire|Ice` 三个精准二元素掩码触发对应效果；None、单元素、三元素、Gate 与 Prop 命中均不误触发。
+- [ ] 只有 `Fire|Lightning`、`Ice|Lightning`、`Fire|Ice` 三个精准二元素掩码触发对应效果；None、单元素和 Gate/Prop 命中均不误触发。三元素法杖的随机子弹使用所选 WeaponId 3～8 的精确掩码，不直接携带三元素掩码。
 - [ ] 火雷以直接目标命中时的 BodyCollider 中心为圆心，只在出现帧查询一次；直接目标受到基础伤害加爆炸伤害，范围内其他存活敌人只受爆炸伤害，同一目标可被同帧多个独立爆炸分别命中。
 - [ ] 冰雷始终把直接目标作为第一目标，并从半径内其他存活目标中按 `LevelRunId + BulletInstanceId + ComboKind` 的确定性随机顺序补足总目标数；每个入选目标只结算一次，连线刷新不追加伤害。
 - [ ] 冰火只造成基础伤害并登记固定世界 `+Y` 位移；同帧多次位移累加，不受道路、Army 或其他敌人阻挡，不改变攻击、动画、目标或冷却。
@@ -135,7 +137,10 @@
 - [ ] Attack、MoveLeft、MoveRight 连续切换保持已经播放的攻击周期进度，不从第 0 帧重启，也不改变下一次发射边界。
 - [ ] 实际 WeaponId 改变时活动槽位从新动画第 0 帧立即发射；重复相同 WeaponId 不重播、不发射。
 - [ ] 大帧每槽最多触发一次周期射击且保留跨周期余量；法杖齐射三颗全部遵循当前 Tick 的快照边界，换武器回调中新生成的子弹不在 BulletManager 当前 Tick 内移动或连锁命中。
-- [ ] 法杖中弹方向为 `(0,1)`，左弹为 `(-3,13).normalized`，右弹为 `(3,13).normalized`；三者速度大小相同且等于配置 MoveSpeed，根节点默认向上并分别对齐飞行方向。
+- [ ] WeaponId 2～8 的中弹方向为 `(0,1)`，左弹为 `(-3,13).normalized`，右弹为 `(3,13).normalized`；三者速度大小相同且等于配置 MoveSpeed，根节点默认向上并分别对齐飞行方向。
+- [ ] WeaponId 9 从进入形态起完整持续五秒；左右弹各自相对中弹的偏角在 `0、5/3、10/3、5` 秒边界依次为 `0°、30°、0°、30°`，左右镜像且单位化。
+- [ ] WeaponId 9 每颗弹独立从 WeaponId 3～8 选择 BulletId 和 ElementMask，同一齐射允许不同类型；相同 LevelRunId 与操作顺序复现相同序列，五秒内再次获得元素不延长阶段。
+- [ ] 三元素阶段结束时火、冰、雷同帧清零，按固定顺序发布三次过期并只发生一次 `9 -> 2` 切换；不会经过中间元素法杖，HUD 同帧显示三个 `0`。
 - [ ] Gate 接触发生在 Army 发射阶段之后，本帧新增元素从下一逻辑帧子弹开始生效。
 - [ ] Gameplay 固定使用 `Bullet`、`EnemyBody`、`EnemyAttack`、`ArmySlot`、`Gate`、`Prop` 六个职责 Layer；道路边界不使用 Collider 或 Layer。
 - [ ] 四类敌人 Prefab 均不包含 `TargetSensor`；攻击起始只比较怪物与锁定槽位目标位置的 XY 距离。

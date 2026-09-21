@@ -22,33 +22,12 @@ MonoBehaviour:
   elementDurationSecondsPerDamage: 1
   ikunBasketballConfigId: 3
   enemySpawns:
-  - spawnTime: 1
-    spawnPosition: 0.5
-    configId: 3
-  - spawnTime: 8.174127
+  - spawnTime: 70
     spawnPosition: 0.565803
     configId: 0
-  - spawnTime: 8.470528
-    spawnPosition: 0.358243
-    configId: 0
-  - spawnTime: 8.540329
-    spawnPosition: 0.859015
-    configId: 1
-  - spawnTime: 8.831974
-    spawnPosition: 0.788554
-    configId: 1
-  - spawnTime: 9.133944
-    spawnPosition: 0.784743
-    configId: 1
-  - spawnTime: 10.163981
-    spawnPosition: 0.381105
-    configId: 2
-  - spawnTime: 10.270575
-    spawnPosition: 0.592543
-    configId: 2
-  - spawnTime: 10.404028
-    spawnPosition: 0.336126
-    configId: 2
+  - spawnTime: 80
+    spawnPosition: 0.5
+    configId: 3
   gateSpawns:
   - spawnTime: 4
     spawnPosition: 0.166667
@@ -77,7 +56,7 @@ MonoBehaviour:
   propSpawns:
   - spawnTime: 1
     spawnPosition: 0.166667
-    configId: 4
+    configId: 2
   - spawnTime: 2
     spawnPosition: 0.5
     configId: 1

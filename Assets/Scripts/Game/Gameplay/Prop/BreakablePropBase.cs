@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Game.Contracts;
-using TMPro;
 using UnityEngine;
 
 namespace Game.Gameplay
@@ -12,7 +12,7 @@ namespace Game.Gameplay
         [SerializeField] private BulletHitProxy bulletHitProxy;
         [SerializeField] private SpriteRenderer visual;
         [SerializeField] private Animator animator;
-        [SerializeField] private TMP_Text debugText;
+        [SerializeField] private ObstacleValueTextView valueText;
 
         private readonly HashSet<int> consumedBulletIds = new HashSet<int>();
 
@@ -34,8 +34,6 @@ namespace Game.Gameplay
 
         public int RuntimeInstanceId => runtimeInstanceId;
         protected int LevelRunId => levelRunId;
-        protected int CurrentHp => currentHp;
-        protected int MaxHp => runtimeMaxHp;
         protected IArmyController Army => army;
         protected IEventBus EventBus => eventBus;
 
@@ -55,10 +53,15 @@ namespace Game.Gameplay
         public virtual bool TryValidate(out string error)
         {
             error = string.Empty;
-            if (bodyCollider == null || bulletHitProxy == null || visual == null ||
+            if (bodyCollider == null || bulletHitProxy == null || visual == null || valueText == null ||
                 animator == null || animator.runtimeAnimatorController == null)
             {
-                error = $"{name} requires bodyCollider, bulletHitProxy, visual and Animator bindings.";
+                error = $"{name} requires bodyCollider, bulletHitProxy, valueText, visual and Animator bindings.";
+                return false;
+            }
+
+            if (!valueText.TryValidate(out error))
+            {
                 return false;
             }
 
@@ -121,7 +124,7 @@ namespace Game.Gameplay
             transform.position = worldPosition;
             transform.rotation = Quaternion.identity;
             bodyCollider.enabled = true;
-            RefreshDebugText();
+            valueText.Initialize(currentHp.ToString(CultureInfo.InvariantCulture));
         }
 
         private void OnEnable()
@@ -143,13 +146,15 @@ namespace Game.Gameplay
 
             if (contactState == PropContactState.Failed)
             {
+                var previousHp = currentHp;
                 currentHp = (int)Math.Max(1L, (long)currentHp - damage.Damage);
-                RefreshDebugText();
+                RefreshValueText(previousHp);
                 return;
             }
 
+            var pendingPreviousHp = currentHp;
             currentHp = (int)Math.Max(0L, (long)currentHp - damage.Damage);
-            RefreshDebugText();
+            RefreshValueText(pendingPreviousHp);
             if (currentHp > 0)
             {
                 return;
@@ -165,6 +170,7 @@ namespace Game.Gameplay
             if (runtimeActive)
             {
                 transform.position += Vector3.down * (runtimeMoveSpeed * deltaTime);
+                valueText.Tick(deltaTime);
             }
         }
 
@@ -194,8 +200,6 @@ namespace Game.Gameplay
                         slotIndex,
                         runtimeContactDamage));
             }
-
-            RefreshDebugText();
         }
 
         void IRoadObstacleRuntime.ExitRoad()
@@ -240,11 +244,11 @@ namespace Game.Gameplay
             runtimeMoveSpeed = 0f;
             currentHp = 0;
             consumedBulletIds.Clear();
+            valueText.ResetForPool();
             gameObject.SetActive(false);
         }
 
         protected abstract void OnBroken(BulletDamageContext damage);
-        protected abstract string BuildDebugText();
         protected virtual void OnPrepareForPool() { }
         protected virtual void ConfigureAnimatorForPlayback(Animator targetAnimator) { }
         protected virtual void ResetAnimatorForPool(Animator targetAnimator) { }
@@ -299,11 +303,11 @@ namespace Game.Gameplay
             }
         }
 
-        private void RefreshDebugText()
+        private void RefreshValueText(int previousHp)
         {
-            if (debugText != null)
+            if (currentHp != previousHp)
             {
-                debugText.text = BuildDebugText();
+                valueText.SetTextAndTryPulse(currentHp.ToString(CultureInfo.InvariantCulture));
             }
         }
 

@@ -9,7 +9,7 @@
 
 ## Gameplay HUD 与结算
 
-Gameplay Canvas 在 `PF_UI_TouchDragArea` 上方依次放置常驻 `BattleHud` 与初始隐藏的 `BattleResult`。HUD 显示纯数字关卡 ID、玩法耗时、当前击杀数和火/冰/雷剩余时间，并用 `Image.Type.Filled` 进度条展示已击杀敌人数占总敌人数的比例。关卡 ID、`mm:ss` 耗时和击杀数统一使用 `PF_UI_ImageNumberText`；该 Prefab 在 `ImageNumberText` 上集中绑定 `0`～`9` 与冒号共 11 张 Sprite，运行时复用子 `Image` 排版。结果控制器保存失败、有下一关的胜利、无下一关的胜利三个互斥根节点，并用同一图片数字组件显示冻结的总耗时和击杀数。
+Gameplay Canvas 在 `PF_UI_TouchDragArea` 上方依次放置常驻 `BattleHud` 与初始隐藏的 `BattleResult`。HUD 显示纯数字关卡 ID、玩法耗时、当前剩余敌人数和火/冰/雷剩余时间，并用 `Image.Type.Filled` 进度条展示剩余敌人数占总敌人数的比例。关卡 ID、`mm:ss` 耗时和剩余敌人数统一使用 `PF_UI_ImageNumberText`；该 Prefab 在 `ImageNumberText` 上集中绑定 `0`～`9` 与冒号共 11 张 Sprite，运行时复用子 `Image` 排版。结果控制器保存失败、有下一关的胜利、无下一关的胜利三个互斥根节点，并用同一图片数字组件显示冻结的总耗时和最终击杀数。
 
 失败根节点提供再次挑战当前关和返回选关按钮；两个胜利根节点都提供返回选关按钮，有下一关的胜利根节点另外提供挑战下一关按钮。胜利事件的 `UnlockedLevelIds` 为空时显示无下一关根节点，非空时显示有下一关根节点，并把列表首项作为挑战目标。UI 只提交 GameStateService 命令，不直接加载场景。
 
@@ -23,7 +23,7 @@ Gameplay Canvas 在 BattleHud 上方、BattleResult 下方放置全屏 `LevelInt
 
 ## 后续 HUD 职责
 
-- 显示军队总人数、激活槽位数（可选显示各槽位代表人数）、加法门数字、元素门 HP 与 HP 清空后的可兑换额外伤害/持续时间、敌人生成/击杀进度和关卡计时。
+- 显示军队总人数、激活槽位数（可选显示各槽位代表人数）、加法门数字、元素门 HP 与 HP 清空后的可兑换额外伤害/持续时间、剩余敌人进度和关卡计时。
 - 显示胜利、失败和重开界面；暂停界面属于后续扩展。
 - 监听状态和数值事件。
 

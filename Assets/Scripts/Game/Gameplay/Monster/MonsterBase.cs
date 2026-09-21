@@ -126,7 +126,7 @@ namespace Game.Gameplay
                 return false;
             }
 
-            if (animator.gameObject.activeInHierarchy &&
+            if (CanValidateAnimatorParameters &&
                 (!HasAnimatorParameter(animator, AttackTrigger, AnimatorControllerParameterType.Trigger) ||
                  !HasAnimatorParameter(animator, DeathTrigger, AnimatorControllerParameterType.Trigger) ||
                  !HasAnimatorParameter(
@@ -749,6 +749,10 @@ namespace Game.Gameplay
                 parameterNameHash,
                 AnimatorControllerParameterType.Trigger);
         }
+
+        // Prefab 资产上的 Animator 尚未运行，直接读取 parameters 会返回空并产生误报。
+        protected bool CanValidateAnimatorParameters =>
+            animator != null && animator.gameObject.activeInHierarchy;
 
         private void RequireAnimatorParameters()
         {

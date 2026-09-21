@@ -9,6 +9,7 @@ namespace Game.Gameplay
     {
         private const int MvpInitialArmyCount = 1;
         private const int InitialWeaponId = 0;
+        private const int BowWeaponId = 1;
         private const int StaffWeaponId = 2;
         private const int FireStaffWeaponId = 3;
         private const int IceStaffWeaponId = 4;
@@ -18,8 +19,19 @@ namespace Game.Gameplay
         private const int IceLightningStaffWeaponId = 8;
         private const int FireIceLightningStaffWeaponId = 9;
         private const int MvpWeaponCount = 10;
+        private const int RandomElementStaffWeaponCount = 6;
+        private const float TripleElementStaffDuration = 5f;
+        private const float TripleElementStaffSegmentDuration = TripleElementStaffDuration / 3f;
+        private const float TripleElementStaffMaxAngle = 30f;
         private static readonly Vector2 StaffLeftBulletDirection = new Vector2(-3f, 13f).normalized;
         private static readonly Vector2 StaffRightBulletDirection = new Vector2(3f, 13f).normalized;
+
+        private enum WeaponPriority
+        {
+            Slingshot = 0,
+            Bow = 1,
+            Staff = 2
+        }
 
         [Serializable]
         private struct WeaponAnimatorControllerBinding
@@ -49,6 +61,10 @@ namespace Game.Gameplay
         private float fireRemainingDuration;
         private float iceRemainingDuration;
         private float lightningRemainingDuration;
+        private float tripleElementStaffElapsed;
+        private float tripleElementStaffRemaining;
+        private uint tripleElementStaffPhaseSequence;
+        private uint tripleElementStaffRandomState;
         private ArmyAnimationState currentAnimationState = ArmyAnimationState.Idle;
         private bool initialized;
         private bool running;
@@ -177,6 +193,10 @@ namespace Game.Gameplay
             fireRemainingDuration = 0f;
             iceRemainingDuration = 0f;
             lightningRemainingDuration = 0f;
+            tripleElementStaffElapsed = 0f;
+            tripleElementStaffRemaining = 0f;
+            tripleElementStaffPhaseSequence = 0u;
+            tripleElementStaffRandomState = 0u;
             currentAnimationState = ArmyAnimationState.Idle;
             completionPresentation = false;
             running = true;
@@ -206,22 +226,33 @@ namespace Game.Gameplay
             }
 
             var weaponIdBeforeDurationTick = currentWeaponId;
-            var elementExpired = TickElementDuration(
-                ref fireRemainingDuration,
-                ElementType.Fire,
-                gameplayDeltaTime);
-            elementExpired |= TickElementDuration(
-                ref iceRemainingDuration,
-                ElementType.Ice,
-                gameplayDeltaTime);
-            elementExpired |= TickElementDuration(
-                ref lightningRemainingDuration,
-                ElementType.Lightning,
-                gameplayDeltaTime);
-            // 本帧全部过期事实发布后只落一次最终组合，避免经过中间法杖身份。
-            if (elementExpired)
+            if (IsTripleElementStaffPhaseActive())
             {
-                RefreshStaffWeapon(ArmyWeaponChangeReason.ElementExpired, null);
+                // 三元素形态由独立五秒阶段接管，避免较短的原元素计时让形态提前降级。
+                if (TickTripleElementStaffPhase(gameplayDeltaTime))
+                {
+                    CompleteTripleElementStaffPhase();
+                }
+            }
+            else
+            {
+                var elementExpired = TickElementDuration(
+                    ref fireRemainingDuration,
+                    ElementType.Fire,
+                    gameplayDeltaTime);
+                elementExpired |= TickElementDuration(
+                    ref iceRemainingDuration,
+                    ElementType.Ice,
+                    gameplayDeltaTime);
+                elementExpired |= TickElementDuration(
+                    ref lightningRemainingDuration,
+                    ElementType.Lightning,
+                    gameplayDeltaTime);
+                // 本帧全部过期事实发布后只落一次最终组合，避免经过中间法杖身份。
+                if (elementExpired)
+                {
+                    RefreshStaffWeapon(ArmyWeaponChangeReason.ElementExpired, null);
+                }
             }
 
             var weapon = weaponConfigProvider.GetWeaponConfig(currentWeaponId);
@@ -270,6 +301,10 @@ namespace Game.Gameplay
             fireRemainingDuration = 0f;
             iceRemainingDuration = 0f;
             lightningRemainingDuration = 0f;
+            tripleElementStaffElapsed = 0f;
+            tripleElementStaffRemaining = 0f;
+            tripleElementStaffPhaseSequence = 0u;
+            tripleElementStaffRandomState = 0u;
             currentAnimationState = ArmyAnimationState.Idle;
             completionPresentation = false;
             for (var index = 0; index < slots.Length; index++)
@@ -484,6 +519,12 @@ namespace Game.Gameplay
             }
 
             weaponConfigProvider.GetWeaponConfig(weaponId);
+            // 优先级只约束武器箱拾取，元素法杖仍可通过统一切换入口正常派生和降级。
+            if (HasLowerWeaponPriority(weaponId, currentWeaponId))
+            {
+                return;
+            }
+
             var targetWeaponId = IsStaffWeapon(weaponId)
                 ? ResolveStaffWeaponId(GetActiveElements())
                 : weaponId;
@@ -546,6 +587,15 @@ namespace Game.Gameplay
 
         public ArmyElementStateSnapshot GetElementStateSnapshot()
         {
+            if (IsTripleElementStaffPhaseActive())
+            {
+                return new ArmyElementStateSnapshot(
+                    tripleElementStaffRemaining,
+                    tripleElementStaffRemaining,
+                    tripleElementStaffRemaining,
+                    ElementMask.Fire | ElementMask.Ice | ElementMask.Lightning);
+            }
+
             return new ArmyElementStateSnapshot(
                 fireRemainingDuration,
                 iceRemainingDuration,
@@ -708,6 +758,30 @@ namespace Game.Gameplay
             return false;
         }
 
+        private bool TickTripleElementStaffPhase(float deltaTime)
+        {
+            var previous = tripleElementStaffRemaining;
+            tripleElementStaffElapsed = Mathf.Min(
+                TripleElementStaffDuration,
+                tripleElementStaffElapsed + deltaTime);
+            tripleElementStaffRemaining = Mathf.Max(0f, TripleElementStaffDuration - tripleElementStaffElapsed);
+            return previous > 0f && tripleElementStaffRemaining <= 0f;
+        }
+
+        private void CompleteTripleElementStaffPhase()
+        {
+            fireRemainingDuration = 0f;
+            iceRemainingDuration = 0f;
+            lightningRemainingDuration = 0f;
+            eventBus.Publish(new ArmyElementExpired(levelRunId, armyId, ElementType.Fire));
+            eventBus.Publish(new ArmyElementExpired(levelRunId, armyId, ElementType.Ice));
+            eventBus.Publish(new ArmyElementExpired(levelRunId, armyId, ElementType.Lightning));
+            ChangeCurrentWeapon(
+                StaffWeaponId,
+                ArmyWeaponChangeReason.ElementExpired,
+                null);
+        }
+
         private void RefreshStaffWeapon(
             ArmyWeaponChangeReason reason,
             int? sourceRuntimeInstanceId)
@@ -735,6 +809,15 @@ namespace Game.Gameplay
             }
 
             var previousWeaponId = currentWeaponId;
+            if (targetWeaponId == FireIceLightningStaffWeaponId)
+            {
+                BeginTripleElementStaffPhase();
+            }
+            else if (previousWeaponId == FireIceLightningStaffWeaponId)
+            {
+                ResetTripleElementStaffPhase();
+            }
+
             currentWeaponId = targetWeaponId;
             ApplyWeaponAnimatorController(currentWeaponId, 0f);
             var activeElements = GetActiveElements();
@@ -764,6 +847,31 @@ namespace Game.Gameplay
             return weaponId >= StaffWeaponId && weaponId <= FireIceLightningStaffWeaponId;
         }
 
+        private static bool HasLowerWeaponPriority(int pickupWeaponId, int currentWeaponId)
+        {
+            return (int)GetWeaponPriority(pickupWeaponId) < (int)GetWeaponPriority(currentWeaponId);
+        }
+
+        private static WeaponPriority GetWeaponPriority(int weaponId)
+        {
+            if (weaponId == InitialWeaponId)
+            {
+                return WeaponPriority.Slingshot;
+            }
+
+            if (weaponId == BowWeaponId)
+            {
+                return WeaponPriority.Bow;
+            }
+
+            if (IsStaffWeapon(weaponId))
+            {
+                return WeaponPriority.Staff;
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(weaponId), weaponId, "Weapon priority is undefined.");
+        }
+
         private static int ResolveStaffWeaponId(ElementMask activeElements)
         {
             switch (activeElements)
@@ -787,6 +895,34 @@ namespace Game.Gameplay
                 default:
                     throw new ArgumentOutOfRangeException(nameof(activeElements));
             }
+        }
+
+        private void BeginTripleElementStaffPhase()
+        {
+            tripleElementStaffElapsed = 0f;
+            tripleElementStaffRemaining = TripleElementStaffDuration;
+            tripleElementStaffPhaseSequence++;
+            if (tripleElementStaffPhaseSequence == 0u)
+            {
+                tripleElementStaffPhaseSequence = 1u;
+            }
+
+            tripleElementStaffRandomState = CreateTripleElementStaffSeed(
+                levelRunId,
+                tripleElementStaffPhaseSequence);
+        }
+
+        private void ResetTripleElementStaffPhase()
+        {
+            tripleElementStaffElapsed = 0f;
+            tripleElementStaffRemaining = 0f;
+            tripleElementStaffRandomState = 0u;
+        }
+
+        private bool IsTripleElementStaffPhaseActive()
+        {
+            return currentWeaponId == FireIceLightningStaffWeaponId &&
+                   tripleElementStaffRemaining > 0f;
         }
 
         private ArmyAnimationState MoveArmy(float deltaTime)
@@ -927,6 +1063,19 @@ namespace Game.Gameplay
             WeaponConfigSnapshot weapon,
             ElementMask activeElements)
         {
+            if (currentWeaponId == FireIceLightningStaffWeaponId)
+            {
+                // 左右弹各自相对中弹偏转；按绝对阶段时间重算，避免逐帧旋转累积误差。
+                var angle = GetTripleElementStaffAngle(tripleElementStaffElapsed);
+                var radians = angle * Mathf.Deg2Rad;
+                var leftDirection = new Vector2(-Mathf.Sin(radians), Mathf.Cos(radians));
+                var rightDirection = new Vector2(Mathf.Sin(radians), Mathf.Cos(radians));
+                SpawnRandomElementStaffBullet(slot, Vector2.up);
+                SpawnRandomElementStaffBullet(slot, leftDirection);
+                SpawnRandomElementStaffBullet(slot, rightDirection);
+                return;
+            }
+
             SpawnBullet(slot, weapon, activeElements, Vector2.up);
             if (!IsStaffWeapon(currentWeaponId))
             {
@@ -936,6 +1085,18 @@ namespace Game.Gameplay
             // 法杖固定三弹道；方向在此归一化，速度仍只取 Bullet 配置。
             SpawnBullet(slot, weapon, activeElements, StaffLeftBulletDirection);
             SpawnBullet(slot, weapon, activeElements, StaffRightBulletDirection);
+        }
+
+        private void SpawnRandomElementStaffBullet(ArmySlotView slot, Vector2 direction)
+        {
+            // 外观、基础数值和元素效果共同取自同一个随机法杖，来源武器身份仍保持 9。
+            var selectedWeaponId = NextRandomElementStaffWeaponId();
+            var selectedWeapon = weaponConfigProvider.GetWeaponConfig(selectedWeaponId);
+            SpawnBullet(
+                slot,
+                selectedWeapon,
+                GetElementsForStaffWeapon(selectedWeaponId),
+                direction);
         }
 
         private void SpawnBullet(
@@ -954,6 +1115,66 @@ namespace Game.Gameplay
                     activeElements,
                     slot.FirePosition,
                     direction));
+        }
+
+        private int NextRandomElementStaffWeaponId()
+        {
+            var state = tripleElementStaffRandomState;
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            tripleElementStaffRandomState = state == 0u ? 1u : state;
+            return FireStaffWeaponId +
+                   (int)(tripleElementStaffRandomState % RandomElementStaffWeaponCount);
+        }
+
+        private static float GetTripleElementStaffAngle(float elapsedTime)
+        {
+            var phase = Mathf.Clamp(elapsedTime, 0f, TripleElementStaffDuration) /
+                        TripleElementStaffSegmentDuration;
+            if (phase <= 1f)
+            {
+                return TripleElementStaffMaxAngle * phase;
+            }
+
+            if (phase <= 2f)
+            {
+                return TripleElementStaffMaxAngle * (2f - phase);
+            }
+
+            return TripleElementStaffMaxAngle * (phase - 2f);
+        }
+
+        private static ElementMask GetElementsForStaffWeapon(int weaponId)
+        {
+            switch (weaponId)
+            {
+                case FireStaffWeaponId:
+                    return ElementMask.Fire;
+                case IceStaffWeaponId:
+                    return ElementMask.Ice;
+                case LightningStaffWeaponId:
+                    return ElementMask.Lightning;
+                case FireIceStaffWeaponId:
+                    return ElementMask.Fire | ElementMask.Ice;
+                case FireLightningStaffWeaponId:
+                    return ElementMask.Fire | ElementMask.Lightning;
+                case IceLightningStaffWeaponId:
+                    return ElementMask.Ice | ElementMask.Lightning;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(weaponId));
+            }
+        }
+
+        private static uint CreateTripleElementStaffSeed(int currentLevelRunId, uint phaseSequence)
+        {
+            unchecked
+            {
+                var seed = 2166136261u;
+                seed = (seed ^ (uint)currentLevelRunId) * 16777619u;
+                seed = (seed ^ phaseSequence) * 16777619u;
+                return seed == 0u ? 1u : seed;
+            }
         }
 
         private static float GetAttackNormalizedTime(ArmySlotView slot, float fireInterval)

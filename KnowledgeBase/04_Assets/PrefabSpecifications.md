@@ -58,7 +58,7 @@ GameplayRoot [GameplaySceneEntry]
 └── EventSystem [EventSystem；StandaloneInputModule]
 ```
 
-GameplayScene 的 Canvas 直属节点顺序保持 TouchDragArea、BattleHud、LevelIntroVideo、BattleResult；具体视觉样式和本轮新增绑定由用户在 Editor 中装配。BattleHud 必须绑定一个 `Image.Type.Filled` 的击杀进度 Image。BattleResult 下必须有失败、有下一关胜利、无下一关胜利三个互斥根节点：失败根绑定重试与返回按钮，有下一关胜利根绑定下一关与返回按钮，无下一关胜利根绑定返回按钮；共用总耗时和击杀文本仍属于 BattleResult 层级。LevelIntroVideo 根节点全屏拉伸，黑色 Image 开启 Raycast Target，同节点 VideoPlayer 禁止 Play On Awake/Loop、使用 API Only 与无音频输出；子 RawImage 全屏拉伸并由 AspectRatioFitter 采用 Envelope Parent。GameplaySceneEntry 显式绑定 LevelIntroVideoView，并通过 `LevelIntroVideoBinding[]` 按 LevelId 绑定导入的 VideoClip。数组可为空；数组中的负数/重复 LevelId 或空 VideoClip 会阻止 Ready。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
+GameplayScene 的 Canvas 直属节点顺序保持 TouchDragArea、BattleHud、LevelIntroVideo、BattleResult；具体视觉样式和本轮新增绑定由用户在 Editor 中装配。BattleHud 必须绑定一个 `Image.Type.Filled` 的剩余敌人进度 Image，填充值从开战时的 `1` 随敌人死亡递减到 `0`。BattleResult 下必须有失败、有下一关胜利、无下一关胜利三个互斥根节点：失败根绑定重试与返回按钮，有下一关胜利根绑定下一关与返回按钮，无下一关胜利根绑定返回按钮；共用总耗时和击杀文本仍属于 BattleResult 层级。LevelIntroVideo 根节点全屏拉伸，黑色 Image 开启 Raycast Target，同节点 VideoPlayer 禁止 Play On Awake/Loop、使用 API Only 与无音频输出；子 RawImage 全屏拉伸并由 AspectRatioFitter 采用 Envelope Parent。GameplaySceneEntry 显式绑定 LevelIntroVideoView，并通过 `LevelIntroVideoBinding[]` 按 LevelId 绑定导入的 VideoClip。数组可为空；数组中的负数/重复 LevelId 或空 VideoClip 会阻止 Ready。AppCamera、CanvasScaler 的最终适配参数按目标竖屏分辨率配置，但不作为玩法数值来源。
 
 ## Army
 
@@ -166,20 +166,20 @@ PF_Monster_Ikun [IkunMonster；Animator；Kinematic Rigidbody2D]
 PF_Gate_Additive [AdditiveGate；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
-└── StateText [TMP_Text]
+└── StateText [TMP_Text；ObstacleValueTextView]
 
 PF_Gate_Element [ElementGate；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位底图]
 ├── BodyCollider [Collider2D；Gate Layer；BulletHitProxy]
-└── StateText [TMP_Text]
+└── StateText [TMP_Text；ObstacleValueTextView]
 ```
 
-- AdditiveGate 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、`visual`、`animator` 和非负有限 `moveSpeed`；Animator 绑定唯一循环 Clip。
-- ElementGate 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`stateText`、`visual`、`animator`、非负有限 `moveSpeed` 和正整数 `contactDamage`；Controller 必须提供整数参数 `ElementType`。
+- AdditiveGate 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`valueText`、`visual`、`animator` 和非负有限 `moveSpeed`；Animator 绑定唯一循环 Clip。
+- ElementGate 根节点提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`valueText`、`visual`、`animator`、非负有限 `moveSpeed` 和正整数 `contactDamage`；Controller 必须提供整数参数 `ElementType`。
 - ElementGate 仍只有一个规范 Prefab；`Fire=1`、`Ice=2`、`Lightning=3` 在每次借出激活前选择对应循环状态，归还和复用不得残留上一元素动画。
-- Additive 的 StateText 显示当前 GateValue。
-- Element 的 StateText 至少显示 ElementType、`CurrentHp/MaxHp` 和 PostDepletionDamage；排版与最终文案不属于玩法契约。
-- TMP_Text 只显示根组件已经结算的状态，不持有或修改玩法数值。
+- Additive 的 StateText 只显示带显式正负号的当前 GateValue；Element 的 StateText 只显示当前 HP，HP 到 `0` 时隐藏但不隐藏门对象。
+- `ObstacleValueTextView` 使用文本节点原始 LocalScale 做相对放大并在短时间内恢复；播放期间新的数值变化只刷新文本，不重启动效。归还对象池时恢复原缩放、可见性和空闲状态。
+- TMP_Text 与 `ObstacleValueTextView` 只显示根组件已经结算的状态，不持有或修改玩法数值。
 - Gate 循环 Clip 不包含玩法 AnimationEvent，动画状态不决定 HP、数字、接触或奖励。
 
 ## Prop
@@ -188,20 +188,21 @@ PF_Gate_Element [ElementGate；Animator；Kinematic Rigidbody2D]
 PF_Prop_Weapon [WeaponProp；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
-└── DebugText [TMP_Text；可选占位表现]
+└── DebugText [TMP_Text；ObstacleValueTextView]
 
 PF_Prop_Basketball [BasketballProp；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
-└── DebugText [TMP_Text；可选占位表现]
+└── DebugText [TMP_Text；ObstacleValueTextView]
 
 PF_Prop_GooseCage [GooseCageProp；Animator；Kinematic Rigidbody2D]
 ├── Visual [SpriteRenderer 或占位视觉]
 ├── BodyCollider [Collider2D；Prop Layer；BulletHitProxy]
-└── DebugText [TMP_Text；可选占位表现]
+└── DebugText [TMP_Text；ObstacleValueTextView]
 ```
 
-- 三种 Prop 根节点都提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、视觉引用和 Animator。HP、接触伤害、移动速度及类型专用奖励均从 `PropConfigSnapshot` 注入。
+- 三种 Prop 根节点都提供 ADR-055 的 Kinematic Rigidbody2D 查询适配，并显式绑定 `bodyCollider`、同节点 `BulletHitProxy`、`valueText`、视觉引用和 Animator。HP、接触伤害、移动速度及类型专用奖励均从 `PropConfigSnapshot` 注入。
+- 三种 Prop 的 DebugText 只显示当前 HP 数字；HP 实际减少时播放短促相对缩放，动效期间后续伤害不重启缩放。HP 到 `0` 时沿用立即回收语义，由整个 Prop 消失；复用不得残留放大比例或旧文本。
 - `PF_Prop_Basketball` 绑定只有 `Basketball_Loop` 的 `AC_Prop_Basketball`；`PF_Prop_Weapon` 绑定 `AC_Prop_Weapon`，该 Controller 以整数参数 `WeaponId` 选择 `Weapon_000_Loop`、`Weapon_001_Loop`、`Weapon_002_Loop`。两个 Controller 都由根 Animator 驱动 `Visual` 子节点的 SpriteRenderer。
 - Prop 循环 Clip 不包含玩法 AnimationEvent。对象池借出时在激活前准备身份，激活当帧从第 0 帧播放；归还和跨局复用不得残留旧状态、参数或 Sprite。
 

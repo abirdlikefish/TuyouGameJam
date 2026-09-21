@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 玩法脚本与批次 7.4 Animator/池复用适配代码已实现并通过编译；Prefab 字段、Layer 与命中流程手测待完成）
 - 依赖：IBulletConfigProvider、PoolService、IBulletHittable、Level
-- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`、`../../06_Decisions/ADR-070-StaffThreeProjectileSpread.md`、`../../06_Decisions/ADR-071-LevelConfiguredBulletDespawnY.md`
+- 决策：`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-038-LevelConfiguredDamageDrivenGates.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-061-ElementComboImpactEffects.md`、`../../06_Decisions/ADR-070-StaffThreeProjectileSpread.md`、`../../06_Decisions/ADR-071-LevelConfiguredBulletDespawnY.md`、`../../06_Decisions/ADR-072-TripleElementStaffBurst.md`
 
 ## 职责
 
@@ -38,7 +38,7 @@
 - Bullet Prefab 保持无 Rigidbody2D；现有 Collider Cast 依赖 Enemy、Gate 和 Prop 规范 Prefab 根节点上已经在 Preparing 校验的 Kinematic Rigidbody2D 查询适配。该适配不负责移动、推挤或回调结算。
 - 首轮只对 Bullet 自身从上一逻辑位置到期望位置执行扫掠，不计算与本帧同时移动目标的相对运动，也不做子步进。通过 MVP 配置的合理速度、Collider 尺寸和目标帧率避免穿透，不承诺任意高速或严重掉帧场景。
 - 元素组合只在直接命中 Enemy 时解析；Gate、Prop 命中继续使用原规则，不创建组合效果。
-- `Fire | Lightning`、`Ice | Lightning`、`Fire | Ice` 必须精准匹配。三元素、单元素和无元素本轮都不触发额外效果；三元素仍只造成原本子弹伤害。
+- `Fire | Lightning`、`Ice | Lightning`、`Fire | Ice` 必须精准匹配。原始三元素掩码、单元素和无元素都不触发额外效果；WeaponId 9 本身不直接提交三元素掩码，而是为每颗随机弹提交所选 WeaponId 3～8 对应的单/双元素掩码。
 - BulletManager 只负责把不可变命中请求交给 `ElementComboManager`。组合效果在 Prefab 尚未激活时通过显式一次性入口完成伤害或登记位移，随后 `OnEnable` 只开始显示；不得依赖 `Awake`、`OnEnable` 或 `Start` 决定玩法结算时机。
 
 ## 运行时快照
@@ -72,10 +72,11 @@ Bullet 自身不添加 Rigidbody2D，避免高弹量场景为每颗活动子弹�
 - Bullet Prefab、TbBullet 基础数值和 Army 发射快照的来源互不混淆；BulletManager 不持有第二份 Army 装备状态。
 - WeaponId 和 ElementMask 的组合按固定顺序计算，最终快照可复现。
 - ElementMask 能表达 None 和三元素的全部组合；Army 后续元素获得或过期不修改飞行中的子弹。
-- 只有三个精准二元素掩码触发组合效果；三元素掩码不会误匹配任一二元素效果。
+- 只有三个精准二元素掩码触发组合效果；三元素掩码不会误匹配任一二元素效果，WeaponId 9 的随机弹按自身所选的单/双元素掩码结算。
 - 组合效果的玩法入口每个实例只能成功调用一次，所有本帧伤害在子弹命中阶段完成；显示生命周期不能重复结算。
 - 改变代表人数不会改变单次射击数量、伤害或速度；弹弓和弓固定单发，法杖家族固定三发，发射源数量只取决于激活槽位数。
-- 法杖三颗子弹的归一化方向分别为 `(0,1)`、`(-3,13)`、`(3,13)`；速度大小均来自同一 Bullet 配置，根节点朝向与各自轨迹一致。
+- WeaponId 2～8 的三颗法杖子弹归一化方向分别为 `(0,1)`、`(-3,13)`、`(3,13)`；WeaponId 9 的左右弹各自按当前阶段角度相对中弹偏转，最大为 `30°`。速度大小均来自每颗实际选中的 Bullet 配置，根节点朝向与各自轨迹一致。
+- WeaponId 9 的三颗弹分别独立从 WeaponId 3～8 的子弹配置确定性随机；BulletId、伤害、速度、动画与 ElementMask 使用所选法杖语义，来源 WeaponId 保持 9。
 - 子弹命中目标后只结算一次伤害并回收。
 - 子弹中心等于 BulletDespawnY 时仍保留，严格大于关卡回收线后当帧回池；不同 Collider、Sprite 尺寸或飞行方向不改变阈值。
 - 加法门没有 HP 仍可合法消费子弹并按实际 `BulletDamageContext.Damage` 增加门值；零 HP、待接触的元素门也仍可合法消费子弹并累计额外伤害。

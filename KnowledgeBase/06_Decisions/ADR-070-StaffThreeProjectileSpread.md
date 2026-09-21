@@ -1,5 +1,7 @@
 # ADR-070：法杖三弹道散射
 
+> ADR-072 修订 WeaponId 9：三元素法杖仍保持三发，但改用五秒动态偏角和逐弹随机的 WeaponId 3～8 子弹语义；本文固定方向、同 BulletId 和同 ElementMask 规则仅继续适用于 WeaponId 2～8。
+
 ## 状态
 
 Accepted
@@ -47,4 +49,3 @@ Army 当前每个活动槽位在一次攻击周期到期时只生成一颗竖直
 - `ADR-043-FireAttackDeathAndContactBoundaries.md`
 - `ADR-057-ElementalStaffWeaponVariants.md`
 - `ADR-060-ArmyAttackCycleAnimationSynchronization.md`
-

@@ -78,11 +78,6 @@ namespace Game.Gameplay
                     true));
         }
 
-        protected override string BuildDebugText()
-        {
-            return $"Weapon {config.WeaponId}  HP {CurrentHp}/{MaxHp}";
-        }
-
         protected override void OnPrepareForPool()
         {
             config = default(PropConfigSnapshot);

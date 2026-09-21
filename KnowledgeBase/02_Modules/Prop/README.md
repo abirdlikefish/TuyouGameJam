@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 脚本已实现并通过编译；Prefab/Layer 与击破流程手测待完成）
 - 依赖：EventBus、Army、Bullet、ObstacleManager、IPropConfigProvider、Level
-- 决策：`../../06_Decisions/ADR-022-PropBreakEffectBoundary.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-067-ConfigurablePropTypesAndGooseCageReward.md`
+- 决策：`../../06_Decisions/ADR-022-PropBreakEffectBoundary.md`、`../../06_Decisions/ADR-031-TypedComponentPoolsAndDefensiveDeactivation.md`、`../../06_Decisions/ADR-041-TypedConfigProvidersAndFatalValidation.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-046-GameplayImplementationContractClosure.md`、`../../06_Decisions/ADR-055-KinematicBulletTargetAdapters.md`、`../../06_Decisions/ADR-067-ConfigurablePropTypesAndGooseCageReward.md`、`../../06_Decisions/ADR-073-WeaponPickupPriority.md`
 
 ## 玩法定位
 
@@ -14,11 +14,11 @@ Prop 是可被击破的道路对象，不等同于武器箱。WeaponProp 在 `Pe
 
 ## 当前 MVP 道具
 
-- 弹弓箱：在接触前击破后将 Army 的 `WeaponId` 更新为 `0`。
-- 弓箭箱：在接触前击破后将 Army 的 `WeaponId` 更新为 `1`。
-- 法杖箱：在接触前击破后将 Army 的 `WeaponId` 更新为 `2`。
+- 弹弓箱：在接触前击破后请求 Army 使用 `WeaponId 0`，当前已是弓或法杖时不降级。
+- 弓箭箱：在接触前击破后请求 Army 使用 `WeaponId 1`，当前已是法杖时不降级。
+- 法杖箱：在接触前击破后请求 Army 使用 `WeaponId 2`，并按已有元素解析最终法杖。
 
-这三种武器箱的配置直接引用一个固定 `WeaponId`：`0 = Slingshot`、`1 = Bow`、`2 = Staff`。篮球与鹅笼通过 `PropType` 使用同一张 `TbProp`，但不把 `WeaponId` 作为自身身份；鹅笼另读取正数 `ArmyAddition`。
+这三种武器箱的配置直接引用一个固定 `WeaponId`：`0 = Slingshot`、`1 = Bow`、`2 = Staff`，拾取优先级为 `Staff > Bow > Slingshot`。低优先级请求不改变 Army，但武器箱仍完成成功击破、事实发布和回收。篮球与鹅笼通过 `PropType` 使用同一张 `TbProp`，但不把 `WeaponId` 作为自身身份；鹅笼另读取正数 `ArmyAddition`。
 
 ## 职责
 
@@ -56,6 +56,7 @@ Pending
 - 当前动画只覆盖存活期间的循环显示。击破后仍沿用现有立即回收语义；如需非循环击破动画，必须另行设计 Breaking 状态与回收时机。
 - ADR-064 只接受固定“无收益”篮球；其他击破效果进入范围前，仍须在 `DES-031` 确认效果类型、单个或组合规则、目标、叠加和配置结构。
 - 关卡出现顺序和每条生成项的 `[0,1]` 横向出生位置由 `LevelConfig` 提供；SpawnManager 解析固定 `spawnY` 上的中心点世界坐标。当前 HP、接触状态和位置不回写 Luban。
+- WeaponProp、BasketballProp 和 GooseCageProp 共用 `BreakablePropBase` 的 `ObstacleValueTextView`：只显示当前 HP 数字；HP 实际减少时执行一次短促相对缩放，动效期间再次减少只刷新数字、不重启动效。HP 到 `0` 后沿用击破立即回收，因此整个道具与文本一同消失。
 
 ## 非职责
 
@@ -72,6 +73,9 @@ Pending
 - 三种武器箱共用一个 `WeaponProp` 规范 Prefab 和类型池，初始化后按 `WeaponId` 呈现正确资源；同一具体类型不能绑定第二个 Prefab。
 - BasketballProp 每次借出都从篮球 Loop 第 0 帧播放；WeaponProp 的 `WeaponId 0/1/2` 分别从对应 Loop 第 0 帧播放。两类对象回池复借后不残留旧参数、状态、帧或 Sprite。
 - Prop Animator、Controller 或 WeaponId 参数缺失、类型错误时阻止 Gameplay Ready；Prop 循环 Clip 不包含玩法 AnimationEvent。
+- 三类 Prop 的 `ObstacleValueTextView` 与同节点 TMP_Text 都是必需绑定；初始化只显示当前 HP，不播放缩放。
+- HP 实际减少时文本短暂放大并恢复；动效期间的后续伤害继续刷新数字但不重启计时，动效结束后的下一次伤害可以重新触发。
+- 击破回池及跨类型复用后，文本缩放、可见性、内容和动效播放状态不得残留。
 - 类型池返回未激活实例；ObstacleManager 完成 Transform、配置、ID、回调和活动登记后才激活，归还前完成业务清理和主动失活。
 - 子弹命中只结算一次伤害，HP 清空只触发一次击破/销毁流程；只有接触前击破才触发配置的击破效果。
 - 未击破接触时每个接触槽位受到相同伤害。
