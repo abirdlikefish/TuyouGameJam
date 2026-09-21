@@ -3,6 +3,6 @@
     "id": 0,
     "armyCountLimit": 0,
     "hpPerSoldier": 10,
-    "moveSpeed": 13
+    "moveSpeed": 50
   }
 ]
