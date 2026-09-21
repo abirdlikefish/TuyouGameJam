@@ -123,11 +123,6 @@ namespace Game.Gameplay
                     damage));
         }
 
-        protected override string BuildDebugText()
-        {
-            return $"Basketball {config.Id}  HP {CurrentHp}/{MaxHp}";
-        }
-
         protected override void OnPrepareForPool()
         {
             sourceEnemyRuntimeInstanceId = -1;

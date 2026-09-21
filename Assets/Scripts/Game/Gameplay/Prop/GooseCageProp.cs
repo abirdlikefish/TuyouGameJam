@@ -55,11 +55,6 @@ namespace Game.Gameplay
                     addition));
         }
 
-        protected override string BuildDebugText()
-        {
-            return $"Goose Cage +{config.ArmyAddition}  HP {CurrentHp}/{MaxHp}";
-        }
-
         protected override void OnPrepareForPool()
         {
             config = default(PropConfigSnapshot);

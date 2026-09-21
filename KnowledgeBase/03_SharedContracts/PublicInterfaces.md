@@ -568,7 +568,7 @@ public interface IGameplayHudSource
 }
 ```
 
-`GameplayHudSnapshot` 包含当前 `LevelId`、`LevelRunId`、关卡显示名、玩法耗时、火/冰/雷剩余时间、击杀数、敌人总数和终局标记。Playing 时由 LevelManager 组合权威状态；Completed 后返回清理前冻结的最终快照。BattleHud 用 `KilledEnemyCount / TotalEnemyCount` 驱动 `Image.Type.Filled` 进度条，不直接显示击杀文本；UI 不自行累计击杀或按 Unity 对象数量推断统计。
+`GameplayHudSnapshot` 包含当前 `LevelId`、`LevelRunId`、关卡显示名、玩法耗时、火/冰/雷剩余时间、击杀数、敌人总数和终局标记。Playing 时由 LevelManager 组合权威状态；Completed 后返回清理前冻结的最终快照。BattleHud 用 `(TotalEnemyCount - KilledEnemyCount) / TotalEnemyCount` 驱动 `Image.Type.Filled` 剩余敌人进度条，并显示同源的剩余敌人数；BattleResult 继续显示最终击杀数。UI 不自行累计击杀或按 Unity 对象数量推断统计。
 
 ```csharp
 public enum LevelRunState

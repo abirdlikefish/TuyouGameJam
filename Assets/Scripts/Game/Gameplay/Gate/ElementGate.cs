@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Game.Contracts;
-using TMPro;
 using UnityEngine;
 
 namespace Game.Gameplay
@@ -17,7 +17,7 @@ namespace Game.Gameplay
         [SerializeField] private BulletHitProxy bulletHitProxy;
         [SerializeField, Min(0f)] private float moveSpeed;
         [SerializeField, Min(1)] private int contactDamage = 1;
-        [SerializeField] private TMP_Text stateText;
+        [SerializeField] private ObstacleValueTextView valueText;
         [SerializeField] private SpriteRenderer visual;
         [SerializeField] private Animator animator;
 
@@ -57,10 +57,15 @@ namespace Game.Gameplay
         public bool TryValidate(out string error)
         {
             error = string.Empty;
-            if (bodyCollider == null || bulletHitProxy == null || stateText == null || visual == null ||
+            if (bodyCollider == null || bulletHitProxy == null || valueText == null || visual == null ||
                 animator == null || animator.runtimeAnimatorController == null)
             {
-                error = $"{name} requires bodyCollider, bulletHitProxy, stateText, visual and Animator bindings.";
+                error = $"{name} requires bodyCollider, bulletHitProxy, valueText, visual and Animator bindings.";
+                return false;
+            }
+
+            if (!valueText.TryValidate(out error))
+            {
                 return false;
             }
 
@@ -144,7 +149,7 @@ namespace Game.Gameplay
             transform.position = request.WorldPosition;
             transform.rotation = Quaternion.identity;
             bodyCollider.enabled = true;
-            RefreshText();
+            valueText.Initialize(currentHp.ToString(CultureInfo.InvariantCulture));
             PrepareAnimation(animationState);
         }
 
@@ -181,7 +186,14 @@ namespace Game.Gameplay
                 postDepletionDamage = SaturatingAdd(postDepletionDamage, extraDamage);
             }
 
-            RefreshText();
+            if (currentHp <= 0)
+            {
+                valueText.Hide();
+            }
+            else if (currentHp != previousHp)
+            {
+                valueText.SetTextAndTryPulse(currentHp.ToString(CultureInfo.InvariantCulture));
+            }
             eventBus.Publish(
                 new ElementGateDamageChanged(
                     levelRunId,
@@ -200,6 +212,7 @@ namespace Game.Gameplay
             if (runtimeActive)
             {
                 transform.position += Vector3.down * (moveSpeed * deltaTime);
+                valueText.Tick(deltaTime);
             }
         }
 
@@ -254,8 +267,6 @@ namespace Game.Gameplay
                     army.ApplySlotDamage(slotIndex, contactDamage);
                 }
             }
-
-            RefreshText();
             eventBus.Publish(
                 new GateContactResolved(
                     levelRunId,
@@ -316,6 +327,7 @@ namespace Game.Gameplay
             elementType = ElementType.None;
             rewardLocked = false;
             consumedBulletIds.Clear();
+            valueText.ResetForPool();
             gameObject.SetActive(false);
         }
 
@@ -394,14 +406,6 @@ namespace Game.Gameplay
                     return ObstacleState.ExitedUncontacted;
                 default:
                     return ObstacleState.ContactPending;
-            }
-        }
-
-        private void RefreshText()
-        {
-            if (stateText != null)
-            {
-                stateText.text = $"{elementType} {currentHp}/{maxHp} +{postDepletionDamage}";
             }
         }
 

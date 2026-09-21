@@ -102,6 +102,7 @@ GameObject:
   - component: {fileID: 624549193021121082}
   - component: {fileID: 6332411489416728431}
   - component: {fileID: 2917367324984959783}
+  - component: {fileID: 6490397777853802577}
   m_Layer: 0
   m_Name: DebugText
   m_TagString: Untagged
@@ -190,7 +191,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Weapon
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -262,6 +263,21 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 6332411489416728431}
   m_maskType: 0
+--- !u!114 &6490397777853802577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3011928436430858835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb34c9f4e2fb01a46a641f5222c56b43, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  targetText: {fileID: 2917367324984959783}
+  pulseScaleMultiplier: 1.25
+  pulseDuration: 0.08
 --- !u!1 &5725770562715468950
 GameObject:
   m_ObjectHideFlags: 0
@@ -399,7 +415,7 @@ MonoBehaviour:
   bulletHitProxy: {fileID: 5212874840349469893}
   visual: {fileID: 2689504109684250228}
   animator: {fileID: 1504752199875130285}
-  debugText: {fileID: 2917367324984959783}
+  valueText: {fileID: 6490397777853802577}
 --- !u!50 &5968061195604928388
 Rigidbody2D:
   serializedVersion: 4

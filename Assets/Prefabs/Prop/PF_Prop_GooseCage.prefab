@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1232970446706891098}
   - component: {fileID: 5707528853696122501}
   - component: {fileID: 6888101682585612125}
+  - component: {fileID: 6700246851275417447}
   m_Layer: 0
   m_Name: DebugText
   m_TagString: Untagged
@@ -99,7 +100,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Goose Cage
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -171,6 +172,21 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 5707528853696122501}
   m_maskType: 0
+--- !u!114 &6700246851275417447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 490858251181508109}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb34c9f4e2fb01a46a641f5222c56b43, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  targetText: {fileID: 6888101682585612125}
+  pulseScaleMultiplier: 1.25
+  pulseDuration: 0.08
 --- !u!1 &4092041913440915775
 GameObject:
   m_ObjectHideFlags: 0
@@ -447,4 +463,4 @@ MonoBehaviour:
   bulletHitProxy: {fileID: 8862920925570197631}
   visual: {fileID: 8991293877680305834}
   animator: {fileID: 7893512852874603164}
-  debugText: {fileID: 6888101682585612125}
+  valueText: {fileID: 6700246851275417447}

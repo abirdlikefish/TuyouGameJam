@@ -32,7 +32,7 @@ MVP 固定读取首行 `TbArmy.Id = 0`，初始人数固定为 `1`，不配置 `
 
 初始字段：`Id`、`FireInterval`、`BulletId`。
 
-`Id` 是唯一的武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`、`3 = FireStaff`、`4 = IceStaff`、`5 = LightningStaff`、`6 = FireIceStaff`、`7 = FireLightningStaff`、`8 = IceLightningStaff`、`9 = FireIceLightningStaff`，十行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个武器引用独立 BulletId。每个活动槽位按对应行的 `FireInterval` 独立触发一次射击；WeaponId 0～1 生成一枚子弹，WeaponId 2～9 按 `(0,1)`、`(-3,13).normalized`、`(3,13).normalized` 固定生成三枚等速子弹。`FireInterval` 必须有限且大于 `0`，单位为秒，也是 Attack、MoveLeft、MoveRight 的权威攻击周期。本局初始活动槽位和实际换到不同武器的活动槽位在周期第 0 帧立即发射；运行中新激活或重新激活的槽位等待完整间隔。单槽每逻辑帧最多触发一次射击且不追赶补发，但保留周期余量；重复当前 WeaponId 不重置。代表人数不缩放射速、伤害或弹丸数量。
+`Id` 是唯一的武器身份，固定 `0 = Slingshot`、`1 = Bow`、`2 = Staff`、`3 = FireStaff`、`4 = IceStaff`、`5 = LightningStaff`、`6 = FireIceStaff`、`7 = FireLightningStaff`、`8 = IceLightningStaff`、`9 = FireIceLightningStaff`，十行都必须存在且不得把 `0` 当作缺失值或无武器哨兵。每个武器引用独立 BulletId。每个活动槽位按对应行的 `FireInterval` 独立触发一次射击；WeaponId 0～1 生成一枚子弹，WeaponId 2～8 按 `(0,1)`、`(-3,13).normalized`、`(3,13).normalized` 固定生成三枚等速子弹。WeaponId 9 仍以自身 `FireInterval` 触发三发齐射，但每颗分别从 WeaponId 3～8 选择 BulletId 和元素掩码，中弹竖直，左右弹各自偏角在五秒内按 `0°→30°→0°→30°` 变化。`FireInterval` 必须有限且大于 `0`，单位为秒，也是 Attack、MoveLeft、MoveRight 的权威攻击周期。本局初始活动槽位和实际换到不同武器的活动槽位在周期第 0 帧立即发射；运行中新激活或重新激活的槽位等待完整间隔。单槽每逻辑帧最多触发一次射击且不追赶补发，但保留周期余量；重复当前 WeaponId 不重置。代表人数不缩放射速、伤害或弹丸数量。
 
 当前不建立 `TbElement`。火、冰、雷使用固定 `ElementType`，元素门按 LevelConfig 中的关卡系数和 HP 归零后的额外伤害计算持续时间，Army 保存本局剩余时间；具体元素效果进入范围后再决定是否新增元素配置表。
 

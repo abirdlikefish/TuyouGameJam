@@ -66,7 +66,7 @@ namespace Game.Gameplay
                 return false;
             }
 
-            if (!HasAnimatorTrigger(RangedAttackTrigger))
+            if (CanValidateAnimatorParameters && !HasAnimatorTrigger(RangedAttackTrigger))
             {
                 error = $"{name}.animator controller requires a RangedAttack Trigger.";
                 return false;

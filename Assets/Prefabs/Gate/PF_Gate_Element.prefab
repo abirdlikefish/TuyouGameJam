@@ -102,6 +102,7 @@ GameObject:
   - component: {fileID: 799987884488109101}
   - component: {fileID: 8551486283948588355}
   - component: {fileID: 7648418532462467980}
+  - component: {fileID: 5698260854395345369}
   m_Layer: 0
   m_Name: StateText
   m_TagString: Untagged
@@ -190,7 +191,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Element
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -262,6 +263,21 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 8551486283948588355}
   m_maskType: 0
+--- !u!114 &5698260854395345369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4825453817540678498}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb34c9f4e2fb01a46a641f5222c56b43, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  targetText: {fileID: 7648418532462467980}
+  pulseScaleMultiplier: 1.25
+  pulseDuration: 0.08
 --- !u!1 &6440702968547936383
 GameObject:
   m_ObjectHideFlags: 0
@@ -420,7 +436,7 @@ MonoBehaviour:
   bulletHitProxy: {fileID: 5404399225917809780}
   moveSpeed: 1
   contactDamage: 10
-  stateText: {fileID: 7648418532462467980}
+  valueText: {fileID: 5698260854395345369}
   visual: {fileID: 5587176640221578035}
   animator: {fileID: 6899728613501011511}
 --- !u!50 &2428482026352142018

@@ -6,7 +6,7 @@
 - 层级：Gameplay
 - 状态：`InProgress`（批次 4 脚本已实现并通过编译；批次 7 动画表现适配、Prefab/Scene 装配与玩法手测待完成）
 - 依赖：EventBus、IArmyConfigProvider、IWeaponConfigProvider、Level、IBulletManager
-- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-066-ArmySlotDeathPresentation.md`、`../../06_Decisions/ADR-070-StaffThreeProjectileSpread.md`
+- 决策：`../../06_Decisions/ADR-035-ArmyConfigurationPrefabLoadoutAndRemoval.md`、`../../06_Decisions/ADR-043-FireAttackDeathAndContactBoundaries.md`、`../../06_Decisions/ADR-048-AnimationAssetPipelineAndPrefabBindings.md`、`../../06_Decisions/ADR-049-ContinuousArmyCombatAnimationAndVictoryPresentation.md`、`../../06_Decisions/ADR-057-ElementalStaffWeaponVariants.md`、`../../06_Decisions/ADR-060-ArmyAttackCycleAnimationSynchronization.md`、`../../06_Decisions/ADR-066-ArmySlotDeathPresentation.md`、`../../06_Decisions/ADR-070-StaffThreeProjectileSpread.md`、`../../06_Decisions/ADR-072-TripleElementStaffBurst.md`、`../../06_Decisions/ADR-073-WeaponPickupPriority.md`
 - MVP `ArmyId` 固定为 `0`，同时读取首行 `TbArmy.Id = 0` 并选择序列化 `ArmyPrefabBinding.ArmyId = 0` 的 Prefab。
 
 ## 职责
@@ -24,7 +24,7 @@
 
 - MVP 初始人数固定为 `1`；通过 `IArmyConfigProvider.GetArmyConfig(0)` 必得 ConfigService 已校验并复制的总人数上限、单兵生命值和横向移动速度不可变快照。
 - `TbArmy` 不保存槽位容量、武器或元素。`WeaponId` 是本局运行时唯一武器身份，固定 0/1 为 Slingshot/Bow、2 为普通 Staff、3～9 为七种元素法杖；每局从 `0` 开始，并通过 `IWeaponConfigProvider.GetWeaponConfig(WeaponId)` 必得发射间隔和基础子弹 ID。ArmyController 不持有 Luban 生成行，也不处理配置缺失恢复。
-- 当前不建立 `TbElement`。火、冰、雷三种剩余持续时间每局从 `0` 开始，由元素门按类型增加；当前武器属于法杖家族时，有效元素组合同步派生 WeaponId 2～9。
+- 当前不建立 `TbElement`。火、冰、雷三种剩余持续时间每局从 `0` 开始，由元素门按类型增加；当前武器属于法杖家族时，有效元素组合同步派生 WeaponId 2～9。WeaponId 9 进入独立五秒阶段，阶段内暂停单元素自然过期并在结束时统一清空三元素。
 - GameplaySceneEntry 通过序列化 `ArmyPrefabBinding` 选择 Army Prefab；ArmyController 通过序列化 `ArmySlotView[] slots` 持有槽位，不通过 Luban 资源键或运行时搜索取得。
 - 当前人数、槽位状态、WeaponId、三元素剩余时间和射击计时都是本局运行时状态，不回写 Luban。
 
@@ -59,7 +59,7 @@ ArmyElementStateSnapshot GetElementStateSnapshot();
 
 `ApplySlotDamage` 保持 `void`。Monster、Gate 和 Prop 在调用前必须通过 `TryGetSlotTarget` 重新确认槽位仍有效；无效或空槽位不提交伤害。方法同步完成权威 HP、人数和事件更新，实际扣除与人数损失只由 Army 的 `SoldierHit`、人数及阵型事件表达。攻击者不读取伤害返回值推进状态。
 
-LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`EnterVictoryPresentation`、`EnterDefeatPresentation`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时与每槽位攻击周期，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。本局初始活动槽位在首个 Playing Tick 立即发射；运行中新激活槽位等待完整 `FireInterval`；实际换到不同武器时全部活动槽位从新周期第 0 帧立即发射。每槽位每逻辑帧最多触发一次射击且不追赶补发，但保留越界余量维持周期相位；WeaponId 0～1 单发，法杖家族 WeaponId 2～9 固定三发散射。Victory/Defeat 表现停止 Army Tick 与命令，但把最终隐藏和身份清理延后到场景卸载或显式 StopRun。
+LevelManager 通过 `IArmyRunController.StartRun`、`TickMovementAndFire`、`EnterVictoryPresentation`、`EnterDefeatPresentation`、`StopRun` 驱动本局生命周期。ArmyController 不使用独立 Update 推进核心移动、元素计时或射击；Tick 中先扣减元素计时与每槽位攻击周期，再把当前 WeaponId、发射瞬间的 ElementMask、来源槽位、位置和方向组成 `BulletSpawnRequest` 交给 BulletManager。本局初始活动槽位在首个 Playing Tick 立即发射；运行中新激活槽位等待完整 `FireInterval`；实际换到不同武器时全部活动槽位从新周期第 0 帧立即发射。每槽位每逻辑帧最多触发一次射击且不追赶补发，但保留越界余量维持周期相位；WeaponId 0～1 单发，法杖家族 WeaponId 2～9 均为三发，WeaponId 9 单独使用动态散射与随机弹种。Victory/Defeat 表现停止 Army Tick 与命令，但把最终隐藏和身份清理延后到场景卸载或显式 StopRun。
 
 ## Prefab 与场景装配
 
@@ -137,10 +137,10 @@ public sealed class ArmyPrefabBinding
 - `GateContactResolved`、`PropBroken` 和 `PropContactDamage` 的订阅顺序不会改变 Army 数值，且不会触发第二次效果。
 - 负数门按 `Abs(GateValue) × HpPerSoldier` 产生伤害，优先由当前 HP 最少、同 HP 时 SlotIndex 最小的槽位承担；请求减员和实际损失人数分别记录。
 - 元素门失败时，每个接触槽位受到相同伤害；成功时只给对应 ElementType 增加一次持续时间，同类型累加且不覆盖其他元素。
-- 当前 MVP 的武器箱成功击破时只切换一次 WeaponId；元素持续时间保持不变，道具接触失败后不得触发任何击破效果。
-- `AddArmy(0)` 不改变 Army 状态或发布人数/阵型变化事件；重复获得当前 WeaponId 不发布 `ArmyWeaponChanged` 且不重置射击冷却，但 Prop 仍可完成自身的成功击破事实。
+- 当前 MVP 的武器箱按法杖、弓、弹弓从高到低比较家族优先级；只有相同或更高优先级继续既有切换流程，较低优先级不改变 WeaponId。元素持续时间始终保持不变，道具接触失败后不得触发任何击破效果。
+- `AddArmy(0)` 不改变 Army 状态或发布人数/阵型变化事件；重复获得当前 WeaponId 或拾取较低优先级武器都不发布 `ArmyWeaponChanged`，不重置射击冷却、不立即发射，但 Prop 仍可完成自身的成功击破事实。
 - 本局初始活动槽位在首个 Playing Tick 的战斗动画第 1 帧立即发射；运行中新激活或重新激活的槽位仍等待一个完整 FireInterval。实际换武器后全部活动槽位从新周期第 0 帧立即发射，重复当前 WeaponId 不重置。
-- 单个逻辑帧内每个激活槽位最多触发一次射击；WeaponId 0～1 生成一颗，WeaponId 2～9 从同一 FirePoint 按竖直、上偏左、上偏右方向生成三颗。大帧间隔不补发历史跨过的射击次数，但保留跨过周期边界的余量，后续发射与动画相位不漂移。
+- 单个逻辑帧内每个激活槽位最多触发一次射击；WeaponId 0～1 生成一颗，WeaponId 2～8 从同一 FirePoint 按固定竖直、上偏左、上偏右方向生成三颗。WeaponId 9 的中弹竖直，左右弹各自偏角在五秒内按 `0°→30°→0°→30°` 变化，三颗弹分别从 WeaponId 3～8 的子弹中确定性随机。大帧间隔不补发历史跨过的射击次数，但保留跨过周期边界的余量，后续发射与动画相位不漂移。
 - Army 先扣减本帧元素计时再发射；元素门在接触阶段新增的元素从下一逻辑帧子弹开始生效，飞行中的子弹元素掩码保持不变。
 - Army 在固定道路内移动时不得让当前激活槽位的合并 AABB 越过左右边界；阵型变化后重新计算可移动范围。
 - 人数、槽位人数或槽位生命值变化时 UI 能通过事件同步。

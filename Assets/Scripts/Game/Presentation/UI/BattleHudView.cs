@@ -3,6 +3,7 @@ using System.Globalization;
 using Game.Contracts;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Game.Presentation
@@ -16,8 +17,10 @@ namespace Game.Presentation
         [SerializeField] private TMP_Text fireDurationText;
         [SerializeField] private TMP_Text iceDurationText;
         [SerializeField] private TMP_Text lightningDurationText;
-        [SerializeField] private Image killProgressImage;
-        [SerializeField] private ImageNumberText killedEnemyCountNumber;
+        [FormerlySerializedAs("killProgressImage")]
+        [SerializeField] private Image remainingEnemyProgressImage;
+        [FormerlySerializedAs("killedEnemyCountNumber")]
+        [SerializeField] private ImageNumberText remainingEnemyCountNumber;
 
         [Header("退出")]
         [SerializeField] private Button exitButton;
@@ -30,7 +33,7 @@ namespace Game.Presentation
         private string cachedFireDuration;
         private string cachedIceDuration;
         private string cachedLightningDuration;
-        private float cachedKillProgress = -1f;
+        private float cachedRemainingEnemyProgress = -1f;
         private bool actionRequested;
         private bool initialized;
 
@@ -67,10 +70,13 @@ namespace Game.Presentation
                 !RequireText(fireDurationText, nameof(fireDurationText), out error) ||
                 !RequireText(iceDurationText, nameof(iceDurationText), out error) ||
                 !RequireText(lightningDurationText, nameof(lightningDurationText), out error) ||
-                !RequireFilledImage(killProgressImage, nameof(killProgressImage), out error) ||
+                !RequireFilledImage(
+                    remainingEnemyProgressImage,
+                    nameof(remainingEnemyProgressImage),
+                    out error) ||
                 !RequireImageNumber(
-                    killedEnemyCountNumber,
-                    nameof(killedEnemyCountNumber),
+                    remainingEnemyCountNumber,
+                    nameof(remainingEnemyCountNumber),
                     out error) ||
                 !RequireButton(exitButton, nameof(exitButton), out error) ||
                 !RequireButton(confirmExitButton, nameof(confirmExitButton), out error) ||
@@ -155,6 +161,9 @@ namespace Game.Presentation
 
         private void Refresh(GameplayHudSnapshot snapshot, bool force)
         {
+            var remainingEnemyCount = CalculateRemainingEnemyCount(
+                snapshot.KilledEnemyCount,
+                snapshot.TotalEnemyCount);
             levelNameNumber.SetNumber(snapshot.LevelId);
             elapsedTimeNumber.SetText(FormatElapsedTime(snapshot.ElapsedTime));
             SetText(fireDurationText, FormatDuration(snapshot.FireRemainingDuration), ref cachedFireDuration, force);
@@ -165,11 +174,11 @@ namespace Game.Presentation
                 ref cachedLightningDuration,
                 force);
             SetProgress(
-                killProgressImage,
-                CalculateKillProgress(snapshot.KilledEnemyCount, snapshot.TotalEnemyCount),
-                ref cachedKillProgress,
+                remainingEnemyProgressImage,
+                CalculateRemainingEnemyProgress(remainingEnemyCount, snapshot.TotalEnemyCount),
+                ref cachedRemainingEnemyProgress,
                 force);
-            killedEnemyCountNumber.SetNumber(snapshot.KilledEnemyCount);
+            remainingEnemyCountNumber.SetNumber(remainingEnemyCount);
         }
 
         private void HandleExitClicked()
@@ -308,19 +317,26 @@ namespace Game.Presentation
             return Mathf.Max(0f, duration).ToString("0.0", CultureInfo.InvariantCulture) + "s";
         }
 
-        private static float CalculateKillProgress(int killedEnemyCount, int totalEnemyCount)
+        private static int CalculateRemainingEnemyCount(int killedEnemyCount, int totalEnemyCount)
+        {
+            if (totalEnemyCount <= 0)
+            {
+                return 0;
+            }
+
+            return Mathf.Clamp(totalEnemyCount - killedEnemyCount, 0, totalEnemyCount);
+        }
+
+        private static float CalculateRemainingEnemyProgress(
+            int remainingEnemyCount,
+            int totalEnemyCount)
         {
             if (totalEnemyCount <= 0)
             {
                 return 0f;
             }
 
-            if (killedEnemyCount >= totalEnemyCount)
-            {
-                return 1f;
-            }
-
-            return Mathf.Clamp01((float)killedEnemyCount / totalEnemyCount);
+            return Mathf.Clamp01((float)remainingEnemyCount / totalEnemyCount);
         }
 
         private static void SetProgress(
@@ -343,7 +359,7 @@ namespace Game.Presentation
             cachedFireDuration = null;
             cachedIceDuration = null;
             cachedLightningDuration = null;
-            cachedKillProgress = -1f;
+            cachedRemainingEnemyProgress = -1f;
         }
 
         private void OnDestroy()

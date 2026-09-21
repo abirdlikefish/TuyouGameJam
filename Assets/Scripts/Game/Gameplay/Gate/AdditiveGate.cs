@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Game.Contracts;
-using TMPro;
 using UnityEngine;
 
 namespace Game.Gameplay
@@ -13,7 +13,7 @@ namespace Game.Gameplay
         [SerializeField] private Collider2D bodyCollider;
         [SerializeField] private BulletHitProxy bulletHitProxy;
         [SerializeField, Min(0f)] private float moveSpeed;
-        [SerializeField] private TMP_Text stateText;
+        [SerializeField] private ObstacleValueTextView valueText;
         [SerializeField] private SpriteRenderer visual;
         [SerializeField] private Animator animator;
 
@@ -46,10 +46,15 @@ namespace Game.Gameplay
         public bool TryValidate(out string error)
         {
             error = string.Empty;
-            if (bodyCollider == null || bulletHitProxy == null || stateText == null || visual == null ||
+            if (bodyCollider == null || bulletHitProxy == null || valueText == null || visual == null ||
                 animator == null || animator.runtimeAnimatorController == null)
             {
-                error = $"{name} requires bodyCollider, bulletHitProxy, stateText, visual and Animator bindings.";
+                error = $"{name} requires bodyCollider, bulletHitProxy, valueText, visual and Animator bindings.";
+                return false;
+            }
+
+            if (!valueText.TryValidate(out error))
+            {
                 return false;
             }
 
@@ -110,7 +115,7 @@ namespace Game.Gameplay
             transform.position = request.WorldPosition;
             transform.rotation = Quaternion.identity;
             bodyCollider.enabled = true;
-            RefreshText();
+            valueText.Initialize(FormatGateValue(gateValue));
             PrepareAnimation();
         }
 
@@ -132,7 +137,10 @@ namespace Game.Gameplay
 
             var previous = gateValue;
             gateValue = (int)Math.Min(int.MaxValue, (long)gateValue + damage.Damage);
-            RefreshText();
+            if (gateValue != previous)
+            {
+                valueText.SetTextAndTryPulse(FormatGateValue(gateValue));
+            }
             eventBus.Publish(
                 new GateValueChanged(
                     levelRunId,
@@ -148,6 +156,7 @@ namespace Game.Gameplay
             if (runtimeActive)
             {
                 transform.position += Vector3.down * (moveSpeed * deltaTime);
+                valueText.Tick(deltaTime);
             }
         }
 
@@ -227,6 +236,7 @@ namespace Game.Gameplay
             spawnEntryIndex = -1;
             gateValue = 0;
             consumedBulletIds.Clear();
+            valueText.ResetForPool();
             gameObject.SetActive(false);
         }
 
@@ -261,12 +271,11 @@ namespace Game.Gameplay
             }
         }
 
-        private void RefreshText()
+        private static string FormatGateValue(int value)
         {
-            if (stateText != null)
-            {
-                stateText.text = gateValue.ToString();
-            }
+            return value >= 0
+                ? $"+{value.ToString(CultureInfo.InvariantCulture)}"
+                : value.ToString(CultureInfo.InvariantCulture);
         }
 
         private static bool IsFinite(float value)
