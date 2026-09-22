@@ -164,7 +164,19 @@ namespace Game.Presentation
             var remainingEnemyCount = CalculateRemainingEnemyCount(
                 snapshot.KilledEnemyCount,
                 snapshot.TotalEnemyCount);
-            levelNameNumber.SetNumber(snapshot.LevelId);
+            if (!int.TryParse(
+                    snapshot.DisplayName,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var displayLevelNumber) ||
+                displayLevelNumber < 0)
+            {
+                throw new FormatException(
+                    $"GameplayHudSnapshot.DisplayName must be a non-negative integer for LevelNameNumber. " +
+                    $"Value='{snapshot.DisplayName}'.");
+            }
+
+            levelNameNumber.SetNumber(displayLevelNumber);
             elapsedTimeNumber.SetText(FormatElapsedTime(snapshot.ElapsedTime));
             SetText(fireDurationText, FormatDuration(snapshot.FireRemainingDuration), ref cachedFireDuration, force);
             SetText(iceDurationText, FormatDuration(snapshot.IceRemainingDuration), ref cachedIceDuration, force);

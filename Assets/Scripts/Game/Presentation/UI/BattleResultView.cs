@@ -10,8 +10,12 @@ namespace Game.Presentation
     public sealed class BattleResultView : MonoBehaviour
     {
         [Header("结算信息")]
-        [SerializeField] private ImageNumberText totalTimeNumber;
-        [SerializeField] private ImageNumberText killedEnemyCountNumber;
+        [SerializeField] private ImageNumberText gameOverTotalTimeNumber;
+        [SerializeField] private ImageNumberText victoryWithNextTotalTimeNumber;
+        [SerializeField] private ImageNumberText victoryWithoutNextTotalTimeNumber;
+        [SerializeField] private ImageNumberText gameOverKilledEnemyCountNumber;
+        [SerializeField] private ImageNumberText victoryWithNextKilledEnemyCountNumber;
+        [SerializeField] private ImageNumberText victoryWithoutNextKilledEnemyCountNumber;
 
         [Header("结算根节点")]
         [SerializeField] private GameObject gameOverRoot;
@@ -84,10 +88,29 @@ namespace Game.Presentation
 
         public bool TryValidate(out string error)
         {
-            if (!RequireImageNumber(totalTimeNumber, nameof(totalTimeNumber), out error) ||
+            if (!RequireImageNumber(
+                    gameOverTotalTimeNumber,
+                    nameof(gameOverTotalTimeNumber),
+                    out error) ||
                 !RequireImageNumber(
-                    killedEnemyCountNumber,
-                    nameof(killedEnemyCountNumber),
+                    victoryWithNextTotalTimeNumber,
+                    nameof(victoryWithNextTotalTimeNumber),
+                    out error) ||
+                !RequireImageNumber(
+                    victoryWithoutNextTotalTimeNumber,
+                    nameof(victoryWithoutNextTotalTimeNumber),
+                    out error) ||
+                !RequireImageNumber(
+                    gameOverKilledEnemyCountNumber,
+                    nameof(gameOverKilledEnemyCountNumber),
+                    out error) ||
+                !RequireImageNumber(
+                    victoryWithNextKilledEnemyCountNumber,
+                    nameof(victoryWithNextKilledEnemyCountNumber),
+                    out error) ||
+                !RequireImageNumber(
+                    victoryWithoutNextKilledEnemyCountNumber,
+                    nameof(victoryWithoutNextKilledEnemyCountNumber),
                     out error) ||
                 !RequireRoot(gameOverRoot, nameof(gameOverRoot), out error) ||
                 !RequireRoot(victoryWithNextRoot, nameof(victoryWithNextRoot), out error) ||
@@ -211,8 +234,8 @@ namespace Game.Presentation
                     "BattleResultView received a result before the matching HUD snapshot was frozen.");
             }
 
-            totalTimeNumber.SetText(FormatElapsedTime(snapshot.ElapsedTime));
-            killedEnemyCountNumber.SetNumber(snapshot.KilledEnemyCount);
+            SetTotalTime(resultPanel, FormatElapsedTime(snapshot.ElapsedTime));
+            SetKilledEnemyCount(resultPanel, snapshot.KilledEnemyCount);
             activePanel = resultPanel;
             resultShown = true;
             actionRequested = false;
@@ -268,6 +291,42 @@ namespace Game.Presentation
                     return victoryWithNextRoot;
                 case ResultPanel.VictoryWithoutNext:
                     return victoryWithoutNextRoot;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(resultPanel), resultPanel, null);
+            }
+        }
+
+        private void SetTotalTime(ResultPanel resultPanel, string value)
+        {
+            switch (resultPanel)
+            {
+                case ResultPanel.GameOver:
+                    gameOverTotalTimeNumber.SetText(value);
+                    break;
+                case ResultPanel.VictoryWithNext:
+                    victoryWithNextTotalTimeNumber.SetText(value);
+                    break;
+                case ResultPanel.VictoryWithoutNext:
+                    victoryWithoutNextTotalTimeNumber.SetText(value);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(resultPanel), resultPanel, null);
+            }
+        }
+
+        private void SetKilledEnemyCount(ResultPanel resultPanel, int value)
+        {
+            switch (resultPanel)
+            {
+                case ResultPanel.GameOver:
+                    gameOverKilledEnemyCountNumber.SetNumber(value);
+                    break;
+                case ResultPanel.VictoryWithNext:
+                    victoryWithNextKilledEnemyCountNumber.SetNumber(value);
+                    break;
+                case ResultPanel.VictoryWithoutNext:
+                    victoryWithoutNextKilledEnemyCountNumber.SetNumber(value);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(resultPanel), resultPanel, null);
             }

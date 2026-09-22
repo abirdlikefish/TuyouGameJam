@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelId: 17
   displayName: 18
-  unlockedLevelIds:
-  - 18
+  unlockedLevelIds: 12000000
   spawnY: 8
   enemyApproachY: 0
   despawnY: -9
@@ -63,20 +62,20 @@ MonoBehaviour:
     spawnPosition: 0.166667
     configId: 0
   - spawnTime: 29
-    spawnPosition: 0.5
-    configId: 0
-  - spawnTime: 29
     spawnPosition: 0.833333
     configId: 0
   - spawnTime: 31
     spawnPosition: 0.166667
-    configId: 3
+    configId: 0
   - spawnTime: 31
     spawnPosition: 0.5
     configId: 3
   - spawnTime: 31
     spawnPosition: 0.833333
-    configId: 3
+    configId: 0
+  - spawnTime: 32
+    spawnPosition: 0.5
+    configId: 0
   gateSpawns:
   - spawnTime: 9
     spawnPosition: 0.5
